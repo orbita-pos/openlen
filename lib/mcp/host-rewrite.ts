@@ -11,6 +11,9 @@ export const MCP_REWRITES = [
   { source: "/mcp", has: ON_MCP_HOST, destination: "/api/mcp" },
   { source: "/.well-known/oauth-protected-resource", has: ON_MCP_HOST, destination: "/api/mcp/resource-metadata" },
   { source: "/.well-known/oauth-protected-resource/mcp", has: ON_MCP_HOST, destination: "/api/mcp/resource-metadata" },
+  // OpenLen's own Google Calendar server (spec local 2026-11-24-servidor-de-google-calendar, §5.1).
+  { source: "/google-calendar", has: ON_MCP_HOST, destination: "/api/mcp/google-calendar" },
+  { source: "/.well-known/oauth-protected-resource/google-calendar", has: ON_MCP_HOST, destination: "/api/mcp/google-calendar/resource-metadata" },
 ];
 
 /** Las rutas bien conocidas del servidor de autorización (en el issuer) y, en
@@ -19,6 +22,7 @@ export const MCP_REWRITES = [
 export const OAUTH_REWRITES = [
   { source: "/.well-known/oauth-authorization-server", destination: "/api/oauth/metadata" },
   { source: "/.well-known/oauth-protected-resource/api/mcp", destination: "/api/mcp/resource-metadata" },
+  { source: "/.well-known/oauth-protected-resource/api/mcp/google-calendar", destination: "/api/mcp/google-calendar/resource-metadata" },
 ];
 
 /** Para el middleware: en este host no hay idioma ni login que poner. */
@@ -31,7 +35,7 @@ export function isMcpHost(host: string | null): boolean {
  *  lleva punto (su matcher): de eso, sólo `/mcp`; la app —portada, login,
  *  workspace— no se sirve en este origen (404). Caddy hace lo mismo delante. */
 export function mcpHostAllows(pathname: string): boolean {
-  return pathname === "/mcp";
+  return pathname === "/mcp" || pathname === "/google-calendar";
 }
 
 /** La verificación del dominio para el registro oficial de MCP (en el issuer). */

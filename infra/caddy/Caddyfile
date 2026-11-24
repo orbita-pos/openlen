@@ -883,7 +883,8 @@ mcp.openlen.com {
 		Referrer-Policy "no-referrer"
 		-Server
 	}
-	@mcp path /mcp /.well-known/oauth-protected-resource /.well-known/oauth-protected-resource/mcp
+	# /google-calendar: OpenLen's own Google Calendar MCP server (spec local 2026-11-24-servidor-de-google-calendar).
+	@mcp path /mcp /.well-known/oauth-protected-resource /.well-known/oauth-protected-resource/mcp /google-calendar /.well-known/oauth-protected-resource/google-calendar
 	handle @mcp {
 		reverse_proxy 127.0.0.1:3000 {
 			flush_interval -1

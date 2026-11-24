@@ -52,6 +52,9 @@ export const RATE_LIMITS = {
    *  storage write — 60/hour clears an editing session yet caps a scripted
    *  fetch flood at ~60 × 15 MB ≈ 900 MB/hour/user. */
   proxyImage: { limit: 60, windowMs: 60 * 60 * 1000 },
+  /** OpenLen's Google Calendar MCP server, per Google token (`gcal:<sha256 of the token, 16 hex>`): a loop can't spend
+   *  the openlen-connectors project's Calendar quota (spec local 2026-11-24-servidor-de-google-calendar, §5.7). */
+  gcalMcp: { limit: 60, windowMs: 60 * 1000 },
 } as const;
 
 function formatRetry(sec: number): string {

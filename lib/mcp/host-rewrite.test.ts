@@ -12,6 +12,12 @@ describe("el host del MCP", () => {
     expect(ruta("mcp.openlen.com", "/.well-known/oauth-protected-resource")).toBe("/api/mcp/resource-metadata");
     expect(ruta("mcp.openlen.com", "/.well-known/oauth-protected-resource/mcp")).toBe("/api/mcp/resource-metadata");
   });
+  // OpenLen's own Google Calendar server (spec local 2026-11-24-servidor-de-google-calendar, §5.1).
+  it("/google-calendar y su metadata van a las rutas del servidor de calendario", () => {
+    expect(ruta("mcp.openlen.com", "/google-calendar")).toBe("/api/mcp/google-calendar");
+    expect(ruta("mcp.openlen.com", "/.well-known/oauth-protected-resource/google-calendar")).toBe("/api/mcp/google-calendar/resource-metadata");
+    expect(mcpHostAllows("/google-calendar")).toBe(true);
+  });
   it("en otro host no toca nada", () => {
     expect(ruta("openlen.com", "/mcp")).toBe("/mcp");
     expect(ruta("misitio.openlen.app", "/.well-known/oauth-protected-resource")).toBe("/.well-known/oauth-protected-resource");
@@ -37,6 +43,9 @@ describe("las rutas bien conocidas del servidor de autorización", () => {
   });
   it("en local, la metadata del recurso con la ruta insertada de /api/mcp", () => {
     expect(r("localhost:3007", "/.well-known/oauth-protected-resource/api/mcp")).toBe("/api/mcp/resource-metadata");
+  });
+  it("en local, la del servidor de calendario con su ruta insertada", () => {
+    expect(r("localhost:3000", "/.well-known/oauth-protected-resource/api/mcp/google-calendar")).toBe("/api/mcp/google-calendar/resource-metadata");
   });
   it("nada más", () => {
     expect(r("openlen.com", "/.well-known/security.txt")).toBe("/.well-known/security.txt");
