@@ -10,7 +10,7 @@ import { reviewTools } from "@/lib/mcp-connectors/names";
 import type { CalendarApi } from "./calendar-api";
 import { GoogleApiError } from "./calendar-api";
 import { toRfc3339 } from "./time";
-import { GCAL_TOOLS, runGcalTool, type GcalCtx } from "./tools";
+import { calendarZones, GCAL_TOOLS, runGcalTool, type GcalCtx } from "./tools";
 
 type Call = { method: keyof CalendarApi; args: unknown[] };
 
@@ -78,6 +78,12 @@ describe("list_calendars, list_events, get_event, search_events", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("🔴 list_events filters by event type with the API's repeated eventTypes", async () => {
+    const { ctx, calls } = fakeApi();
+    await run("list_events", { eventTypeFilter: ["focusTime", "outOfOffice"] }, ctx);
+    expect(calls.at(-1)).toEqual({ method: "listEvents", args: ["primary", expect.objectContaining({ eventTypes: ["focusTime", "outOfOffice"] })] });
   });
 
   it("search_events searches by words on the primary calendar", async () => {
@@ -277,6 +283,72 @@ describe("update_event", () => {
   });
 });
 
+describe("update_event refuses what it can't do as asked", () => {
+  // Claude Code's tools validate the input and say what to change instead of dropping part of it in silence.
+  it("🔴 allDay or timeZone with no startTime or endTime is refused, saying why", async () => {
+    const { ctx, calls } = fakeApi({ getEvent: () => ({ id: "ev1" }), patchEvent: () => ({ id: "ev1" }) });
+    const r = await run("update_event", { eventId: "ev1", allDay: true }, ctx);
+    expect(r.isError).toBe(true);
+    expect(textOf(r)).toBe("allDay and timeZone only apply together with startTime or endTime; give the new time too.");
+    expect((await run("update_event", { eventId: "ev1", timeZone: "Europe/Madrid", summary: "x" }, ctx)).isError).toBe(true);
+    expect(calls.filter((c) => c.method === "patchEvent")).toHaveLength(0);
+  });
+
+  it("🔴 changing the guests of an event whose guest list Google cut short is refused", async () => {
+    const partial = { id: "ev1", attendeesOmitted: true, attendees: [{ email: "yo@x.com", self: true }] };
+    const { ctx, calls } = fakeApi({ getEvent: () => partial, patchEvent: () => ({ id: "ev1" }) });
+    const r = await run("update_event", { eventId: "ev1", addedAttendees: [{ email: "carla@x.com" }] }, ctx);
+    expect(r.isError).toBe(true);
+    expect(textOf(r)).toContain("attendeesOmitted");
+    expect(calls.filter((c) => c.method === "patchEvent")).toHaveLength(0);
+  });
+});
+
+describe("a Google Meet link", () => {
+  // Google's API: existing conference data is conferenceSolution + entryPoints; for hangoutsMeet the conferenceId is the
+  // meeting code.
+  it("🔴 an existing Meet link goes with its meeting code", async () => {
+    const { ctx, calls } = fakeApi({ insertEvent: () => ({ id: "new" }) });
+    await run("create_event", { summary: "Junta", startTime: "2026-11-25T10:00:00", endTime: "2026-11-25T11:00:00", googleMeetUrl: "https://meet.google.com/abc-defg-hij" }, ctx);
+    const body = (calls.find((c) => c.method === "insertEvent")!.args[1]) as Record<string, unknown>;
+    expect(body.conferenceData).toEqual({
+      conferenceId: "abc-defg-hij",
+      conferenceSolution: { key: { type: "hangoutsMeet" } },
+      entryPoints: [{ entryPointType: "video", uri: "https://meet.google.com/abc-defg-hij" }],
+    });
+  });
+
+  it("🔴 a link that isn't Google Meet is refused, saying where it goes instead", async () => {
+    const { ctx, calls } = fakeApi({ insertEvent: () => ({ id: "new" }) });
+    const r = await run("create_event", { summary: "Junta", startTime: "2026-11-25T10:00:00", endTime: "2026-11-25T11:00:00", googleMeetUrl: "https://zoom.us/j/123" }, ctx);
+    expect(r.isError).toBe(true);
+    expect(textOf(r)).toBe("googleMeetUrl takes a Google Meet link (https://meet.google.com/…); put any other video link in location or description.");
+    expect(calls.filter((c) => c.method === "insertEvent")).toHaveLength(0);
+  });
+});
+
+describe("the calendar's time zone", () => {
+  // A calendar the person can reach but doesn't follow has no calendarList entry: the primary's zone stands in.
+  it("🔴 a calendar with no calendarList entry takes the primary calendar's zone", async () => {
+    const { ctx } = fakeApi({
+      getCalendarListEntry: (id) => {
+        if (id === "primary") return { timeZone: "Europe/Madrid" };
+        throw new GoogleApiError(404, "Not Found");
+      },
+    });
+    expect(await calendarZones(ctx.api)("equipo@group.calendar.google.com")).toBe("Europe/Madrid");
+  });
+
+  it("any other error still reaches Len", async () => {
+    const { ctx } = fakeApi({
+      getCalendarListEntry: () => {
+        throw new GoogleApiError(403, "Insufficient Permission");
+      },
+    });
+    await expect(calendarZones(ctx.api)("equipo@group.calendar.google.com")).rejects.toThrow("Insufficient Permission");
+  });
+});
+
 describe("delete_event and respond_to_event", () => {
   it("delete_event deletes with NONE as sendUpdates none", async () => {
     const { ctx, calls } = fakeApi();
@@ -284,15 +356,14 @@ describe("delete_event and respond_to_event", () => {
     expect(calls[0]).toEqual({ method: "deleteEvent", args: ["primary", "ev1", { sendUpdates: "none" }] });
   });
 
-  it("respond_to_event changes only the person's own attendee", async () => {
+  // Google's API: attendeesOmitted "can be used to only update the participant's response" — the guest list is never
+  // written back, so a list Google cut short can't drop anyone.
+  it("🔴 respond_to_event sends only the person's own answer, with attendeesOmitted", async () => {
     const event = { id: "ev1", attendees: [{ email: "ana@x.com", responseStatus: "accepted" }, { email: "yo@x.com", self: true, responseStatus: "needsAction" }] };
     const { ctx, calls } = fakeApi({ getEvent: () => event, patchEvent: () => ({ id: "ev1" }) });
     await run("respond_to_event", { eventId: "ev1", responseStatus: "declined", responseComment: "No puedo" }, ctx);
     const body = (calls.find((c) => c.method === "patchEvent")!.args[2]) as Record<string, unknown>;
-    expect(body.attendees).toEqual([
-      { email: "ana@x.com", responseStatus: "accepted" },
-      { email: "yo@x.com", self: true, responseStatus: "declined", comment: "No puedo" },
-    ]);
+    expect(body).toEqual({ attendeesOmitted: true, attendees: [{ email: "yo@x.com", self: true, responseStatus: "declined", comment: "No puedo" }] });
   });
 
   it("respond_to_event on an event the person isn't invited to is an error", async () => {

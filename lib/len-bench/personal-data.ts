@@ -6,6 +6,21 @@
 
 const CONNECTOR_PREFIX = "mcp__";
 const NAME_FIELDS = ["name", "tool"] as const;
+/** Len's tools that read a connector's resources (`RESOURCE_TOOL_NAMES` of lib/mcp-connectors/turn.ts, which pulls the
+ *  server's modules this script-side file can't): no mcp__ prefix, the connector's data all the same — as Claude Code
+ *  counts its ListMcpResourcesTool and ReadMcpResourceTool. */
+const RESOURCE_TOOLS: ReadonlySet<string> = new Set(["list_mcp_resources", "list_mcp_resource_templates", "read_mcp_resource"]);
+const isConnectorTool = (name: string) => name.startsWith(CONNECTOR_PREFIX) || RESOURCE_TOOLS.has(name);
+
+/**
+ * The same rule as a Postgres condition on a jsonb `column` (a SQL expression, e.g. `m.transcript`), for the fetchers to
+ * ask the box BEFORE bringing anything (§5.8: it never reaches the development machine). On jsonb's text a key is written
+ * `"name": "…"`, so only a name FIELD matches; a quote inside a message is escaped and never does.
+ */
+export function connectorCallsIn(column: string): string {
+  const names = [...RESOURCE_TOOLS].map((n) => `${n}"`).join("|");
+  return `(${column})::text ~ '"(name|tool)":\\s*"(${CONNECTOR_PREFIX}|${names})'`;
+}
 
 /** True if anywhere in `value` an object names a connector's tool in its `name` or `tool` field. */
 export function carriesConnectorResults(value: unknown): boolean {
@@ -22,7 +37,7 @@ export function carriesConnectorResults(value: unknown): boolean {
     const o = v as Record<string, unknown>;
     for (const field of NAME_FIELDS) {
       const named = o[field];
-      if (typeof named === "string" && named.startsWith(CONNECTOR_PREFIX)) return true;
+      if (typeof named === "string" && isConnectorTool(named)) return true;
     }
     pending.push(...Object.values(o));
   }

@@ -13,9 +13,28 @@ export const GCAL_SCOPES: readonly string[] = [
   "https://www.googleapis.com/auth/calendar.events.freebusy",
 ];
 
-/** The server's public URL (RFC 9728 `resource`). Locally: http://localhost:3000/api/mcp/google-calendar. */
+const PUBLIC_URL = "https://mcp.openlen.com/google-calendar";
+const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+/** This machine, over http or https: where `next dev` serves the server. */
+function isLoopback(url: string): boolean {
+  if (!URL.canParse(url)) return false;
+  const u = new URL(url);
+  return (u.protocol === "http:" || u.protocol === "https:") && LOOPBACK.has(u.hostname);
+}
+
+/**
+ * The server's public URL (RFC 9728 `resource`). Locally: http://localhost:3000/api/mcp/google-calendar.
+ *
+ * This URL decides which server gets OpenLen's own Google client (the directory's entry), so `GCAL_MCP_RESOURCE_URL`
+ * takes only approved endpoints, as Claude Code takes `CLAUDE_CODE_CUSTOM_OAUTH_URL`: the public URL, or this machine
+ * outside production. Anything else throws by name instead of quietly pointing the client somewhere else.
+ */
 export function gcalResourceUrl(env: Env = process.env): string {
-  return env.GCAL_MCP_RESOURCE_URL?.trim() || "https://mcp.openlen.com/google-calendar";
+  const set = env.GCAL_MCP_RESOURCE_URL?.trim();
+  if (!set) return PUBLIC_URL;
+  if (set === PUBLIC_URL || (env.NODE_ENV !== "production" && isLoopback(set))) return set;
+  throw new Error("GCAL_MCP_RESOURCE_URL is not an approved endpoint.");
 }
 
 /** Its Protected Resource Metadata, with the resource's path inserted (RFC 9728 §3.1). */

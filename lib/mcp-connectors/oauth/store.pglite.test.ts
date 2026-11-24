@@ -146,6 +146,18 @@ describe("the connection", () => {
     expect((await loadConnection("p1", "cal", URL_A, ISSUER, FP))?.tokens).toEqual({ access_token: "at_2", refresh_token: "rt_1", token_type: "Bearer" });
   });
 
+  // As Claude Code saves a sign-in's tokens (an atomic `mutate` of what is stored): the kept refresh token comes from the
+  // LATEST row, so a save racing with one that rotated the refresh token never writes the old one back.
+  it("🔴 two saves at once: the one without a refresh token keeps the newest, never the one it read before", async () => {
+    await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
+    await saveTokens("p1", "cal", URL_A, ISSUER, FP, { access_token: "at_1", refresh_token: "rt_old", token_type: "Bearer" });
+    await Promise.all([
+      saveTokens("p1", "cal", URL_A, ISSUER, FP, { access_token: "at_rotated", refresh_token: "rt_new", token_type: "Bearer" }),
+      saveTokens("p1", "cal", URL_A, ISSUER, FP, { access_token: "at_plain", token_type: "Bearer" }),
+    ]);
+    expect((await loadConnection("p1", "cal", URL_A, ISSUER, FP))?.tokens?.refresh_token).toBe("rt_new");
+  });
+
   it("dropTokens keeps the client and removes only the tokens", async () => {
     await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
     await saveTokens("p1", "cal", URL_A, ISSUER, FP, TOKENS);

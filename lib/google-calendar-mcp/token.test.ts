@@ -14,14 +14,18 @@ const SCOPES = [
 ];
 const NOW_S = 1_800_000_000;
 
-function deps(answer: (token: string) => Response, calls: string[] = [], now = () => NOW_S * 1000): TokenDeps {
+/** tokeninfo as Google's own library asks it (google-auth-library's getTokenInfo): a POST with the token in the
+ *  Authorization header and nothing in the URL. `sleeps` records the waits between retries, which don't wait here. */
+function deps(answer: (token: string) => Response, calls: string[] = [], now = () => NOW_S * 1000, sleeps: number[] = []): TokenDeps {
   return {
     clientId: CLIENT,
     now,
-    fetch: (async (input: RequestInfo | URL) => {
-      const url = new URL(String(input instanceof Request ? input.url : input));
-      expect(url.origin + url.pathname).toBe("https://oauth2.googleapis.com/tokeninfo");
-      const token = url.searchParams.get("access_token") ?? "";
+    sleep: async (ms) => void sleeps.push(ms),
+    fetch: (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input instanceof Request ? input.url : input);
+      expect(url).toBe("https://oauth2.googleapis.com/tokeninfo");
+      expect(init?.method).toBe("POST");
+      const token = /^Bearer (.+)$/.exec(new Headers(init?.headers).get("authorization") ?? "")?.[1] ?? "";
       calls.push(token);
       return answer(token);
     }) as typeof fetch,
@@ -103,6 +107,54 @@ describe("checkGoogleToken", () => {
     expect(await checkGoogleToken("ya29.a", deps(() => new Response("oops", { status: 500 })))).toEqual({ ok: false, status: 503 });
     expect(await checkGoogleToken("ya29.b", deps(() => new Response("slow down", { status: 429 })))).toEqual({ ok: false, status: 503 });
     expect(await checkGoogleToken("ya29.c", deps(() => new Response('{"error":"invalid_token"}', { status: 400 })))).toEqual({ ok: false, status: 401 });
+  });
+
+  // As Google's own library: 3 retries on 408/429/5xx, 2 when nothing answers, after 100 ms, 500 ms and 1.5 s.
+  it("🔴 tokeninfo failing is retried as Google's library retries it before the 503", async () => {
+    const calls: string[] = [];
+    const sleeps: number[] = [];
+    expect(await checkGoogleToken("ya29.flaky", deps(() => new Response("oops", { status: 503 }), calls, undefined, sleeps))).toEqual({ ok: false, status: 503 });
+    expect(calls).toHaveLength(4);
+    expect(sleeps).toEqual([100, 500, 1500]);
+    const down: string[] = [];
+    const d = deps(() => {
+      throw new Error("network down");
+    }, down);
+    expect(await checkGoogleToken("ya29.down", d)).toEqual({ ok: false, status: 503 });
+    expect(down).toHaveLength(3);
+  });
+
+  it("a 429 then a good answer: the token is checked, nothing lost", async () => {
+    let n = 0;
+    const r = await checkGoogleToken("ya29.busy", deps(() => (n++ === 0 ? new Response("slow down", { status: 429 }) : good())));
+    expect(r.ok).toBe(true);
+  });
+
+  // As Claude Code keeps a server's «needs authentication» for 15 minutes: a token Google refused isn't asked about again
+  // for that long — each bad token cost tokeninfo calls before, twice per request.
+  it("🔴 a refused token is remembered for 15 minutes", async () => {
+    const calls: string[] = [];
+    let nowMs = NOW_S * 1000;
+    const d = deps(() => new Response('{"error":"invalid_token"}', { status: 400 }), calls, () => nowMs);
+    expect(await checkGoogleToken("ya29.bad", d)).toEqual({ ok: false, status: 401 });
+    expect(await checkGoogleToken("ya29.bad", d)).toEqual({ ok: false, status: 401 });
+    expect(calls).toEqual(["ya29.bad"]);
+    nowMs += 15 * 60_000 + 1;
+    expect(await checkGoogleToken("ya29.bad", d)).toEqual({ ok: false, status: 401 });
+    expect(calls).toEqual(["ya29.bad", "ya29.bad"]);
+  });
+
+  it("a token of another app is remembered as refused too; a 503 is never remembered", async () => {
+    const calls: string[] = [];
+    const other = deps(() => good({ aud: "other-app", azp: "other-app" }), calls);
+    await checkGoogleToken("ya29.foreign", other);
+    await checkGoogleToken("ya29.foreign", other);
+    expect(calls).toEqual(["ya29.foreign"]);
+    const down: string[] = [];
+    const failing = deps(() => new Response("oops", { status: 500 }), down);
+    await checkGoogleToken("ya29.later", failing);
+    await checkGoogleToken("ya29.later", failing);
+    expect(down).toHaveLength(8);
   });
 
   // Final review, I1: a token Google stopped taking mid-call is forgotten, so the next request asks tokeninfo again.

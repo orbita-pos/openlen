@@ -457,7 +457,7 @@ vi.mock("@/lib/projects/thumbnail-jobs", () => ({ scheduleDraftThumbnail: vi.fn(
 import { fijarAccesoDePrueba } from "@/lib/projects/acceso-de-prueba";
 import { PERSONAL_MEMORY_FOOT } from "@/lib/agent/memory/personal-context";
 import { PRIVATE_MEMORY_NOTE } from "@/lib/agent/memory/private-memory";
-import { RESOURCE_TOOL_NAMES, SHARED_PROJECT_NOTE } from "@/lib/mcp-connectors/turn";
+import { RESOURCE_TOOL_NAMES, SHARED_PROJECT_CONTEXT } from "@/lib/mcp-connectors/turn";
 
 async function readEvents(res: Response): Promise<Array<{ event: string; data: Record<string, unknown> }>> {
   const text = await res.text();
@@ -7087,7 +7087,7 @@ describe("POST /api/agent — the person's own assistant", () => {
       mocks.proyectoCompartido.mockImplementation(async () => true);
       await readEvents(await pedir({}));
       expect(connectorTools()).toEqual([]);
-      expect(connectorsSent()).toBe(SHARED_PROJECT_NOTE);
+      expect(connectorsSent()).toBe(SHARED_PROJECT_CONTEXT);
     });
 
     it("🔴 a project with a member: the member's turn declares none of theirs either", async () => {
@@ -7099,14 +7099,14 @@ describe("POST /api/agent — the person's own assistant", () => {
       await readEvents(await pedir({}));
       expect(connectorDeps.readConfig).toHaveBeenCalledWith("ana");
       expect(connectorTools()).toEqual([]);
-      expect(connectorsSent()).toBe(SHARED_PROJECT_NOTE);
+      expect(connectorsSent()).toBe(SHARED_PROJECT_CONTEXT);
     });
 
     it("🔴 the owner's own assistant in that project keeps them: only its owner sees its chat", async () => {
       mocks.proyectoCompartido.mockImplementation(async () => true);
       await readEvents(await pedir({ assistantId: "a1" }));
       expect(connectorTools()).toContain("mcp__notion__search");
-      expect(connectorsSent()).not.toBe(SHARED_PROJECT_NOTE);
+      expect(connectorsSent()).not.toBe(SHARED_PROJECT_CONTEXT);
     });
 
     it("🔴 RF 4: when asking whether the project is shared fails, no connectors", async () => {
@@ -7115,7 +7115,7 @@ describe("POST /api/agent — the person's own assistant", () => {
       });
       await readEvents(await pedir({}));
       expect(connectorTools()).toEqual([]);
-      expect(connectorsSent()).toBe(SHARED_PROJECT_NOTE);
+      expect(connectorsSent()).toBe(SHARED_PROJECT_CONTEXT);
     });
   });
 });

@@ -11,7 +11,7 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
 import { casesDir, fetchedCaseFrom, writeFetchedCase, type RawCaseRows } from "../lib/len-bench/casos/clientes/fetched";
-import { carriesConnectorResults, LEFT_FOR_LIMITED_USE } from "../lib/len-bench/personal-data";
+import { carriesConnectorResults, connectorCallsIn, LEFT_FOR_LIMITED_USE } from "../lib/len-bench/personal-data";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CASES_FILE = "lib/len-bench/casos/clientes/cases.json";
@@ -59,6 +59,13 @@ function main(): void {
   const left: string[] = [];
   for (const { projectId } of cases) {
     const short = projectId.slice(0, 8);
+    if (!UUID.test(projectId)) throw new Error(`not a project id: ${projectId}`);
+    // Spec local 2026-11-24-servidor-de-google-calendar, §5.8: asked on the box first, so a case with a connector's
+    // results never leaves it; the check on the rows below stays as a second guard.
+    if (psql(`select exists(select 1 from ${OWNER_ROWS(projectId)} and ${connectorCallsIn("m.transcript")});`) === "t") {
+      left.push(`${short}: ${LEFT_FOR_LIMITED_USE}`);
+      continue;
+    }
     const raw = fetchRaw(projectId);
     if (!raw) {
       left.push(`${short}: el proyecto ya no existe`);

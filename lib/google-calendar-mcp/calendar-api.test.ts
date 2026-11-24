@@ -75,4 +75,32 @@ describe("calendarApi", () => {
     expect((err as GoogleApiError).status).toBe(403);
     expect((err as GoogleApiError).message).toBe("Insufficient Permission");
   });
+
+  // A proxy's HTML error page is still Google's status to Len, never a SyntaxError that ends the call.
+  it("🔴 an error whose body isn't JSON is a GoogleApiError with its status", async () => {
+    const { api } = fake(() => new Response("<html>Bad Gateway</html>", { status: 502, headers: { "content-type": "text/html" } }));
+    const err = await api.getEvent("primary", "x").catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(GoogleApiError);
+    expect((err as GoogleApiError).status).toBe(502);
+    expect((err as GoogleApiError).message).toBe("Google Calendar answered 502");
+  });
+
+  // Claude Code's MCP client gives every request a 60 s budget and aborts it with «The operation timed out.»
+  it("🔴 a Google call that never answers ends at its time limit as a GoogleApiError 504", async () => {
+    const hanging = (async (_input: RequestInfo | URL, init?: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(init.signal!.reason));
+      })) as typeof fetch;
+    const api = calendarApi("ya29.T", { fetch: hanging, timeoutMs: 20 });
+    const err = await api.listCalendars({}).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(GoogleApiError);
+    expect((err as GoogleApiError).status).toBe(504);
+    expect((err as GoogleApiError).message).toBe("Google Calendar didn't answer in time: the operation timed out.");
+  });
+
+  it("a list in the query is repeated, as Google's repeated parameters are", async () => {
+    const { api, seen } = fake();
+    await api.listEvents("primary", { eventTypes: ["default", "focusTime"], singleEvents: true });
+    expect(seen[0]!.url.search).toBe("?eventTypes=default&eventTypes=focusTime&singleEvents=true");
+  });
 });

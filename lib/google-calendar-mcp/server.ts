@@ -2,14 +2,17 @@
 // handler like OpenLen's own MCP server (lib/mcp/server.ts). Before mcp-handler sees a request: off → 503; a token Google
 // says lacks a scope → 403 `insufficient_scope` (the connector puts the server in needs-auth/scope); a good token past its
 // 60 calls a minute → 429; Google unable to check it (tokeninfo down, 5xx, 429) → 503. A missing or bad token is
-// withMcpAuth's 401 with the link to the metadata.
+// withMcpAuth's 401 with the link to the metadata. A token Google refuses DURING a call makes that call's answer the same
+// 401, as an MCP client like Claude Code's expects: it refreshes and retries that call, or asks the person to sign in.
 import { createHash } from "node:crypto";
 
+import { bearerAuthChallengeResponse, OAuthError, OAuthErrorCode } from "@modelcontextprotocol/server";
 import { createMcpHandler, withMcpAuth } from "mcp-handler";
 
 import { consumeToken, RATE_LIMITS } from "@/lib/rate-limit";
 
 import { gcalEnabled, gcalResourceMetadataUrl, gcalResourceUrl } from "./config";
+import { withRequestState } from "./request-state";
 import { checkGoogleToken, type TokenDeps } from "./token";
 import { registerGcalTools } from "./tools";
 
@@ -52,6 +55,18 @@ export function buildGcalMcpHandler(d: TokenDeps): (req: Request) => Promise<Res
         if (!r.allowed) return plain(429, "too many calls", { "retry-after": String(Math.ceil(r.retryAfterMs / 1000)) });
       }
     }
-    return authed(req);
+    const { value: res, refused } = await withRequestState(async () => {
+      const answer = await authed(req);
+      // A stateless call streams ONE answer and these tools send no progress: read it whole before it leaves, so a refusal
+      // heard while the tool ran can still be this call's status.
+      if (!answer.body || !(answer.headers.get("content-type") ?? "").includes("text/event-stream")) return answer;
+      return new Response(await answer.arrayBuffer(), { status: answer.status, headers: answer.headers });
+    });
+    if (refused()) {
+      return bearerAuthChallengeResponse(new OAuthError(OAuthErrorCode.InvalidToken, "Google no longer accepts this sign-in"), {
+        resourceMetadataUrl: metadata.toString(),
+      });
+    }
+    return res;
   };
 }

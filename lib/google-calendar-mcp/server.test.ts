@@ -16,10 +16,11 @@ function deps(scope = ALL): TokenDeps {
   return {
     clientId: CLIENT,
     now: () => 1_800_000_000_000,
-    fetch: (async (input: RequestInfo | URL) => {
+    sleep: async () => {},
+    fetch: (async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input instanceof Request ? input.url : input);
       if (url.startsWith("https://oauth2.googleapis.com/tokeninfo")) {
-        const token = new URL(url).searchParams.get("access_token");
+        const token = /^Bearer (.+)$/.exec(new Headers(init?.headers).get("authorization") ?? "")?.[1] ?? null;
         if (!token?.startsWith("ya29.")) return new Response("{}", { status: 400 });
         return new Response(JSON.stringify({ azp: CLIENT, aud: CLIENT, scope, exp: "1800003600" }), { status: 200 });
       }
@@ -90,11 +91,12 @@ describe("a call through the server", () => {
     const d: TokenDeps = {
       clientId: CLIENT,
       now: () => 1_800_000_000_000,
+      sleep: async () => {},
       fetch: (async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input instanceof Request ? input.url : input);
         if (url.startsWith("https://oauth2.googleapis.com/tokeninfo")) {
           if (o.tokeninfo) return o.tokeninfo();
-          const token = new URL(url).searchParams.get("access_token");
+          const token = /^Bearer (.+)$/.exec(new Headers(init?.headers).get("authorization") ?? "")?.[1] ?? null;
           if (!token?.startsWith("ya29.") || (o.alive && !o.alive())) return new Response('{"error":"invalid_token"}', { status: 400 });
           return new Response(JSON.stringify({ azp: CLIENT, aud: CLIENT, scope: ALL, exp: "1800003600" }), { status: 200 });
         }
@@ -129,7 +131,28 @@ describe("a call through the server", () => {
     expect((await buildGcalMcpHandler(failing.d)(rpc({ authorization: "Bearer ya29.y" }))).status).toBe(503);
   });
 
-  it("🔴 Google refusing the token in a call: the next request is a 401, so the connector marks the sign-in lapsed", async () => {
+  // As an MCP client like Claude Code's expects it: the call Google refused IS the 401, with the challenge, so the client
+  // refreshes and retries that same call (or asks the person to sign in again) — not one failed call first.
+  it("🔴 Google refusing the token in a call: that call answers 401 with the challenge", async () => {
+    const { d } = google({ calendar: () => new Response(JSON.stringify({ error: { code: 401, message: "Invalid Credentials" } }), { status: 401 }) });
+    const h = buildGcalMcpHandler(d);
+    const answers: { method: string; status: number; challenge: string | null }[] = [];
+    const recording = async (req: Request) => {
+      const body = req.method === "POST" ? ((await req.clone().json()) as { method?: string }) : {};
+      const res = await h(req);
+      answers.push({ method: body.method ?? req.method, status: res.status, challenge: res.headers.get("www-authenticate") });
+      return res;
+    };
+    const client = await connectTestClient(recording, "ya29.revoked");
+    await expect(client.callTool({ name: "list_calendars", arguments: {} })).rejects.toThrow();
+    await client.close().catch(() => {});
+    const call = answers.find((a) => a.method === "tools/call")!;
+    expect(call.status).toBe(401);
+    expect(call.challenge).toContain('error="invalid_token"');
+    expect(call.challenge).toContain('resource_metadata="https://mcp.openlen.com/.well-known/oauth-protected-resource/google-calendar"');
+  });
+
+  it("🔴 Google refusing the token in a call: the token is forgotten too, so the next request asks Google again", async () => {
     let alive = true;
     const { d } = google({
       alive: () => alive,
@@ -137,9 +160,8 @@ describe("a call through the server", () => {
     });
     const h = buildGcalMcpHandler(d);
     const client = await connectTestClient(h, "ya29.revoked");
-    const r = (await client.callTool({ name: "list_calendars", arguments: {} })) as { isError?: boolean };
-    await client.close();
-    expect(r.isError).toBe(true);
+    await expect(client.callTool({ name: "list_calendars", arguments: {} })).rejects.toThrow();
+    await client.close().catch(() => {});
     alive = false;
     expect((await h(rpc({ authorization: "Bearer ya29.revoked" }))).status).toBe(401);
   });

@@ -2,7 +2,8 @@
 // (what the model has seen, and what lets OpenLen go back to Google's server by changing one URL), our own descriptions,
 // and every schema inline: each nested shape is built by a function so no instance is reused — a reused instance is
 // what turns into a `$ref`, which the connector review drops (`reviewTools`). Left out on purpose: Drive attachments
-// (they would need Drive scopes), working locations and special event types.
+// (they would need Drive scopes) and writing working locations or special event types (they can be listed and filtered).
+// What a tool can't do as asked it refuses saying why, as Claude Code's tools validate their input, never in silence.
 import { randomUUID } from "node:crypto";
 
 import type { McpServer } from "@modelcontextprotocol/server";
@@ -12,6 +13,7 @@ import * as z from "zod4";
 import { calendarApi, GoogleApiError, type CalendarApi } from "./calendar-api";
 import { freeSlots } from "./suggest-time";
 import { eventTime, hasOffset, toRfc3339 } from "./time";
+import { noteGoogleRefused } from "./request-state";
 import { forgetGoogleToken } from "./token";
 
 type Json = Record<string, unknown>;
@@ -125,7 +127,10 @@ type EventArgs = Partial<{
 }>;
 
 /** The body fields both create_event and update_event set from the same arguments; only what was sent. */
-function commonBody(a: EventArgs): { body: Json; conference: boolean } {
+/** A Google Meet link and its meeting code (`abc-defg-hij`), which the API takes as the hangoutsMeet `conferenceId`. */
+const MEET_LINK = /^https:\/\/meet\.google\.com\/([a-z]{3}-[a-z]{4}-[a-z]{3})(?:[/?#].*)?$/i;
+
+function commonBody(a: EventArgs): { body: Json; conference: boolean; refusal?: string } {
   const body: Json = {};
   for (const k of ["summary", "description", "location", "visibility", "colorId"] as const) if (a[k] !== undefined) body[k] = a[k];
   if (a.availability) body.transparency = a.availability === "AVAILABILITY_FREE" ? "transparent" : "opaque";
@@ -139,7 +144,13 @@ function commonBody(a: EventArgs): { body: Json; conference: boolean } {
   else if (a.useDefaultReminders === false) body.reminders = { useDefault: false, overrides: [] };
   let conference = false;
   if (a.googleMeetUrl) {
-    body.conferenceData = { conferenceSolution: { key: { type: "hangoutsMeet" } }, entryPoints: [{ entryPointType: "video", uri: a.googleMeetUrl }] };
+    const code = MEET_LINK.exec(a.googleMeetUrl.trim())?.[1];
+    if (!code) return { body, conference, refusal: "googleMeetUrl takes a Google Meet link (https://meet.google.com/…); put any other video link in location or description." };
+    body.conferenceData = {
+      conferenceId: code.toLowerCase(),
+      conferenceSolution: { key: { type: "hangoutsMeet" } },
+      entryPoints: [{ entryPointType: "video", uri: a.googleMeetUrl.trim() }],
+    };
     conference = true;
   } else if (a.addGoogleMeetUrl) {
     body.conferenceData = { createRequest: { requestId: randomUUID(), conferenceSolutionKey: { type: "hangoutsMeet" } } };
@@ -191,6 +202,10 @@ const listEvents = define({
     endTime: z.string().optional().describe(`Latest start of the events returned. ${LOCAL_TIME}`),
     timeZone: timeZone(),
     fullText: z.string().optional().describe("Words that must appear in the event."),
+    eventTypeFilter: z
+      .array(z.enum(["birthday", "default", "focusTime", "fromGmail", "outOfOffice", "workingLocation"]))
+      .optional()
+      .describe("Only these kinds of events. Default: all of them."),
     orderBy: z.enum(["startTime", "updated"]).optional().describe("Default startTime."),
     pageSize: z.number().int().min(1).max(250).optional(),
     pageToken: z.string().optional(),
@@ -206,6 +221,7 @@ const listEvents = define({
       timeMin: a.startTime && tz ? toRfc3339(a.startTime, tz) : a.endTime ? undefined : new Date().toISOString(),
       timeMax: a.endTime && tz ? toRfc3339(a.endTime, tz) : undefined,
       q: a.fullText,
+      eventTypes: a.eventTypeFilter,
       maxResults: a.pageSize,
       pageToken: a.pageToken,
     });
@@ -252,7 +268,8 @@ const createEvent = define({
   async run(a, { api, defaultTimeZone }) {
     const id = a.calendarId ?? "primary";
     const tz = a.timeZone ?? (await defaultTimeZone(id));
-    const { body, conference } = commonBody(a);
+    const { body, conference, refusal } = commonBody(a);
+    if (refusal) return fail(refusal);
     body.start = eventTime(a.startTime, tz, a.allDay === true);
     body.end = eventTime(a.endTime, tz, a.allDay === true);
     if (a.attendees) body.attendees = a.attendees.map(apiAttendee);
@@ -278,11 +295,19 @@ const updateEvent = define({
   annotations: { ...WRITE, idempotentHint: true },
   async run(a, { api, defaultTimeZone }) {
     const id = a.calendarId ?? "primary";
-    const { body, conference } = commonBody(a);
+    if ((a.allDay !== undefined || a.timeZone !== undefined) && !a.startTime && !a.endTime) {
+      return fail("allDay and timeZone only apply together with startTime or endTime; give the new time too.");
+    }
+    const { body, conference, refusal } = commonBody(a);
+    if (refusal) return fail(refusal);
     const timeChanges = Boolean(a.startTime || a.endTime);
     // The event is read to keep its length, its guests, and — when allDay isn't given — whether it is all-day.
     const needsEvent = Boolean(a.addedAttendees || a.removedAttendeeEmails || (a.startTime && !a.endTime) || (timeChanges && a.allDay === undefined));
     const current = needsEvent ? await api.getEvent(id, a.eventId) : null;
+    // Google's API: a list it cut short says attendeesOmitted, and writing it back would drop whoever was left out.
+    if (current?.attendeesOmitted === true && (a.addedAttendees || a.removedAttendeeEmails)) {
+      return fail("Google sent this event's guest list cut short (attendeesOmitted), so changing guests here could drop some of them; the person can change the guests in Google Calendar.");
+    }
     if (a.startTime || a.endTime) {
       if (a.allDay && !(a.startTime && a.endTime)) return fail("allDay needs both startTime and endTime.");
       const tz = a.timeZone ?? (await defaultTimeZone(id));
@@ -336,8 +361,11 @@ const respondToEvent = define({
     const event = await api.getEvent(id, a.eventId);
     const guests = (event.attendees as Json[] | undefined) ?? [];
     if (!guests.some((g) => g.self === true)) return fail("The user isn't a guest of this event, so there is nothing to answer.");
-    const attendees = guests.map((g) => (g.self === true ? { ...g, responseStatus: a.responseStatus, ...(a.responseComment !== undefined ? { comment: a.responseComment } : {}) } : g));
-    const updated = await api.patchEvent(id, a.eventId, { attendees }, { sendUpdates: sendUpdates(a.notificationLevel) });
+    const self = guests.find((g) => g.self === true)!;
+    // Google's API: attendeesOmitted "can be used to only update the participant's response" — the guest list is never
+    // written back, so a list Google cut short can't lose anyone.
+    const answer = { ...self, responseStatus: a.responseStatus, ...(a.responseComment !== undefined ? { comment: a.responseComment } : {}) };
+    const updated = await api.patchEvent(id, a.eventId, { attendeesOmitted: true, attendees: [answer] }, { sendUpdates: sendUpdates(a.notificationLevel) });
     return json(brief(updated));
   },
 });
@@ -402,6 +430,30 @@ export async function runGcalTool(tool: GcalTool, args: unknown, ctx: GcalCtx): 
   }
 }
 
+/**
+ * The time zone of each calendar, asked once per call: its calendarList entry's, or — for a calendar the person can reach
+ * but doesn't follow, which has no entry (404) — the primary calendar's. `calendarlist.readonly` is the scope that reads
+ * it; `calendars.get` would need a broader one.
+ */
+export function calendarZones(api: CalendarApi): (calendarId: string) => Promise<string> {
+  const zones = new Map<string, Promise<string>>();
+  const zoneOf = (calendarId: string): Promise<string> => {
+    let z = zones.get(calendarId);
+    if (!z) {
+      z = api.getCalendarListEntry(calendarId).then(
+        (c) => (typeof c.timeZone === "string" && c.timeZone ? c.timeZone : "UTC"),
+        (err: unknown) => {
+          if (calendarId !== "primary" && err instanceof GoogleApiError && err.status === 404) return zoneOf("primary");
+          throw err;
+        },
+      );
+      zones.set(calendarId, z);
+    }
+    return z;
+  };
+  return zoneOf;
+}
+
 /** Registers the nine tools on an MCP server; each call uses the person's token from the request's auth. */
 export function registerGcalTools(server: McpServer, d: { fetch: typeof fetch }): void {
   for (const tool of GCAL_TOOLS) {
@@ -412,16 +464,12 @@ export function registerGcalTools(server: McpServer, d: { fetch: typeof fetch })
         const token = extra.http?.authInfo?.token;
         if (!token) return fail("Not signed in to Google.");
         const api = calendarApi(token, d);
-        const zones = new Map<string, Promise<string>>();
-        const defaultTimeZone = (calendarId: string) => {
-          let z = zones.get(calendarId);
-          if (!z) {
-            z = api.getCalendarListEntry(calendarId).then((c) => (typeof c.timeZone === "string" && c.timeZone ? c.timeZone : "UTC"));
-            zones.set(calendarId, z);
-          }
-          return z;
+        const defaultTimeZone = calendarZones(api);
+        const signedOut = () => {
+          forgetGoogleToken(token);
+          noteGoogleRefused();
         };
-        return runGcalTool(tool, args, { api, defaultTimeZone, signedOut: () => forgetGoogleToken(token) });
+        return runGcalTool(tool, args, { api, defaultTimeZone, signedOut });
       },
     );
   }

@@ -83,6 +83,9 @@ OPENLEN_MCP_GOOGLE_TEST_USERS=jesus@...
 # OPENLEN_GCAL_MCP=0    # Apaga el servidor de Calendar de OpenLen (contesta 503)
 
 # Sólo en local: la URL pública del servidor de Calendar (por defecto https://mcp.openlen.com/google-calendar).
+# Decide qué servidor recibe el cliente de Google de OpenLen, así que sólo acepta esa URL pública o esta máquina
+# (localhost, 127.0.0.1, [::1]) fuera de producción; cualquier otro valor falla con «GCAL_MCP_RESOURCE_URL is not an
+# approved endpoint.», como Claude Code con CLAUDE_CODE_CUSTOM_OAUTH_URL.
 # GCAL_MCP_RESOURCE_URL=http://localhost:3000/api/mcp/google-calendar
 ```
 

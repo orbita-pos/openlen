@@ -11,7 +11,7 @@ import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { scenes, scenesDir, type SceneFile, type SceneRow, type SceneSpec } from "../lib/agent/replay-scenes/scene-files";
-import { carriesConnectorResults, LEFT_FOR_LIMITED_USE } from "../lib/len-bench/personal-data";
+import { carriesConnectorResults, connectorCallsIn, LEFT_FOR_LIMITED_USE } from "../lib/len-bench/personal-data";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -38,6 +38,14 @@ function fetchScene(spec: SceneSpec): SceneFile {
   if (spec.rowIds.length < 1 || !ids.every((id) => UUID.test(id))) throw new Error(`scene ${spec.name}: ids must be uuids`);
   const first = spec.rowIds[0]!;
   const last = spec.rowIds.at(-1)!;
+  // Spec local 2026-11-24-servidor-de-google-calendar, §5.8: asked on the box first, so a conversation with a connector's
+  // results never leaves it; the check on the rows below stays as a second guard. It asks about exactly the rows the
+  // query below brings — the conversation up to the last replayed turn —, not the turns after it, which never leave.
+  const carries = psql(`
+    with c as (${conversation(first)}),
+    lim as (select (select "createdAt" from "projectChatMessages" where id = '${last}') b)
+    select exists(select 1 from c, lim where c."createdAt" <= lim.b and (${connectorCallsIn("c.transcript")} or ${connectorCallsIn("c.actions")}));`);
+  if (carries === "t") throw new Error(`scene ${spec.name} ${LEFT_FOR_LIMITED_USE}`);
   const json = psql(`
     with c as (${conversation(first)}),
     lim as (select (select "createdAt" from "projectChatMessages" where id = '${first}') a, (select "createdAt" from "projectChatMessages" where id = '${last}') b),

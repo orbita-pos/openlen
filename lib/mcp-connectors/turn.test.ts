@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import type { McpConnection } from "./client";
 import { entryFingerprint, parseMcpConfig } from "./config";
+import { PERSONAL_CONNECTORS_HEAD, PERSONAL_TOOLS_NOTE, withoutPersonalContext } from "@/lib/agent/memory/personal-context";
+
 import { mountServer } from "./mount";
 import { NeedsSignIn } from "./oauth/provider";
 import type { ServerState } from "./store";
@@ -10,6 +12,7 @@ import {
   mergeMcpDeclarations,
   privateInSharedProject,
   RESOURCE_TOOL_NAMES,
+  SHARED_PROJECT_CONTEXT,
   SHARED_PROJECT_NOTE,
   TurnConnections,
   type CallDeps,
@@ -757,7 +760,7 @@ describe("privateInSharedProject", () => {
     expect(shared.serverNames).toEqual(full.serverNames);
     expect(shared.toMount).toEqual(full.toMount);
     expect(shared.toMount).toContain("fresh");
-    expect(shared.contextText).toBe(SHARED_PROJECT_NOTE);
+    expect(shared.contextText).toBe(SHARED_PROJECT_CONTEXT);
   });
 
   it("with nothing configured but a «Conectar» card it could offer: no suggest_connectors, and the note", async () => {
@@ -767,7 +770,7 @@ describe("privateInSharedProject", () => {
     const shared = privateInSharedProject(full);
     expect(shared.declarations).toEqual([]);
     expect(shared.routes.size).toBe(0);
-    expect(shared.contextText).toBe(SHARED_PROJECT_NOTE);
+    expect(shared.contextText).toBe(SHARED_PROJECT_CONTEXT);
   });
 
   it("with no server and nothing to offer: nothing, not even the note", async () => {
@@ -775,6 +778,19 @@ describe("privateInSharedProject", () => {
     const shared = privateInSharedProject(await connectorsForTurn("p1", d));
     expect(shared.declarations).toEqual([]);
     expect(shared.contextText).toBe("");
+  });
+
+  // Like the rest of the speaker's connector context: its own <system-reminder> block, which another person's turn
+  // reads replaced by the shared line (withoutPersonalContext), as Claude Code wraps what it adds to a turn.
+  it("🔴 the note rides in the connectors' own reminder block, which another person's turn doesn't see", () => {
+    expect(SHARED_PROJECT_CONTEXT).toBe(`${PERSONAL_CONNECTORS_HEAD}${SHARED_PROJECT_NOTE}
+</system-reminder>
+`);
+    const seenByOthers = withoutPersonalContext(`STATE
+
+${SHARED_PROJECT_CONTEXT}`);
+    expect(seenByOthers).not.toContain(SHARED_PROJECT_NOTE);
+    expect(seenByOthers).toContain(PERSONAL_TOOLS_NOTE);
   });
 
   it("the note is the spec's, word for word", () => {

@@ -36,9 +36,10 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 
 /** Google as far as this needs it: tokeninfo knows one token with the three scopes, and its OpenID discovery document
  *  (the fields the SDK checks, as accounts.google.com serves them). */
-const google = async (url: string): Promise<Response> => {
+const google = async (url: string, init?: RequestInit): Promise<Response> => {
   if (url.startsWith("https://oauth2.googleapis.com/tokeninfo")) {
-    if (new URL(url).searchParams.get("access_token") !== TOKEN) return json({ error: "invalid_token" }, 400);
+    const bearer = /^Bearer (.+)$/.exec(new Headers(init?.headers).get("authorization") ?? "")?.[1];
+    if (init?.method !== "POST" || bearer !== TOKEN) return json({ error: "invalid_token" }, 400);
     return json({ azp: CLIENT, aud: CLIENT, scope: GCAL_SCOPES.join(" "), exp: String(Math.floor(NOW.getTime() / 1000) + 3600) });
   }
   if (url === "https://accounts.google.com/.well-known/openid-configuration") {
@@ -57,14 +58,14 @@ const google = async (url: string): Promise<Response> => {
   return new Response("not found", { status: 404 });
 };
 
-const server = buildGcalMcpHandler({ clientId: CLIENT, fetch: (async (input: RequestInfo | URL) => google(hrefOf(input))) as typeof fetch, now: () => NOW.getTime() });
+const server = buildGcalMcpHandler({ clientId: CLIENT, fetch: (async (input: RequestInfo | URL, init?: RequestInit) => google(hrefOf(input), init)) as typeof fetch, now: () => NOW.getTime() });
 
 /** The network the connector sees: OpenLen's Calendar server and its metadata at the directory's URLs, and Google. */
 const net = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = hrefOf(input);
   if (url === GCAL.entry.url) return server(input instanceof Request ? input : new Request(url, init));
   if (url === gcalResourceMetadataUrl()) return resourceMetadata();
-  return google(url);
+  return google(url, init);
 }) as typeof fetch;
 
 /** The person's stored sign-in, or none. Mounting only reads it. */

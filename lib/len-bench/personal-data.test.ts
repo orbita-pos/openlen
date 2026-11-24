@@ -3,6 +3,8 @@
 // Limited Use forbids people reading Calendar data, and the scenes and customer cases are read by people.
 import { describe, expect, it } from "vitest";
 
+import { RESOURCE_TOOL_NAMES } from "@/lib/mcp-connectors/turn";
+
 import { carriesConnectorResults } from "./personal-data";
 
 const row = (transcript: unknown, userText = "pon la reunión del lunes en la página") => ({ id: "r1", userText, transcript });
@@ -38,6 +40,21 @@ describe("carriesConnectorResults", () => {
     ];
     expect(carriesConnectorResults([row(transcript, "mcp__google-calendar__list_events")])).toBe(false);
     expect(carriesConnectorResults({ text: "mcp__x__y", note: { title: "mcp__x__y" } })).toBe(false);
+  });
+
+  // The shape a turn's transcript is stored in (lib/ai-gateway.ts `Message.functionCalls`).
+  it("🔴 the stored shape: an assistant message's functionCalls", () => {
+    const stored = [{ role: "assistant", content: "", functionCalls: [{ name: "mcp__google-calendar__list_events", args: {} }] }];
+    expect(carriesConnectorResults([row(stored)])).toBe(true);
+    expect(carriesConnectorResults([row([{ role: "assistant", content: "", functionCalls: [{ name: "Read", args: {} }] }])])).toBe(false);
+  });
+
+  // Claude Code counts its resource tools (ListMcpResourcesTool, ReadMcpResourceTool) as MCP's; Len's are
+  // list_mcp_resources, list_mcp_resource_templates and read_mcp_resource, which carry no mcp__ prefix.
+  it("🔴 reading a connector's resources carries its results too", () => {
+    for (const name of RESOURCE_TOOL_NAMES) {
+      expect(carriesConnectorResults([row([{ role: "assistant", content: "", functionCalls: [{ name, args: {} }] }])]), name).toBe(true);
+    }
   });
 
   it("nothing, null and plain values carry nothing", () => {

@@ -137,6 +137,9 @@ export interface TurnConnectors {
 /** What the turn's context says in a shared project (spec local 2026-11-24-servidor-de-google-calendar, §5.6). */
 export const SHARED_PROJECT_NOTE =
   "This project is shared: everyone in it reads this chat, so your personal connectors are off here. If the person asks for something from one (their calendar, their email), tell them to ask in their own assistant or in a project only they use.";
+/** The note as the turn's context carries it: in the connectors' own reminder block, like the rest of what they add —
+ *  so another person's turn reads it replaced by the shared line (`withoutPersonalContext`). */
+export const SHARED_PROJECT_CONTEXT = `${PERSONAL_CONNECTORS_HEAD}${SHARED_PROJECT_NOTE}\n</system-reminder>\n`;
 
 /**
  * The speaker's connectors in a SHARED project (§5.6; Jesús, 24/11: «así como lo hace Claude Code» — what is a person's
@@ -153,7 +156,7 @@ export function privateInSharedProject(c: TurnConnectors): TurnConnectors {
     serverNames: c.serverNames,
     active: new Map(),
     resourceServers: [],
-    contextText: hadSomething ? SHARED_PROJECT_NOTE : "",
+    contextText: hadSomething ? SHARED_PROJECT_CONTEXT : "",
     toMount: c.toMount,
   };
 }

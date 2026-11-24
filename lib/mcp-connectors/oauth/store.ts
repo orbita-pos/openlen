@@ -121,17 +121,26 @@ export async function saveClientInfo(personId: string, serverName: string, serve
  *  different binding. */
 export async function saveTokens(personId: string, serverName: string, serverUrl: string, issuer: string, fingerprint: string, tokens: StoredOAuthTokens): Promise<void> {
   // A token set without a refresh token keeps the one saved before (Google sends one only on a consent screen; spec local
-  // 2026-11-24-servidor-de-google-calendar, §5.2).
+  // 2026-11-24-servidor-de-google-calendar, §5.2) — the LATEST one, as Claude Code saves a sign-in's tokens with an atomic
+  // update of what is stored: compare-and-swap on the stored ciphertext (a fresh IV each time), and a save that lost the
+  // race reads again, so a refresh token another save just rotated is never written back with the old one.
   const binding = and(eq(o.personId, personId), eq(o.serverName, serverName), eq(o.serverUrl, serverUrl), eq(o.issuer, issuer), eq(o.fingerprint, fingerprint));
-  const [before] = await db.select({ tokens: o.tokens }).from(o).where(binding).limit(1);
-  const toSave = withKeptRefreshToken(openJson<StoredOAuthTokens>(before?.tokens ?? null), tokens);
-  const updated = await db
-    .update(o)
-    .set({ tokens: encryptToken(JSON.stringify(toSave)), updatedAt: new Date() })
-    .where(binding)
-    .returning({ serverName: o.serverName });
-  if (updated.length === 0) throw new Error(`no OAuth connection for "${serverName}" at this URL, issuer and entry to save the tokens into`);
+  for (let attempt = 0; attempt < SAVE_TOKENS_ATTEMPTS; attempt++) {
+    const [before] = await db.select({ tokens: o.tokens }).from(o).where(binding).limit(1);
+    if (!before) throw new Error(`no OAuth connection for "${serverName}" at this URL, issuer and entry to save the tokens into`);
+    const toSave = withKeptRefreshToken(openJson<StoredOAuthTokens>(before.tokens), tokens);
+    const unchanged = before.tokens === null ? isNull(o.tokens) : eq(o.tokens, before.tokens);
+    const updated = await db
+      .update(o)
+      .set({ tokens: encryptToken(JSON.stringify(toSave)), updatedAt: new Date() })
+      .where(and(binding, unchanged))
+      .returning({ serverName: o.serverName });
+    if (updated.length > 0) return;
+  }
+  throw new Error(`the OAuth connection for "${serverName}" kept changing while its tokens were saved`);
 }
+
+const SAVE_TOKENS_ATTEMPTS = 5;
 
 /** Forgets the tokens and keeps the client: the next sign-in reuses it. */
 export async function dropTokens(personId: string, serverName: string): Promise<void> {
