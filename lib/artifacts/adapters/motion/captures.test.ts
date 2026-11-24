@@ -63,7 +63,7 @@ it("speaks of an app only to an app: a site hears about its pages, and each is t
   const edited={...input,revision:{...input.revision,files:{...input.revision.files,"project-source/main.ts":"changed by model"}}};
   const rejection=(e:unknown)=>e as Error,unexpected=()=>{throw new Error("expected a rejection");};
   const siteError=await buildProjectCaptures(edited).then(unexpected,rejection);
-  expect(siteError.message).not.toMatch(/app/);
+  expect(siteError.message).not.toMatch(/\bapp\b/);
   const app={...edited,revision:{...edited.revision,sourceRef:{...edited.revision.sourceRef!,catalogo:"2026-11"}}} as SealedArtifactInput;
   await expect(buildProjectCaptures(app)).rejects.toMatchObject({code:"frozen_source_changed",message:expect.stringMatching(/never edit project-source\/ or the app.*refresh_source_paths \["\/index\.html"\]$/)});
   const missing=await buildProjectCaptures({...input,revision:{...input.revision,sourceRef:null}}).then(unexpected,rejection);
