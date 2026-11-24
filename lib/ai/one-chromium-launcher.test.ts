@@ -33,6 +33,11 @@ const ALLOWED: Readonly<
     runsUntrustedHtml: true,
   },
   "lib/apps/tests/runtime-harness.ts": { why: "test-only harness for the vitest runtime", viewsLensPages: false, runsUntrustedHtml: false },
+  "lib/mentions/gate.ts": {
+    why: "the «selects everything» gate (npm run mentions:gate): a local check over the repo's templates and Jesús's own projects, never a customer's, served from 127.0.0.1, which lanzarChromium's egress proxy (<-loopback>) refuses unless registered with allowEgressOrigin",
+    viewsLensPages: false,
+    runsUntrustedHtml: false,
+  },
 };
 
 function sources(dir: string, out: string[] = []): string[] {
