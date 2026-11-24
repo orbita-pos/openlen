@@ -139,7 +139,8 @@ describe("Caddy, la carpeta y el host lienzo-*", () => {
     const c = matcher("carpeta");
     const rutas = rutasDe(c, "path ");
     // /storage/v1/* (carril D): Next pone la caché de cada objeto, los privados `private`.
-    expect(rutasDe(c, "not path ")).toEqual(["/assets/*", "/uploads/*", "/storage/v1/*"]);
+    // /openlen/figure-* (f1f935096): el motor de la figura lleva su contenido en el nombre, así que es de @assets.
+    expect(rutasDe(c, "not path ")).toEqual(["/assets/*", "/uploads/*", "/openlen/figure-*", "/storage/v1/*"]);
     expect(PAGINAS).toContain('header @carpeta Cache-Control "public, max-age=0, must-revalidate"');
     const doc = matcher("doc");
     // Nota 8: la línea de extensiones, NO la de `/api/f/*` (la vigila caddy-contract).
