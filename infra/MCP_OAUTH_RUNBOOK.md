@@ -17,7 +17,7 @@ La migración aditiva (`scripts/mcp-connectors-migrate-sql.ts`) crea `personMcpO
 
 ## 2. Configuración en Google Cloud Console (Google Calendar MCP)
 
-El servidor oficial de Google Calendar MCP (`https://calendarmcp.googleapis.com/mcp/v1`) exige un cliente OAuth de Google registrado con el indicador de agente de IA. En el proyecto de Google Cloud de OpenLen (el mismo donde vive el login con Google de `auth.ts`):
+El servidor oficial de Google Calendar MCP (`https://calendarmcp.googleapis.com/mcp/v1`) exige un cliente OAuth de Google registrado con el indicador de agente de IA. Vive en su **propio proyecto de Google Cloud, «OpenLen Connectors» (`openlen-connectors`)**, NO en el del login con Google de `auth.ts` (`genai`): el permiso de calendario es sensible y pide la verificación de Google, y en un proyecto aparte el login (sólo correo y perfil, publicado sin verificación) nunca depende de ella. Hecho así el 24/11/2026:
 
 1. **Habilitar la API de Calendar MCP**
    - En *APIs & Services → Library*, buscar y habilitar **Google Calendar API** y el endpoint de **Calendar MCP** (`calendarmcp.googleapis.com`).
