@@ -37,11 +37,18 @@ run ssh "$HOST" "set -e
   cd /var/www/len-site && ln -sfn releases/$REL current.tmp && mv -Tf current.tmp current
   ls -1dt releases/* | tail -n +6 | xargs -r rm -rf
   rm -f /tmp/len-$REL.tgz
-  Z=\$(grep -m1 '^CLOUDFLARE_ZONE_ID=' /etc/openlen/openlen.env | cut -d= -f2-)
+  # La zona de len.openlen.com es la de openlen.com, NO la de CLOUDFLARE_ZONE_ID: ésa es la de las páginas de los
+  # usuarios (openlen.app desde el 31/10), y purgar URLs de otra zona contesta «success» sin borrar nada. Hasta el
+  # 24/11 este script la usaba, y cada publicación del sitio tardaba hasta una hora (su s-maxage) en verse.
   T=\$(grep -m1 '^CLOUDFLARE_API_TOKEN=' /etc/openlen/openlen.env | cut -d= -f2-)
-  while read -r body; do
-    curl -sS -X POST \"https://api.cloudflare.com/client/v4/zones/\$Z/purge_cache\" -H \"Authorization: Bearer \$T\" -H 'Content-Type: application/json' --data \"\$body\" | grep -o '\"success\":[a-z]*'
-  done < /tmp/len-purge.jsonl
+  Z=\$(curl -sS \"https://api.cloudflare.com/client/v4/zones?name=openlen.com\" -H \"Authorization: Bearer \$T\" | node -e 'let s=\"\";process.stdin.on(\"data\",(d)=>(s+=d)).on(\"end\",()=>{const z=(JSON.parse(s).result||[]).find((x)=>x.name===\"openlen.com\");process.stdout.write(z?z.id:\"\")})')
+  if [ -n \"\$Z\" ]; then
+    while read -r body; do
+      curl -sS -X POST \"https://api.cloudflare.com/client/v4/zones/\$Z/purge_cache\" -H \"Authorization: Bearer \$T\" -H 'Content-Type: application/json' --data \"\$body\" | grep -o '\"success\":[a-z]*'
+    done < /tmp/len-purge.jsonl
+  else
+    echo '✘ purga: no encuentro la zona openlen.com en Cloudflare; el borde sirve la versión anterior hasta una hora'
+  fi
   rm -f /tmp/len-purge.jsonl
   # 🔴 ENTRECOMILLADO, y no es estilo: sin comillas bash lee el \`>\` como una
   # REDIRECCIÓN y escribe «current -» dentro de lo que devuelva \`readlink\` —
