@@ -2,6 +2,8 @@
 // remote OAuth MCP servers that `suggest_connectors` offers when the person has none installed for what they asked.
 // Google Calendar is offered only to someone who can finish the flow: `OPENLEN_MCP_GOOGLE_CLIENT_ID` must be set, and
 // while `OPENLEN_MCP_GOOGLE_TEST_USERS` is set, the person's email must be in it.
+import { gcalEnabled } from "../google-calendar-mcp/config";
+
 import { hostOf } from "./approval";
 import { entryFingerprint, parseMcpConfig, serializeMcpConfig, type McpConfig } from "./config";
 import { DIRECTORY, GOOGLE_ISSUER, type DirectoryEntry } from "./directory-entries";
@@ -23,6 +25,9 @@ export function directoryForAnyone(config: McpConfig, env: Env = process.env): D
   return DIRECTORY.filter((d) => {
     if (configuredUrls.has(d.entry.url)) return false;
     if (d.issuer === GOOGLE_ISSUER && !env.OPENLEN_MCP_GOOGLE_CLIENT_ID?.trim()) return false;
+    // OpenLen's own Calendar server switched off answers 503: no card offers it (spec local
+    // 2026-11-24-servidor-de-google-calendar, §5.7).
+    if (d.id === "google-calendar" && !gcalEnabled(env)) return false;
     return true;
   });
 }

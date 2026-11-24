@@ -8,7 +8,12 @@ import type { AuthInfo } from "@modelcontextprotocol/server";
 
 import { GCAL_SCOPES } from "./config";
 
-export type TokenCheck = { ok: true; authInfo: AuthInfo } | { ok: false; status: 401 } | { ok: false; status: 403; missing: string[] };
+/** 401: Google says the token is no good. 503: Google couldn't say (tokeninfo unreachable, 5xx, 429) — not a sign-in. */
+export type TokenCheck =
+  | { ok: true; authInfo: AuthInfo }
+  | { ok: false; status: 401 }
+  | { ok: false; status: 403; missing: string[] }
+  | { ok: false; status: 503 };
 
 export interface TokenDeps {
   readonly clientId: string;
@@ -28,6 +33,11 @@ export function resetTokenCache(): void {
 
 const keyOf = (token: string) => createHash("sha256").update(token).digest("hex");
 
+/** Google refused this token in a call (revoked, or dead before its `exp`): the next request asks tokeninfo again. */
+export function forgetGoogleToken(token: string): void {
+  cache.delete(keyOf(token.trim()));
+}
+
 export async function checkGoogleToken(bearer: string | undefined, d: TokenDeps): Promise<TokenCheck> {
   const token = bearer?.trim();
   if (!token) return { ok: false, status: 401 };
@@ -37,15 +47,18 @@ export async function checkGoogleToken(bearer: string | undefined, d: TokenDeps)
   if (hit && hit.expiresAtMs > now) return scopesOf(hit.authInfo);
   if (hit) cache.delete(key);
 
+  // Only tokeninfo's verdict on the token is a 401. Anything else means Google couldn't say: a 503 the connector retries,
+  // never a 401 that would park the person in «sign in again». Either way the request is refused.
   let info: Record<string, unknown>;
   try {
     const res = await d.fetch(`${TOKENINFO}?access_token=${encodeURIComponent(token)}`);
-    if (!res.ok) return { ok: false, status: 401 };
+    if (res.status === 400 || res.status === 401) return { ok: false, status: 401 };
+    if (!res.ok) return { ok: false, status: 503 };
     const body: unknown = await res.json();
-    if (body === null || typeof body !== "object") return { ok: false, status: 401 };
+    if (body === null || typeof body !== "object") return { ok: false, status: 503 };
     info = body as Record<string, unknown>;
   } catch {
-    return { ok: false, status: 401 };
+    return { ok: false, status: 503 };
   }
 
   if (info.azp !== d.clientId && info.aud !== d.clientId) return { ok: false, status: 401 };

@@ -5,6 +5,9 @@ import { Temporal } from "@js-temporal/polyfill";
 
 const HAS_OFFSET = /(?:Z|[+-]\d{2}:?\d{2})$/i;
 
+/** Whether a time already carries Z or an offset (then it is an instant, not a wall time in a zone). */
+export const hasOffset = (local: string): boolean => HAS_OFFSET.test(local);
+
 /** A local time in `timeZone` as RFC 3339 with its offset; a time that already carries one (or Z) is kept. */
 export function toRfc3339(local: string, timeZone: string): string {
   if (HAS_OFFSET.test(local)) return local;

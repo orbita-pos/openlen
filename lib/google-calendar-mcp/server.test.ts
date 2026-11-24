@@ -81,3 +81,66 @@ describe("the Calendar server over HTTP", () => {
     expect((await buildGcalMcpHandler(deps())(rpc({ authorization: "Bearer ya29.good" }))).status).toBe(503);
   });
 });
+
+// Final review: the wire from the request's token to Google, and what the server answers when Google can't vouch for it.
+describe("a call through the server", () => {
+  /** tokeninfo knows ya29.* tokens while `alive`; the Calendar API records the bearer it got and answers `calendar`. */
+  function google(o: { alive?: () => boolean; tokeninfo?: () => Response; calendar?: () => Response } = {}) {
+    const bearers: string[] = [];
+    const d: TokenDeps = {
+      clientId: CLIENT,
+      now: () => 1_800_000_000_000,
+      fetch: (async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.startsWith("https://oauth2.googleapis.com/tokeninfo")) {
+          if (o.tokeninfo) return o.tokeninfo();
+          const token = new URL(url).searchParams.get("access_token");
+          if (!token?.startsWith("ya29.") || (o.alive && !o.alive())) return new Response('{"error":"invalid_token"}', { status: 400 });
+          return new Response(JSON.stringify({ azp: CLIENT, aud: CLIENT, scope: ALL, exp: "1800003600" }), { status: 200 });
+        }
+        if (url.startsWith("https://www.googleapis.com/calendar/v3/")) {
+          bearers.push(new Headers(init?.headers).get("authorization") ?? "");
+          return o.calendar?.() ?? new Response(JSON.stringify({ items: [{ id: "yo@x.com", summary: "Yo", timeZone: "Europe/Madrid", primary: true, accessRole: "owner" }] }), { status: 200 });
+        }
+        return new Response("{}", { status: 404 });
+      }) as typeof fetch,
+    };
+    return { d, bearers };
+  }
+
+  it("🔴 tools/call reaches Google with the person's own token, and Len reads Google's answer", async () => {
+    const { d, bearers } = google();
+    const client = await connectTestClient(buildGcalMcpHandler(d), "ya29.person");
+    const r = (await client.callTool({ name: "list_calendars", arguments: {} })) as { content: { text?: string }[]; isError?: boolean };
+    await client.close();
+    expect(r.isError).toBeFalsy();
+    expect(bearers).toEqual(["Bearer ya29.person"]);
+    expect(JSON.parse(r.content[0]!.text!)).toEqual({ calendars: [{ id: "yo@x.com", summary: "Yo", timeZone: "Europe/Madrid", primary: true, accessRole: "owner" }] });
+  });
+
+  it("🔴 tokeninfo down or failing: 503, never a 401 that would send everyone to sign in again", async () => {
+    const down = google({
+      tokeninfo: () => {
+        throw new Error("network down");
+      },
+    });
+    expect((await buildGcalMcpHandler(down.d)(rpc({ authorization: "Bearer ya29.x" }))).status).toBe(503);
+    const failing = google({ tokeninfo: () => new Response("oops", { status: 502 }) });
+    expect((await buildGcalMcpHandler(failing.d)(rpc({ authorization: "Bearer ya29.y" }))).status).toBe(503);
+  });
+
+  it("🔴 Google refusing the token in a call: the next request is a 401, so the connector marks the sign-in lapsed", async () => {
+    let alive = true;
+    const { d } = google({
+      alive: () => alive,
+      calendar: () => new Response(JSON.stringify({ error: { code: 401, message: "Invalid Credentials" } }), { status: 401 }),
+    });
+    const h = buildGcalMcpHandler(d);
+    const client = await connectTestClient(h, "ya29.revoked");
+    const r = (await client.callTool({ name: "list_calendars", arguments: {} })) as { isError?: boolean };
+    await client.close();
+    expect(r.isError).toBe(true);
+    alive = false;
+    expect((await h(rpc({ authorization: "Bearer ya29.revoked" }))).status).toBe(401);
+  });
+});

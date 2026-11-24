@@ -249,8 +249,10 @@ export default async function PrivacyPage({
             <li>
               Lo que Len leyó de tu calendario queda en esa conversación, como el
               resto de lo que hablas con Len, hasta que borras el proyecto o pides
-              suprimir tu cuenta. Para contestarte se procesa con nuestros
-              proveedores de IA (ver «Generación con IA») sólo para esa respuesta.
+              suprimir tu cuenta. Como el resto de la conversación, se envía a
+              nuestros proveedores de IA (ver «Generación con IA») sólo para que
+              Len te conteste, también en los mensajes siguientes de esa
+              conversación.
             </li>
             <li>
               Esos datos no los leen personas de OpenLen, salvo que tú nos lo
@@ -260,7 +262,9 @@ export default async function PrivacyPage({
             <li>
               En un proyecto compartido con otras personas, Len no usa tus
               conectores: todos los miembros leen ese chat. Lo tuyo se pide en tu
-              asistente o en un proyecto sólo tuyo.
+              asistente o en un proyecto sólo tuyo. Si compartes un proyecto
+              donde Len ya usó tus conectores, lo que leyó entonces sigue en esa
+              conversación y los miembros pueden verlo.
             </li>
           </ul>
           <p>
@@ -715,9 +719,10 @@ export default async function PrivacyPage({
             <li>
               What Len read from your calendar stays in that conversation, like
               everything else you discuss with Len, until you delete the project
-              or ask us to delete your account. To answer you, it is processed by
-              our AI providers (see &ldquo;AI generation&rdquo;) only for that
-              answer.
+              or ask us to delete your account. Like the rest of the conversation,
+              it is sent to our AI providers (see &ldquo;AI generation&rdquo;)
+              only so Len can answer you, including in later messages of that
+              conversation.
             </li>
             <li>
               No one at OpenLen reads that data, unless you ask us to for support,
@@ -727,7 +732,9 @@ export default async function PrivacyPage({
             <li>
               In a project shared with other people, Len doesn&apos;t use your
               connectors: every member reads that chat. Ask for what&apos;s yours
-              in your assistant or in a project only you use.
+              in your assistant or in a project only you use. If you share a
+              project where Len already used your connectors, what it read then
+              stays in that conversation and members can see it.
             </li>
           </ul>
           <p>

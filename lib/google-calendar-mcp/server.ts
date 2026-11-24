@@ -1,7 +1,8 @@
 // THE CALENDAR SERVER OVER HTTP (spec local 2026-11-24-servidor-de-google-calendar, §5.1, §5.2, §5.7): a stateless Web
 // handler like OpenLen's own MCP server (lib/mcp/server.ts). Before mcp-handler sees a request: off → 503; a token Google
 // says lacks a scope → 403 `insufficient_scope` (the connector puts the server in needs-auth/scope); a good token past its
-// 60 calls a minute → 429. A missing or bad token is withMcpAuth's 401 with the link to the metadata.
+// 60 calls a minute → 429; Google unable to check it (tokeninfo down, 5xx, 429) → 503. A missing or bad token is
+// withMcpAuth's 401 with the link to the metadata.
 import { createHash } from "node:crypto";
 
 import { createMcpHandler, withMcpAuth } from "mcp-handler";
@@ -38,6 +39,8 @@ export function buildGcalMcpHandler(d: TokenDeps): (req: Request) => Promise<Res
     const bearer = bearerOf(req);
     if (bearer) {
       const c = await checkGoogleToken(bearer, d);
+      // Google couldn't vouch for the token either way: a failure the connector retries, not a sign-in.
+      if (!c.ok && c.status === 503) return plain(503, "Google couldn't check the sign-in right now; try again", { "retry-after": "30" });
       if (!c.ok && c.status === 403) {
         return plain(403, "insufficient_scope", {
           "www-authenticate": `Bearer error="insufficient_scope", scope="${c.missing.join(" ")}", resource_metadata="${metadata.toString()}"`,

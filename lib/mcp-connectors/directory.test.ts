@@ -74,6 +74,14 @@ describe("directoryForAnyone", () => {
     const configured = configWith({ mycal: { transport: "streamable-http", url: gcalResourceUrl() } });
     expect(directoryForAnyone(configured, env)).toEqual([]);
   });
+
+  // Spec local 2026-11-24-servidor-de-google-calendar, §5.7 (final review, I5): with OpenLen's Calendar server off, no card
+  // offers a server that answers 503.
+  it("🔴 with OPENLEN_GCAL_MCP=0 Google Calendar isn't offered", () => {
+    const env = { OPENLEN_MCP_GOOGLE_CLIENT_ID: "gid.apps.googleusercontent.com" };
+    expect(directoryForAnyone({ servers: {} }, { ...env, OPENLEN_GCAL_MCP: "0" })).toEqual([]);
+    expect(directoryFor("jesus@example.com", { servers: {} }, { ...env, OPENLEN_GCAL_MCP: "0" })).toEqual([]);
+  });
 });
 
 describe("suggest_connectors in a turn", () => {

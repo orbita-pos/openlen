@@ -4,7 +4,7 @@
 // The server takes only Google tokens issued to OpenLen's own client, unexpired, with the three scopes (spec local
 // 2026-11-24-servidor-de-google-calendar, §5.2).
 import { beforeEach, describe, expect, it } from "vitest";
-import { checkGoogleToken, resetTokenCache, type TokenDeps } from "./token";
+import { checkGoogleToken, forgetGoogleToken, resetTokenCache, type TokenDeps } from "./token";
 
 const CLIENT = "openlen-client.apps.googleusercontent.com";
 const SCOPES = [
@@ -88,12 +88,33 @@ describe("checkGoogleToken", () => {
     expect(calls).toEqual(["ya29.short", "ya29.short"]);
   });
 
-  it("a network failure is a 401 too, and the token never shows in what is thrown or logged", async () => {
+  // Final review, I2: tokeninfo not answering says nothing about the token. A 401 would send the connector to refresh, get
+  // 401 again and park every person in needs-auth (never retried on its own); a 503 is a failure it retries. Still closed.
+  it("🔴 a network failure is a 503, not a sign-in, and the token never shows in what is thrown or logged", async () => {
     const d = deps(() => {
       throw new Error("network down");
     });
     const r = await checkGoogleToken("ya29.SECRET_VALUE", d);
-    expect(r).toEqual({ ok: false, status: 401 });
+    expect(r).toEqual({ ok: false, status: 503 });
     expect(JSON.stringify(r)).not.toContain("SECRET_VALUE");
+  });
+
+  it("🔴 tokeninfo answering 5xx or 429 is a 503; only its verdict on the token (400) is a 401", async () => {
+    expect(await checkGoogleToken("ya29.a", deps(() => new Response("oops", { status: 500 })))).toEqual({ ok: false, status: 503 });
+    expect(await checkGoogleToken("ya29.b", deps(() => new Response("slow down", { status: 429 })))).toEqual({ ok: false, status: 503 });
+    expect(await checkGoogleToken("ya29.c", deps(() => new Response('{"error":"invalid_token"}', { status: 400 })))).toEqual({ ok: false, status: 401 });
+  });
+
+  // Final review, I1: a token Google stopped taking mid-call is forgotten, so the next request asks tokeninfo again.
+  it("forgetGoogleToken makes the next check ask tokeninfo again", async () => {
+    const calls: string[] = [];
+    let alive = true;
+    const d = deps(() => (alive ? good() : new Response('{"error":"invalid_token"}', { status: 400 })), calls);
+    expect((await checkGoogleToken("ya29.revoked", d)).ok).toBe(true);
+    alive = false;
+    expect((await checkGoogleToken("ya29.revoked", d)).ok).toBe(true);
+    forgetGoogleToken("ya29.revoked");
+    expect(await checkGoogleToken("ya29.revoked", d)).toEqual({ ok: false, status: 401 });
+    expect(calls).toEqual(["ya29.revoked", "ya29.revoked"]);
   });
 });

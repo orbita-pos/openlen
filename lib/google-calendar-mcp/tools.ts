@@ -11,7 +11,8 @@ import * as z from "zod4";
 
 import { calendarApi, GoogleApiError, type CalendarApi } from "./calendar-api";
 import { freeSlots } from "./suggest-time";
-import { eventTime, toRfc3339 } from "./time";
+import { eventTime, hasOffset, toRfc3339 } from "./time";
+import { forgetGoogleToken } from "./token";
 
 type Json = Record<string, unknown>;
 type ToolResult = { content: { type: "text"; text: string }[]; isError?: boolean };
@@ -19,6 +20,9 @@ type ToolResult = { content: { type: "text"; text: string }[]; isError?: boolean
 export interface GcalCtx {
   readonly api: CalendarApi;
   defaultTimeZone(calendarId: string): Promise<string>;
+  /** Google refused the person's token in this call (revoked, or dead before its `exp`): the server forgets it, so the
+   *  next request asks tokeninfo again and answers 401, and the connector marks the sign-in lapsed. */
+  signedOut?(): void;
 }
 
 export interface GcalTool<S extends z.ZodObject = z.ZodObject> {
@@ -72,6 +76,15 @@ const eventFields = () => ({
 
 // ── Mapping helpers ────────────────────────────────────────────────────────────────────────────────────────────────────
 const SEND_UPDATES = { NONE: "none", EXTERNAL_ONLY: "externalOnly", ALL: "all" } as const;
+
+type AttendeeArg = { email: string; displayName?: string; optionalAttendee?: boolean; responseStatus?: string; additionalGuests?: number };
+/** Google's MCP calls it `optionalAttendee`; the API's field is `optional` (an unknown field would be dropped in silence). */
+function apiAttendee({ optionalAttendee, ...rest }: AttendeeArg): Json {
+  return optionalAttendee === undefined ? { ...rest } : { ...rest, optional: optionalAttendee };
+}
+
+/** A patched start or end with the other kind of time cleared: a patch merges `start`, and Google refuses one that has both. */
+const patchTime = (t: { date: string } | { dateTime: string; timeZone: string }): Json => ("date" in t ? { ...t, dateTime: null } : { ...t, date: null });
 const sendUpdates = (level: keyof typeof SEND_UPDATES | undefined) => SEND_UPDATES[level ?? "ALL"];
 
 /** What Len reads of an event: the useful fields, nothing else. */
@@ -116,7 +129,11 @@ function commonBody(a: EventArgs): { body: Json; conference: boolean } {
   const body: Json = {};
   for (const k of ["summary", "description", "location", "visibility", "colorId"] as const) if (a[k] !== undefined) body[k] = a[k];
   if (a.availability) body.transparency = a.availability === "AVAILABILITY_FREE" ? "transparent" : "opaque";
-  if (a.guestPermissions) Object.assign(body, a.guestPermissions);
+  if (a.guestPermissions) {
+    // Google's MCP says `guestsCanSeeGuests`; the API's field is `guestsCanSeeOtherGuests`.
+    const { guestsCanSeeGuests, ...rest } = a.guestPermissions;
+    Object.assign(body, rest, guestsCanSeeGuests === undefined ? {} : { guestsCanSeeOtherGuests: guestsCanSeeGuests });
+  }
   if (a.overrideReminders) body.reminders = { useDefault: false, overrides: a.overrideReminders };
   else if (a.useDefaultReminders === true) body.reminders = { useDefault: true };
   else if (a.useDefaultReminders === false) body.reminders = { useDefault: false, overrides: [] };
@@ -142,6 +159,7 @@ function lengthOf(e: Json): { ms: number } | { days: number } | null {
 
 function addLength(local: string, timeZone: string, len: { ms: number } | { days: number }): string {
   if ("days" in len) return Temporal.PlainDate.from(local.slice(0, 10)).add({ days: len.days }).toString();
+  if (hasOffset(local)) return Temporal.Instant.from(local).add({ milliseconds: len.ms }).toZonedDateTimeISO(timeZone).toString({ timeZoneName: "never", smallestUnit: "second" });
   return Temporal.PlainDateTime.from(local).toZonedDateTime(timeZone).add({ milliseconds: len.ms }).toPlainDateTime().toString({ smallestUnit: "second" });
 }
 
@@ -166,7 +184,7 @@ const listEvents = define({
   name: "list_events",
   title: "List events",
   description:
-    "Lists the events of one calendar, recurring ones expanded into their occurrences. Give startTime and endTime only when the user asks about a period. For a search by words on the primary calendar, use search_events.",
+    "Lists the events of one calendar, recurring ones expanded into their occurrences. Give startTime and endTime only when the user asks about a period; without them it lists from now on. For a search by words on the primary calendar, use search_events.",
   inputSchema: z.object({
     calendarId: calendarId(),
     startTime: z.string().optional().describe(`Earliest end of the events returned. ${LOCAL_TIME}`),
@@ -184,7 +202,8 @@ const listEvents = define({
     const r = await api.listEvents(id, {
       singleEvents: true,
       orderBy: a.orderBy ?? "startTime",
-      timeMin: a.startTime && tz ? toRfc3339(a.startTime, tz) : undefined,
+      // Without a period, what's coming: with orderBy=startTime and no timeMin Google would start years back.
+      timeMin: a.startTime && tz ? toRfc3339(a.startTime, tz) : a.endTime ? undefined : new Date().toISOString(),
       timeMax: a.endTime && tz ? toRfc3339(a.endTime, tz) : undefined,
       q: a.fullText,
       maxResults: a.pageSize,
@@ -236,7 +255,7 @@ const createEvent = define({
     const { body, conference } = commonBody(a);
     body.start = eventTime(a.startTime, tz, a.allDay === true);
     body.end = eventTime(a.endTime, tz, a.allDay === true);
-    if (a.attendees) body.attendees = a.attendees;
+    if (a.attendees) body.attendees = a.attendees.map(apiAttendee);
     if (a.recurrenceData) body.recurrence = a.recurrenceData;
     const created = await api.insertEvent(id, body, { sendUpdates: sendUpdates(a.notificationLevel), ...(conference ? { conferenceDataVersion: 1 } : {}) });
     return json(brief(created));
@@ -260,26 +279,28 @@ const updateEvent = define({
   async run(a, { api, defaultTimeZone }) {
     const id = a.calendarId ?? "primary";
     const { body, conference } = commonBody(a);
-    const needsEvent = Boolean(a.addedAttendees || a.removedAttendeeEmails || (a.startTime && !a.endTime));
+    const timeChanges = Boolean(a.startTime || a.endTime);
+    // The event is read to keep its length, its guests, and — when allDay isn't given — whether it is all-day.
+    const needsEvent = Boolean(a.addedAttendees || a.removedAttendeeEmails || (a.startTime && !a.endTime) || (timeChanges && a.allDay === undefined));
     const current = needsEvent ? await api.getEvent(id, a.eventId) : null;
     if (a.startTime || a.endTime) {
       if (a.allDay && !(a.startTime && a.endTime)) return fail("allDay needs both startTime and endTime.");
       const tz = a.timeZone ?? (await defaultTimeZone(id));
       // An all-day event moved by its start alone stays all-day.
       const allDay = a.allDay ?? (current !== null && typeof (current.start as Json | undefined)?.date === "string");
-      if (a.startTime) body.start = eventTime(a.startTime, tz, allDay);
+      if (a.startTime) body.start = patchTime(eventTime(a.startTime, tz, allDay));
       let end = a.endTime;
       if (a.startTime && !end && current) {
         const len = lengthOf(current);
         if (len) end = addLength(a.startTime, tz, len);
       }
-      if (end) body.end = eventTime(end, tz, allDay);
+      if (end) body.end = patchTime(eventTime(end, tz, allDay));
     }
     if (current && (a.addedAttendees || a.removedAttendeeEmails)) {
       const removed = new Set((a.removedAttendeeEmails ?? []).map((e) => e.toLowerCase()));
       const kept = ((current.attendees as Json[] | undefined) ?? []).filter((g) => !removed.has(String(g.email).toLowerCase()));
       const have = new Set(kept.map((g) => String(g.email).toLowerCase()));
-      body.attendees = [...kept, ...(a.addedAttendees ?? []).filter((g) => !have.has(g.email.toLowerCase()))];
+      body.attendees = [...kept, ...(a.addedAttendees ?? []).filter((g) => !have.has(g.email.toLowerCase())).map(apiAttendee)];
     }
     const updated = await api.patchEvent(id, a.eventId, body, { sendUpdates: sendUpdates(a.notificationLevel), ...(conference ? { conferenceDataVersion: 1 } : {}) });
     return json(brief(updated));
@@ -324,9 +345,10 @@ const respondToEvent = define({
 const suggestTime = define({
   name: "suggest_time",
   title: "Suggest time",
-  description: "Finds free periods shared by everyone in attendeeEmails between startTime and endTime. Calendars it can't see are named in unavailableCalendars.",
+  description:
+    "Finds free periods shared by the user and everyone in attendeeEmails between startTime and endTime; the user's own primary calendar always counts. Calendars it can't see are named in unavailableCalendars.",
   inputSchema: z.object({
-    attendeeEmails: z.array(z.string()).min(1).describe("Everyone who must be free, the user included if they must be."),
+    attendeeEmails: z.array(z.string()).min(1).describe('Who else must be free (emails). For the user alone, pass ["primary"].'),
     startTime: z.string().describe(`Start of the search. ${LOCAL_TIME}`),
     endTime: z.string().describe(`End of the search. ${LOCAL_TIME}`),
     timeZone: timeZone(),
@@ -344,10 +366,12 @@ const suggestTime = define({
   async run(a, { api, defaultTimeZone }) {
     const tz = a.timeZone ?? (await defaultTimeZone("primary"));
     const window = { start: toRfc3339(a.startTime, tz), end: toRfc3339(a.endTime, tz) };
-    const r = await api.freeBusy({ timeMin: window.start, timeMax: window.end, timeZone: tz, items: a.attendeeEmails.map((id) => ({ id })) });
+    // «With Ana» means the user too, whether or not Len knows their Google address.
+    const ids = [...new Set(["primary", ...a.attendeeEmails])];
+    const r = await api.freeBusy({ timeMin: window.start, timeMax: window.end, timeZone: tz, items: ids.map((id) => ({ id })) });
     const calendars = (r.calendars as Record<string, Json> | undefined) ?? {};
-    const unavailable = a.attendeeEmails.filter((e) => !calendars[e] || (Array.isArray(calendars[e]!.errors) && (calendars[e]!.errors as unknown[]).length > 0));
-    const busy = a.attendeeEmails.filter((e) => !unavailable.includes(e)).flatMap((e) => (calendars[e]!.busy as { start: string; end: string }[] | undefined) ?? []);
+    const unavailable = ids.filter((e) => !calendars[e] || (Array.isArray(calendars[e]!.errors) && (calendars[e]!.errors as unknown[]).length > 0));
+    const busy = ids.filter((e) => !unavailable.includes(e)).flatMap((e) => (calendars[e]!.busy as { start: string; end: string }[] | undefined) ?? []);
     const slots = freeSlots(busy, window, {
       durationMinutes: a.durationMinutes ?? 30,
       pageSize: a.preferences?.pageSize ?? 5,
@@ -370,7 +394,10 @@ export async function runGcalTool(tool: GcalTool, args: unknown, ctx: GcalCtx): 
   try {
     return await tool.run(args as never, ctx);
   } catch (err) {
-    if (err instanceof GoogleApiError) return fail(`Google Calendar: ${err.message}`);
+    if (err instanceof GoogleApiError) {
+      if (err.status === 401) ctx.signedOut?.();
+      return fail(`Google Calendar: ${err.message}`);
+    }
     throw err;
   }
 }
@@ -394,7 +421,7 @@ export function registerGcalTools(server: McpServer, d: { fetch: typeof fetch })
           }
           return z;
         };
-        return runGcalTool(tool, args, { api, defaultTimeZone });
+        return runGcalTool(tool, args, { api, defaultTimeZone, signedOut: () => forgetGoogleToken(token) });
       },
     );
   }

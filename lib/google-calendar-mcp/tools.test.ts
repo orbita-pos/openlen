@@ -4,10 +4,12 @@
 // The nine tools (spec local 2026-11-24-servidor-de-google-calendar, §5.3): Google's names and argument names, schemas Len
 // takes (no $ref), each one mapped to the Calendar API v3.
 import * as z from "zod4";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { Temporal } from "@js-temporal/polyfill";
 import { reviewTools } from "@/lib/mcp-connectors/names";
 import type { CalendarApi } from "./calendar-api";
 import { GoogleApiError } from "./calendar-api";
+import { toRfc3339 } from "./time";
 import { GCAL_TOOLS, runGcalTool, type GcalCtx } from "./tools";
 
 type Call = { method: keyof CalendarApi; args: unknown[] };
@@ -64,6 +66,20 @@ describe("list_calendars, list_events, get_event, search_events", () => {
     });
   });
 
+  // Final review: with orderBy=startTime and no timeMin Google starts at the calendar's first event, years back. Without a
+  // period, what the person means is what's coming.
+  it("🔴 list_events without a period lists from now on", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-24T18:30:00Z"));
+    try {
+      const { ctx, calls } = fakeApi();
+      await run("list_events", {}, ctx);
+      expect(calls.at(-1)).toEqual({ method: "listEvents", args: ["primary", expect.objectContaining({ timeMin: "2026-11-24T18:30:00.000Z", timeMax: undefined })] });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("search_events searches by words on the primary calendar", async () => {
     const { ctx, calls } = fakeApi();
     await run("search_events", { query: "boda" }, ctx);
@@ -88,9 +104,47 @@ describe("list_calendars, list_events, get_event, search_events", () => {
     expect(r.isError).toBe(true);
     expect(textOf(r)).toContain("Not Found");
   });
+
+  // Final review, I1: Google refusing the token mid-call (revoked, expired early) makes the server forget it, so the next
+  // request asks tokeninfo again and answers 401 — the connector marks the sign-in lapsed. Any other error forgets nothing.
+  it("🔴 a 401 from Google tells the server the sign-in is gone; a 404 doesn't", async () => {
+    let signedOut = 0;
+    const throwing = (status: number) =>
+      fakeApi({
+        getEvent: () => {
+          throw new GoogleApiError(status, status === 401 ? "Invalid Credentials" : "Not Found");
+        },
+      }).ctx;
+    const r = await run("get_event", { eventId: "ev1" }, { ...throwing(401), signedOut: () => void signedOut++ });
+    expect(r.isError).toBe(true);
+    expect(signedOut).toBe(1);
+    await run("get_event", { eventId: "ev1" }, { ...throwing(404), signedOut: () => void signedOut++ });
+    expect(signedOut).toBe(1);
+  });
 });
 
 describe("create_event", () => {
+  // Final review, I4: Google's MCP argument names, the API's field names.
+  it("🔴 optionalAttendee is the API's optional, and guestsCanSeeGuests its guestsCanSeeOtherGuests", async () => {
+    const { ctx, calls } = fakeApi({ insertEvent: () => ({ id: "new" }) });
+    await run(
+      "create_event",
+      {
+        summary: "Junta",
+        startTime: "2026-11-25T10:00:00",
+        endTime: "2026-11-25T11:00:00",
+        attendees: [{ email: "ana@x.com", optionalAttendee: true, displayName: "Ana" }, { email: "beto@x.com" }],
+        guestPermissions: { guestsCanSeeGuests: false, guestsCanModify: true },
+      },
+      ctx,
+    );
+    const body = (calls.find((c) => c.method === "insertEvent")!.args[1]) as Record<string, unknown>;
+    expect(body.attendees).toEqual([{ email: "ana@x.com", displayName: "Ana", optional: true }, { email: "beto@x.com" }]);
+    expect(body.guestsCanSeeOtherGuests).toBe(false);
+    expect(body.guestsCanModify).toBe(true);
+    expect(body).not.toHaveProperty("guestsCanSeeGuests");
+  });
+
   it("attendees, a new Meet link and EXTERNAL_ONLY notifications", async () => {
     const { ctx, calls } = fakeApi({ insertEvent: () => ({ id: "new" }) });
     await run(
@@ -142,13 +196,71 @@ describe("update_event", () => {
     attendees: [{ email: "ana@x.com" }, { email: "beto@x.com" }],
   };
 
-  // Review Focus 2.
+  // Review Focus 2. A patch merges `start`/`end`, so the other kind of time is cleared in the same body (final review, I7).
   it("🔴 moving only startTime keeps the duration", async () => {
     const { ctx, calls } = fakeApi({ getEvent: () => existing, patchEvent: () => ({ id: "ev1" }) });
     await run("update_event", { eventId: "ev1", startTime: "2026-11-26T16:00:00" }, ctx);
     const body = (calls.find((c) => c.method === "patchEvent")!.args[2]) as Record<string, unknown>;
-    expect(body.start).toEqual({ dateTime: "2026-11-26T16:00:00", timeZone: "America/Mexico_City" });
-    expect(body.end).toEqual({ dateTime: "2026-11-26T17:30:00", timeZone: "America/Mexico_City" });
+    expect(body.start).toEqual({ dateTime: "2026-11-26T16:00:00", timeZone: "America/Mexico_City", date: null });
+    expect(body.end).toEqual({ dateTime: "2026-11-26T17:30:00", timeZone: "America/Mexico_City", date: null });
+  });
+
+  // Final review, I7: the schema lets a startTime carry Z or an offset; the length is kept in real time either way.
+  const lengthMs = (body: Record<string, unknown>) =>
+    Temporal.Instant.from(toRfc3339((body.end as { dateTime: string }).dateTime, "America/Mexico_City")).epochMilliseconds -
+    Temporal.Instant.from(toRfc3339((body.start as { dateTime: string }).dateTime, "America/Mexico_City")).epochMilliseconds;
+
+  it("🔴 moving only startTime given with Z keeps the duration, and doesn't throw", async () => {
+    const { ctx, calls } = fakeApi({ getEvent: () => existing, patchEvent: () => ({ id: "ev1" }) });
+    const r = await run("update_event", { eventId: "ev1", startTime: "2026-11-26T16:00:00Z" }, ctx);
+    expect(r.isError).toBeFalsy();
+    const body = (calls.find((c) => c.method === "patchEvent")!.args[2]) as Record<string, unknown>;
+    expect(lengthMs(body)).toBe(90 * 60_000);
+  });
+
+  it("🔴 moving only startTime given with an offset keeps the duration in real time", async () => {
+    const { ctx, calls } = fakeApi({ getEvent: () => existing, patchEvent: () => ({ id: "ev1" }) });
+    await run("update_event", { eventId: "ev1", startTime: "2026-11-26T16:00:00+01:00" }, ctx);
+    const body = (calls.find((c) => c.method === "patchEvent")!.args[2]) as Record<string, unknown>;
+    expect(lengthMs(body)).toBe(90 * 60_000);
+  });
+
+  const allDayEvent = { id: "ev2", start: { date: "2026-11-25" }, end: { date: "2026-11-26" } };
+
+  it("🔴 an all-day event given new start and end without allDay stays all-day (the event is read)", async () => {
+    const { ctx, calls } = fakeApi({ getEvent: () => allDayEvent, patchEvent: () => ({ id: "ev2" }) });
+    await run("update_event", { eventId: "ev2", startTime: "2026-12-01", endTime: "2026-12-02" }, ctx);
+    const body = (calls.find((c) => c.method === "patchEvent")!.args[2]) as Record<string, unknown>;
+    expect(body.start).toEqual({ date: "2026-12-01", dateTime: null });
+    expect(body.end).toEqual({ date: "2026-12-02", dateTime: null });
+  });
+
+  it("🔴 an all-day event given only a new endTime stays all-day", async () => {
+    const { ctx, calls } = fakeApi({ getEvent: () => allDayEvent, patchEvent: () => ({ id: "ev2" }) });
+    await run("update_event", { eventId: "ev2", endTime: "2026-11-28" }, ctx);
+    const body = (calls.find((c) => c.method === "patchEvent")!.args[2]) as Record<string, unknown>;
+    expect(body.end).toEqual({ date: "2026-11-28", dateTime: null });
+  });
+
+  it("🔴 timed to all-day and back clear the other kind of time", async () => {
+    const toAllDay = fakeApi({ getEvent: () => existing, patchEvent: () => ({ id: "ev1" }) });
+    await run("update_event", { eventId: "ev1", startTime: "2026-11-27", endTime: "2026-11-28", allDay: true }, toAllDay.ctx);
+    expect((toAllDay.calls.find((c) => c.method === "patchEvent")!.args[2] as Record<string, unknown>).start).toEqual({ date: "2026-11-27", dateTime: null });
+    const toTimed = fakeApi({ getEvent: () => allDayEvent, patchEvent: () => ({ id: "ev2" }) });
+    await run("update_event", { eventId: "ev2", startTime: "2026-11-25T09:00:00", endTime: "2026-11-25T10:00:00", allDay: false }, toTimed.ctx);
+    expect((toTimed.calls.find((c) => c.method === "patchEvent")!.args[2] as Record<string, unknown>).start).toEqual({
+      dateTime: "2026-11-25T09:00:00",
+      timeZone: "America/Mexico_City",
+      date: null,
+    });
+  });
+
+  // Final review, I4: the argument names are Google's MCP's; the API's fields are `optional` and `guestsCanSeeOtherGuests`.
+  it("🔴 an added optional guest is optional in the API", async () => {
+    const { ctx, calls } = fakeApi({ getEvent: () => existing, patchEvent: () => ({ id: "ev1" }) });
+    await run("update_event", { eventId: "ev1", addedAttendees: [{ email: "carla@x.com", optionalAttendee: true }] }, ctx);
+    const body = (calls.find((c) => c.method === "patchEvent")!.args[2]) as Record<string, unknown>;
+    expect(body.attendees).toEqual([{ email: "ana@x.com" }, { email: "beto@x.com" }, { email: "carla@x.com", optional: true }]);
   });
 
   it("added and removed attendees merge with the event's list", async () => {
@@ -196,6 +308,7 @@ describe("suggest_time", () => {
     const { ctx } = fakeApi({
       freeBusy: () => ({
         calendars: {
+          primary: { busy: [] },
           "ana@x.com": { busy: [{ start: "2026-11-25T10:00:00-06:00", end: "2026-11-25T11:00:00-06:00" }] },
           "privado@y.com": { busy: [], errors: [{ domain: "global", reason: "notFound" }] },
         },
@@ -208,5 +321,24 @@ describe("suggest_time", () => {
       { start: { dateTime: "2026-11-25T11:00:00-06:00", timeZone: "America/Mexico_City" }, end: { dateTime: "2026-11-25T12:00:00-06:00", timeZone: "America/Mexico_City" } },
     ]);
     expect(out.unavailableCalendars).toEqual(["privado@y.com"]);
+  });
+
+  // Final review, I8: «find a time with Ana» must not offer a slot where the person is busy, whether or not Len knew their
+  // Google address.
+  it("🔴 the person's own calendar always counts", async () => {
+    const { ctx, calls } = fakeApi({
+      freeBusy: () => ({
+        calendars: {
+          primary: { busy: [{ start: "2026-11-25T09:00:00-06:00", end: "2026-11-25T11:00:00-06:00" }] },
+          "ana@x.com": { busy: [] },
+        },
+      }),
+    });
+    const r = await run("suggest_time", { attendeeEmails: ["ana@x.com"], startTime: "2026-11-25T09:00:00", endTime: "2026-11-25T12:00:00" }, ctx);
+    const body = calls.find((c) => c.method === "freeBusy")!.args[0] as { items: { id: string }[] };
+    expect(body.items).toEqual([{ id: "primary" }, { id: "ana@x.com" }]);
+    expect(JSON.parse(textOf(r)).timeSlots).toEqual([
+      { start: { dateTime: "2026-11-25T11:00:00-06:00", timeZone: "America/Mexico_City" }, end: { dateTime: "2026-11-25T12:00:00-06:00", timeZone: "America/Mexico_City" } },
+    ]);
   });
 });
