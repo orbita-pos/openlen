@@ -33,6 +33,7 @@ import type { LenRequestView } from "@/lib/assistants/len-requests";
 import { AvisosDeLen } from "./avisos";
 import { TarjetasDeHerramientas } from "../herramientas/tool-cards";
 import { VisualDelChat } from "./visual";
+import { TextoDeLen } from "./texto-de-len";
 
 const reloj = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 const ladoDe = (e: ElementoDelHilo): "me" | "len" | null =>
@@ -510,7 +511,12 @@ function Burbuja({ e, chat, cliente, projectId, idioma, onVerPagina, onInstalada
         </>
       );
     case "len":
-      return <div className="ch-b">{e.texto}</div>;
+      // Markdown, drawn as the web does (texto-de-len.tsx); what the person wrote ("tu") stays literal.
+      return (
+        <div className="ch-b ch-md">
+          <TextoDeLen texto={e.texto} />
+        </div>
+      );
     case "fallo":
       return <div className="ch-b">{t("fallo")}</div>;
     case "verEnTuPagina":

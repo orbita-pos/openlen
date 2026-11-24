@@ -290,3 +290,32 @@ it("🔴 a visual item renders in the phone chat and forwards sendPrompt and upd
  });
  expect(mandar).toHaveBeenCalledWith("Listo");
 });
+
+// Seen on the phone on 24/11 (a language teacher's answers): what Len and the agents write is Markdown, and the phone painted
+// it raw — «**You're around A2**», «*went*» with their asterisks. The web draws it (`texto-de-len.tsx`) and Claude Code's text
+// «will be rendered … using the CommonMark specification»; the phone now draws it with the same parser. What a person writes
+// stays literal, as on the web.
+it("🔴 Len's answer is drawn as Markdown: bold, italics and lists, with no asterisks left", () => {
+ const log = pintar([respuesta("**You're around A2.** You tell what happened (*went*, *finished*).\n\n- **i** → **I**\n- `help` + verb")]);
+ const b = log.querySelector(".is-len .ch-b")!;
+ expect(b.querySelector("strong")?.textContent).toBe("You're around A2.");
+ expect([...b.querySelectorAll("em")].map((x) => x.textContent)).toEqual(["went", "finished"]);
+ expect(b.querySelectorAll("li")).toHaveLength(2);
+ expect(b.querySelector("code")?.textContent).toBe("help");
+ expect(b.textContent).not.toContain("*");
+ expect(b.textContent).not.toContain("`");
+});
+
+it("a link Len writes opens only when it is an absolute http(s) address; anything else stays text", () => {
+ const log = pintar([respuesta("[docs](https://openlen.com/docs) and [bad](javascript:alert(1))")]);
+ const links = [...log.querySelectorAll(".is-len .ch-b a")];
+ expect(links.map((a) => a.getAttribute("href"))).toEqual(["https://openlen.com/docs"]);
+ expect(log.textContent).toContain("bad");
+});
+
+it("what the person wrote stays as they typed it, asterisks and all", () => {
+ const log = pintar([mensaje()].map((m) => ({ ...m, texto: "*hola* **ya**" })));
+ const b = [...log.querySelectorAll(".ch-b")].find((x) => x.textContent?.includes("hola"))!;
+ expect(b.textContent).toBe("*hola* **ya**");
+ expect(b.querySelector("strong, em")).toBeNull();
+});
