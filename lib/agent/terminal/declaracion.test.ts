@@ -102,10 +102,14 @@ describe("Len Dynamis: sólo la terminal para los ficheros", () => {
     for (const queda of ["view_page", "use_page", "publish", "ask_user_question", "undo_last_change", "web_search", "web_fetch"]) expect(n).toContain(queda);
   });
 
+  // «Read-only» no es la herramienta; «Read the current session goal» (la
+  // descripción de `get_goal`, literal de DeepSeek, pieza 8) tampoco: es el verbo.
+  // Ni «Read what the visuals you drew…» (`read_widget_context`, 50e23fc53, el
+  // ReadWidgetContext de Claude Code): también el verbo.
+  const NOMBRA_UNA_DE_FICHEROS = /\b(Read|Edit|Write|Grep|Glob)\b(?!-| the current session goal| what the visuals you drew)/;
+
   it("🔴 en Dynamis, ni el prompt, ni las descripciones, ni /AGENTS.md nombran una herramienta que no tiene", () => {
-    // «Read-only» no es la herramienta; «Read the current session goal» (la
-    // descripción de `get_goal`, literal de DeepSeek, pieza 8) tampoco: es el verbo.
-    expect(todo(CON, "dynamis")).not.toMatch(/\b(Read|Edit|Write|Grep|Glob)\b(?!-| the current session goal)/);
+    expect(todo(CON, "dynamis")).not.toMatch(NOMBRA_UNA_DE_FICHEROS);
   });
 
   // 🔴 LA LÁPIDA de la palanca vieja: el valor que antes quitaba Read, Edit y
@@ -123,7 +127,7 @@ describe("Len Dynamis: sólo la terminal para los ficheros", () => {
   });
 
   it("🔴 tampoco en una APP en Dynamis", () => {
-    expect(textosDeApp(CON, "dynamis")).not.toMatch(/\b(Read|Edit|Write|Grep|Glob)\b(?!-| the current session goal)/);
+    expect(textosDeApp(CON, "dynamis")).not.toMatch(NOMBRA_UNA_DE_FICHEROS);
   });
 
   it("cada sustitución encuentra su frase en lo que lee el modelo con la terminal (en una página o en una app)", () => {
