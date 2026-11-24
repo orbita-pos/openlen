@@ -107,3 +107,62 @@ describe("forked skills", () => {
     expect(f.calls).toHaveLength(1);
   });
 });
+
+// A SKILL LOADED AGAIN, as Claude Code 2.1.330 does it: it compares the CONTENT the model already has with the
+// content it would send, not the name. The same bytes → «already loaded above; instructions unchanged»;
+// different ones → the new text, behind its re-invocation line. Len copied the line and kept only the name, so
+// a skill improved mid-conversation (`propose_skills`, `learn`, a Write to /.len/skills) answered «unchanged»
+// and Len went on with the old text.
+describe("a skill loaded again", () => {
+  async function session(body: string) {
+    const { resolveSkills } = await import("./registry");
+    const skills = resolveSkills({ bundled: [], project: [{ name: "cotizar", text: `---\nname: cotizar\ndescription: Quotes\n---\n${body}`, updatedAt: new Date(0) }], personal: [] });
+    return { skills, loadedSkills: new Set<string>() } as import("@/lib/agent/tools").AgentSession;
+  }
+  const text = (o: { response: Record<string, unknown> }) => String(o.response.tool_result);
+
+  it("the same text: Claude Code's «already loaded above; instructions unchanged»", async () => {
+    const { toolSkill } = await import("./tool");
+    const s = await session("QUOTE IN PESOS.");
+    expect(text(await toolSkill(s, { name: "cotizar" }))).toContain("QUOTE IN PESOS.");
+    expect(text(await toolSkill(s, { name: "cotizar" }))).toBe("Skill /cotizar is already loaded above; instructions unchanged.");
+  });
+
+  it("🔴 an improved skill: its new text, behind Claude Code's re-invocation line; then «unchanged» again", async () => {
+    const { toolSkill } = await import("./tool");
+    const s = await session("QUOTE IN PESOS.");
+    await toolSkill(s, { name: "cotizar" });
+    s.skills = (await session("QUOTE IN DOLLARS.")).skills;
+    const again = text(await toolSkill(s, { name: "cotizar" }));
+    expect(again.startsWith("(Re-invocation of /cotizar \u2014 the skill instructions were previously loaded; the arguments or dynamic output below are new.)\n\n")).toBe(true);
+    expect(again).toContain("QUOTE IN DOLLARS.");
+    expect(again).not.toContain("QUOTE IN PESOS.");
+    expect(text(await toolSkill(s, { name: "cotizar" }))).toBe("Skill /cotizar is already loaded above; instructions unchanged.");
+  });
+
+  it("a copy whose content was never recorded (a row from before) is taken as unchanged, as before", async () => {
+    const { toolSkill } = await import("./tool");
+    const s = await session("QUOTE IN DOLLARS.");
+    s.loadedSkills!.add("cotizar");
+    expect(text(await toolSkill(s, { name: "cotizar" }))).toBe("Skill /cotizar is already loaded above; instructions unchanged.");
+  });
+
+  it("the rows the history resends say what each copy was: the latest since the last summary wins", async () => {
+    const { foldSkillDigests } = await import("./tool");
+    const rows = [
+      { transcript: { skillsLoaded: ["pdf"], skillDigests: { pdf: "a" } } },
+      { compaction: MARK, transcript: { skillsLoaded: ["cotizar"], skillDigests: { cotizar: "b" } } },
+      { transcript: { skillDigests: { cotizar: "c" } } },
+      { transcript: null },
+    ];
+    expect(Object.fromEntries(foldSkillDigests(rows as never))).toEqual({ cotizar: "c" });
+  });
+
+  it("a turn saves only the copies it gave: a new skill or a changed one", async () => {
+    const { skillDigestsToSave } = await import("./tool");
+    const known = new Map([["pdf", "a"], ["cotizar", "b"]]);
+    expect(skillDigestsToSave(new Map([["pdf", "a"], ["cotizar", "c"], ["office", "d"]]), known)).toEqual({ skillDigests: { cotizar: "c", office: "d" } });
+    expect(skillDigestsToSave(new Map(known), known)).toEqual({});
+    expect(skillDigestsToSave(undefined, known)).toEqual({});
+  });
+});

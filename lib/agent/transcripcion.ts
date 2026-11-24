@@ -179,6 +179,9 @@ export interface TranscripcionGuardada {
   readonly skillsDigest?: string;
   /** The skills THIS turn loaded (with `skill` or /name), as state: `foldLoadedSkills`. */
   readonly skillsLoaded?: readonly string[];
+  /** The copies of skills THIS turn gave the model (a new one, or one whose text changed), by name: a digest of
+   *  their text (`skillDigest`), folded by `foldSkillDigests`. Absent on rows from before: taken as unchanged. */
+  readonly skillDigests?: Readonly<Record<string, string>>;
   /** LEN 3.1 · las fotos de ESTE turno que Len NO vio (no se pudieron bajar):
    *  su nota dijo que no cargaron y no llevaron píxeles. El historial las rehace
    *  igual, aunque ahora sí bajen: si no, el mensaje cambiaba en el turno

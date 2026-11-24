@@ -3039,6 +3039,30 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
       expect(guardada.transcript?.skillsLoaded).toBeUndefined();
     });
 
+    // As Claude Code 2.1.330 compares a skill loaded again by its CONTENT: the row keeps the copy each turn gave, and
+    // the next turn's `skill` knows it (lib/agent/skills/tool.ts, `foldSkillDigests`).
+    it("🔴 /name: the row keeps the copy of the skill it gave, by name", async () => {
+      turno();
+      mocks.turnosParaElHistorial.mockResolvedValue([TRANSCRITO]);
+      await readEvents(
+        await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "/office-docx hazme una carta" }) })),
+      );
+      const guardada = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { skillDigests?: Record<string, string> } | null }])[1];
+      expect(guardada.transcript?.skillDigests?.["office-docx"]).toMatch(/^[0-9a-f]{16}$/);
+    });
+
+    it("🔴 the turn's `skill` starts from the copies the history recorded", async () => {
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        await args.runTool("Read", { file_path: "/index.html" });
+        return { finalText: "listo", turns: 1, toolCalls: 1, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false, mutoDurable: true };
+      });
+      mocks.turnosParaElHistorial.mockResolvedValue([{ ...TRANSCRITO, transcript: { ...TRANSCRITO.transcript, skillsLoaded: ["cotizar"], skillDigests: { cotizar: "0123456789abcdef" } } }]);
+      await readEvents(await pedir());
+      const [session] = mocks.runAgentTool.mock.calls.at(-1) as unknown as [{ loadedSkills?: Set<string>; loadedSkillDigests?: Map<string, string> }];
+      expect(session.loadedSkills?.has("cotizar")).toBe(true);
+      expect(session.loadedSkillDigests?.get("cotizar")).toBe("0123456789abcdef");
+    });
+
     // Like Claude Code, which attaches its invoked skills again after compacting.
     it("🔴 after a summary the loaded skills come back, and one the kept messages still show is not repeated", async () => {
       type Vuelta = { message: { content: string } | null; loaded: string[] } | undefined;

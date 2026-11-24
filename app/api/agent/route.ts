@@ -85,7 +85,7 @@ import { bundledSkills } from "@/lib/agent/skills/bundled";
 import { catalogBudgetChars, foldSkillsDigest, personalSkillsReminder, skillCatalogMessage } from "@/lib/agent/skills/catalog-message";
 import { skillsEnabled } from "@/lib/agent/skills/enabled";
 import { EMPTY_SKILL_SET, resolveSkills } from "@/lib/agent/skills/registry";
-import { foldLoadedSkills } from "@/lib/agent/skills/tool";
+import { foldLoadedSkills, foldSkillDigests, renderSkillContent, skillDigest, skillDigestsToSave } from "@/lib/agent/skills/tool";
 import { invokedSkillNames, withInvokedSkills } from "@/lib/agent/skills/invocation";
 import { cleanVisualStates, heldVisualStates, visualStatesReminder, type HeldVisualState } from "@/lib/agent/visuals/model-context";
 import { SHOW_WIDGET } from "@/lib/agent/visuals/widget";
@@ -1489,6 +1489,8 @@ async function correrTurno(
   // /name (spec local 2026-10-26-len-skills, §4.5): only what the person wrote invokes a skill, never
   // the thread's or the email's context; its content goes after the prompt, as DeepSeek injects it.
   const skillsConocidas = foldLoadedSkills(filasDelHistorial);
+  // And the copy of each the model has (as Claude Code compares them, by content): `skill` gives a changed one again.
+  const huellasDeSkillsConocidas = foldSkillDigests(filasDelHistorial);
   const skillsPedidas = invokedSkillNames(prompt, new Set(skillsDelTurno.userInvocable().map((x) => x.skill.name))).map((n) => skillsDelTurno.get(n)!);
   // AN AGENT'S SKILLS (spec local 2026-11-19-agentes-para-todos, §6.4): the ones its file preloads go the same way as
   // the /name ones — after the prompt and kept as state —, once per conversation, as Claude Code preloads an agent's.
@@ -1747,6 +1749,7 @@ async function correrTurno(
     // What the conversation already loaded, as state (as Claude Code keeps it), and what /name
     // put in this message: `skill` answers «already loaded» for them.
     loadedSkills: new Set([...skillsConocidas, ...skillsInvocadas.map((x) => x.skill.name)]),
+    loadedSkillDigests: new Map([...huellasDeSkillsConocidas, ...skillsInvocadas.map((x): [string, string] => [x.skill.name, skillDigest(renderSkillContent(x))])]),
     // What a `skill` call answered in THIS turn (DeepSeek's `turnLoads`): `propose_action` needs its skill here.
     turnSkillLoads: new Set<string>(),
     projectId,
@@ -2060,6 +2063,8 @@ async function correrTurno(
         ...(catalogoDelTurno ? { skills: catalogoDelTurno.text, skillsDigest: catalogoDelTurno.digest } : {}),
         // And what this turn loaded, as state, for the next ones.
         ...cargadasEnEsteTurno(agentSession.loadedSkills, skillsConocidas),
+        // And the copies it gave that the history didn't have: a new skill, or one whose text changed.
+        ...skillDigestsToSave(agentSession.loadedSkillDigests, huellasDeSkillsConocidas),
         // Len 3.1: las fotos que no se vieron y las capturas del modo
         // Diseño, para que el historial rehaga este mensaje tal cual.
         ...(fotosSinVer.length > 0 ? { unseenPhotos: fotosSinVer } : {}),
@@ -2820,6 +2825,7 @@ async function correrTurno(
               const cargadas = [...(agentSession.loadedSkills ?? [])].flatMap((name) => agentSession.skills?.get(name) ?? []);
               const vuelta = restoredSkills(cargadas, kept);
               agentSession.loadedSkills = new Set(vuelta.loaded);
+              agentSession.loadedSkillDigests = new Map([...(agentSession.loadedSkillDigests ?? [])].filter(([name]) => vuelta.loaded.includes(name)));
               return vuelta;
             },
           },

@@ -2,11 +2,14 @@
  * THE `skill` TOOL (spec local 2026-10-26-len-skills, §4.4): DeepSeek Harness's `skill({ name })`
  * (`packages/skill/tool-skill/src/index.ts`, MIT, LICENSES/deepseek-harness.MIT.txt): its name, its
  * description, its three errors and its `<skill_content>` answer (`renderSkillContent`, in
- * `packages/skill/skill/src/index.ts`). A skill already loaded in this conversation is not sent again:
- * Claude Code's line says so instead.
+ * `packages/skill/skill/src/index.ts`). A skill already loaded in this conversation is compared by its
+ * content, as Claude Code 2.1.330 does: the same text is not sent again (Claude Code's line says so);
+ * a changed one goes again, behind Claude Code's re-invocation line.
  *
  * Read-only: it counts against no write budget (`READ_ME`-like, `READ_ONLY_TOOLS` in loop.ts).
  */
+import { createHash } from "node:crypto";
+
 import type { ResolvedSkill } from "./registry";
 import { SKILL_NAME } from "./skill-file";
 import { isCompactionMark, type CompactionMark } from "@/lib/agent/compaction/mark";
@@ -52,8 +55,43 @@ export function renderSkillContent(s: ResolvedSkill): string {
   ].join("\n");
 }
 
-/** Claude Code's answer when the skill is already in the conversation. */
+/** Claude Code's answer when the skill is already in the conversation, byte for byte. */
 export const alreadyLoaded = (name: string) => `Skill /${name} is already loaded above; instructions unchanged.`;
+/** Claude Code's line in front of a skill loaded again whose content changed (2.1.330): the new text follows. */
+export const reinvocationLine = (name: string) =>
+  `(Re-invocation of /${name} — the skill instructions were previously loaded; the arguments or dynamic output below are new.)`;
+
+/** What tells two copies of a skill apart: a digest of the exact text the model was given. */
+export const skillDigest = (text: string): string => createHash("sha256").update(text).digest("hex").slice(0, 16);
+
+const isDigestRecord = (v: unknown): v is Readonly<Record<string, string>> =>
+  !!v && typeof v === "object" && !Array.isArray(v) && Object.values(v).every((d) => typeof d === "string");
+
+/**
+ * The copy of each skill the model has, by name (Claude Code compares the content, not the name): what each row
+ * says it gave (`skillDigests`), from the last summary on, the latest winning. A skill with no recorded copy — a
+ * row from before copies were recorded, one that came back with a summary — is taken as unchanged.
+ */
+export function foldSkillDigests(
+  rows: readonly { readonly compaction?: unknown; readonly transcript: { readonly skillDigests?: unknown } | null }[],
+): Map<string, string> {
+  const digests = new Map<string, string>();
+  const lastMark = rows.findLastIndex((r) => isCompactionMark(r.compaction));
+  for (const [i, r] of rows.entries()) {
+    if (i < lastMark) continue;
+    // A mark that names no skills (written idle, or from before they came back) forgets its row's, as `foldLoadedSkills`.
+    if (i === lastMark && !(r.compaction as CompactionMark).skills) continue;
+    const given = r.transcript?.skillDigests;
+    if (isDigestRecord(given)) for (const [name, digest] of Object.entries(given)) digests.set(name, digest);
+  }
+  return digests;
+}
+
+/** For the turn's row: the copies it gave that the history didn't already have (a new skill, a changed one). */
+export function skillDigestsToSave(now: ReadonlyMap<string, string> | undefined, known: ReadonlyMap<string, string>): { skillDigests?: Record<string, string> } {
+  const given = [...(now ?? [])].filter(([name, digest]) => known.get(name) !== digest);
+  return given.length > 0 ? { skillDigests: Object.fromEntries(given) } : {};
+}
 
 /**
  * Which skills the conversation already shows, as STATE (as Claude Code keeps them, and DeepSeek's
@@ -105,12 +143,22 @@ export async function toolSkill(session: AgentSession, args: Record<string, unkn
   // This turn's loads, «already loaded» included (DeepSeek's `turnLoads`): `propose_action` needs its skill here.
   (session.turnSkillLoads ??= new Set()).add(name);
   const loaded = (session.loadedSkills ??= new Set());
-  if (loaded.has(name)) return { response: { ok: true, tool_result: alreadyLoaded(name) } };
-  loaded.add(name);
   // `tool-suggestions` carries what already exists, as DeepSeek's `personalized-pages` appends its official plugins.
   const catalog = name === TOOL_SUGGESTIONS && deps?.suggestionCatalog ? await deps.suggestionCatalog().catch(() => null) : null;
   const content = catalog ? `${renderSkillContent(found)}
 
 ${catalog}` : renderSkillContent(found);
+  // As Claude Code 2.1.330: a skill already loaded is compared by CONTENT. The same bytes, its line; different ones
+  // (the skill was improved, or its dynamic part changed), the new text behind its re-invocation line.
+  const digest = skillDigest(content);
+  const copies = (session.loadedSkillDigests ??= new Map());
+  if (loaded.has(name)) {
+    const prior = copies.get(name);
+    if (prior === undefined || prior === digest) return { response: { ok: true, tool_result: alreadyLoaded(name) } };
+    copies.set(name, digest);
+    return { response: { ok: true, tool_result: `${reinvocationLine(name)}\n\n${content}` }, action: { tool: SKILL_TOOL, ok: true, summary: name } };
+  }
+  loaded.add(name);
+  copies.set(name, digest);
   return { response: { ok: true, tool_result: content }, action: { tool: SKILL_TOOL, ok: true, summary: name } };
 }

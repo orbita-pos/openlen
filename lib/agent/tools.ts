@@ -1432,6 +1432,9 @@ export interface AgentSession {
   /** The skills already in this conversation (loaded with `skill` or invoked with /name): `skill`
    *  answers Claude Code's «already loaded» line instead of sending them again. */
   loadedSkills?: Set<string>;
+  /** The copy of each of them the model has (`skillDigest` of the text it was given), as Claude Code compares
+   *  them: a skill whose text changed goes again, behind its re-invocation line. A name with none: unchanged. */
+  loadedSkillDigests?: Map<string, string>;
   /** A read-only subagent (spec local 2026-11-01-subagentes-de-len, §4.2) or the person's own assistant: Write, Edit
    *  and what a command changes in the project are refused (`READ_ONLY_REFUSAL`). Absent for Len. */
   readOnly?: true;
