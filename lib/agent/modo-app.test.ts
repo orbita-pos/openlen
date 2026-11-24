@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { buildAgentSystemPrompt, buildFunctionDeclarations } from "./catalog";
 import { buildManualDeLaPlataforma, documentosDeLaPlataforma, textoDeLaPlataforma } from "./manual-de-la-plataforma";
 import { GUIA_DE_LA_APP, HERRAMIENTAS_QUE_CAMBIAN_EN_UNA_APP, promptDeLaApp } from "./modo-app";
-import { RUTA_GUIA, RUTA_LIBRERIAS, RUTA_MANUAL } from "./ficheros/manual";
+import { CARPETA_AGENTES, CARPETA_SKILLS, RUTA_GUIA, RUTA_LIBRERIAS, RUTA_MANUAL } from "./ficheros/manual";
 import { summarizeProjectState } from "./tools";
 import { CATALOGO_ACTUAL, catalogo } from "@/lib/apps/dependencias";
 
@@ -180,13 +180,14 @@ describe("el manual de una app (/AGENTS.md)", () => {
     // Con las skills encendidas, la guía de la app es la skill frontend-design (spec local
     // 2026-10-27-len-five-skills): /.openlen/docs no sirve nada.
     expect(textoDeLaPlataforma("/.openlen/skills/frontend-design/SKILL.md", "len", APP)).toContain(GUIA_DE_LA_APP);
-    expect(Object.keys(documentosDeLaPlataforma(APP)).filter((r) => !r.startsWith("/.openlen/skills/"))).toEqual([]);
+    // Ni los tipos de subagente de OpenLen (/.openlen/agents, faefa821f), que se sirven con las skills.
+    expect(Object.keys(documentosDeLaPlataforma(APP)).filter((r) => !r.startsWith(`${CARPETA_SKILLS}/`) && !r.startsWith(`${CARPETA_AGENTES}/`))).toEqual([]);
     // Con ellas apagadas, como siempre.
     vi.stubEnv("OPENLEN_SKILLS", "0");
     try {
       expect(textoDeLaPlataforma(RUTA_GUIA, "len", APP)).toBe(GUIA_DE_LA_APP);
       expect(textoDeLaPlataforma(RUTA_LIBRERIAS, "len", APP)).toBeNull();
-      expect(Object.keys(documentosDeLaPlataforma(APP))).toEqual([RUTA_GUIA]);
+      expect(Object.keys(documentosDeLaPlataforma(APP)).filter((r) => !r.startsWith(`${CARPETA_AGENTES}/`))).toEqual([RUTA_GUIA]);
       expect(textoDeLaPlataforma(RUTA_LIBRERIAS)).not.toBeNull();
     } finally {
       vi.unstubAllEnvs();
@@ -294,8 +295,11 @@ describe("los nombres que usa el modo app", () => {
     const texto = [
       buildAgentSystemPrompt(ENV, "len", APP),
       buildManualDeLaPlataforma(ENV, "len", APP),
-      // Sin las skills: su código (Python) está lleno de nombres con guiones bajos que no son herramientas.
-      ...Object.entries(documentosDeLaPlataforma(APP)).filter(([r]) => !r.startsWith("/.openlen/skills/")).map(([, t]) => t),
+      // Sin las skills: su código (Python) está lleno de nombres con guiones bajos que no son herramientas. Ni los
+      // tipos de subagente (/.openlen/agents): su `disallowedTools` nombra las de una página (convert_to_app) a propósito.
+      ...Object.entries(documentosDeLaPlataforma(APP))
+        .filter(([r]) => !r.startsWith(`${CARPETA_SKILLS}/`) && !r.startsWith(`${CARPETA_AGENTES}/`))
+        .map(([, t]) => t),
       ...app.map((d) => String(d.description ?? "")),
     ].join("\n");
     // Lo que tiene forma de nombre y NO es una herramienta: un parámetro, un

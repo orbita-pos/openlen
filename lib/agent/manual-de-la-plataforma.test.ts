@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildAgentSystemPrompt } from "./catalog";
-import { CARPETA_DOCS, esAdjuntoDelManual, RUTA_APPS, RUTA_GUIA, RUTA_LIBRERIAS, RUTA_MANUAL, RUTAS_DE_DOCS } from "./ficheros/manual";
+import { CARPETA_AGENTES, CARPETA_DOCS, CARPETA_SKILLS, esAdjuntoDelManual, RUTA_APPS, RUTA_GUIA, RUTA_LIBRERIAS, RUTA_MANUAL, RUTAS_DE_DOCS } from "./ficheros/manual";
 import {
   adjuntoDelManual,
   buildManualDeLaPlataforma,
@@ -85,8 +85,9 @@ describe("el manual de la plataforma", () => {
   });
 
   it("F4 · la guía y las librerías viven en /.openlen/docs, cada una en su fichero", () => {
-    // Las skills (/.openlen/skills) no van en el índice de /AGENTS.md: las anuncia su catálogo.
-    expect(Object.keys(docs).filter((r) => !r.startsWith("/.openlen/skills/"))).toEqual([...RUTAS_DE_DOCS]);
+    // Las skills (/.openlen/skills) no van en el índice de /AGENTS.md: las anuncia su catálogo. Los tipos de
+    // subagente de OpenLen (/.openlen/agents, faefa821f) tampoco: los anuncia la herramienta `subagent`.
+    expect(Object.keys(docs).filter((r) => !r.startsWith(`${CARPETA_SKILLS}/`) && !r.startsWith(`${CARPETA_AGENTES}/`))).toEqual([...RUTAS_DE_DOCS]);
     const donde: [string, string][] = [
       ["DESIGN GUIDE (for the pages you create yourself", RUTA_GUIA],
       ["COLOR, SHAPE AND TYPE", RUTA_GUIA],
