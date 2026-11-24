@@ -43,6 +43,19 @@ const PENDIENTES: readonly string[] = [
   // El cajón del rail de inicio en el teléfono (06/11): sale por la IZQUIERDA a
   // toda altura, y `ModalShell` sólo centra. Migrarlo pide una forma de cajón.
   "start-rail.tsx",
+  // Comparar las dos variantes de un A/B (19/11): las dos páginas lado a lado
+  // piden 1160 px y 85vh, y el más ancho de `ModalShell` (`page`) es de 1024.
+  // Tampoco tiene trampa de foco ni `Escape`: migrarlo se los daría.
+  "ab-compare-modal.tsx",
+  // Las hojas del asistente propio (11/11): 360 px y teñidas con su color
+  // (`HerTint`); `ModalShell` sólo tiene lg/xl/page y no lleva tinte.
+  "her-sheet.tsx",
+  // Sus proyectos (09/11): un panel que se despliega DENTRO de su menú, sin velo
+  // ni trampa de foco. Como `top-bar.tsx`, puede que no sea un diálogo.
+  "her-projects.tsx",
+  // El visor de fotos del chat (27/10): a pantalla completa sobre negro, con
+  // flechas entre fotos y sin cabecera; `ModalShell` es un panel con título.
+  "photo-gallery.tsx",
 ];
 
 /** Los que YA usan `ModalShell`. No pueden volver a escribir el suyo. */
