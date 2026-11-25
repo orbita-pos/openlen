@@ -187,7 +187,7 @@ describe("Len Dynamis en el cable", () => {
       expect(pedido(0).temperature).toBe(1);
       expect(pedido(0).topP).toBe(1);
       expect(pedido(1).topP).toBe(1);
-      expect(pedido(0).maxOutputTokens).toBe(32_768);
+      expect(pedido(0).maxOutputTokens).toBe(65_536);
       expect(pedido(1).maxOutputTokens).toBe(2_048);
       expect("reasoningEffortWord" in pedido(0)).toBe(false);
       expect("reasoningEffortWord" in pedido(1)).toBe(false);

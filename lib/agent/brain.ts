@@ -216,13 +216,13 @@ export async function* asAgentStream(
   if (pensado) yield { type: "reasoning", text: pensado };
 }
 
-// 16k se quedaba corto y el turno moría truncado: el caso del interruptor de
-// modo oscuro —que reescribe :root, :root.dark y el control— produjo 15,631
-// tokens de salida contra el tope, y el bucle lo marca como error terminal.
-// Al usuario le llega "intenta un pedido más corto" por una edición legítima.
-// 65,536 se acepta en esta misma ruta (medido hoy en /api/generate); 32k deja
-// el doble de aire sin acercarse. Sólo se paga lo que se usa.
-const LOOP_MAX_OUTPUT_TOKENS = 32_768;
+// 16k se quedaba corto y el turno moría truncado; 32k también corta cuando el
+// razonamiento adaptativo (`high` sin techo) se suma a un `Write` grande (p. ej.
+// un módulo 3D/procedural de 60–90 KB ≈ 20k–30k tokens en JSON escapado).
+// 65,536 lo aceptan tanto DeepInfra como Fireworks en este modelo (ya medido en
+// /api/generate y en Dynamis), no mueve un byte del prefijo en caché y sólo se
+// paga lo que el modelo realmente emite.
+const LOOP_MAX_OUTPUT_TOKENS = 65_536;
 const CLOSEOUT_MAX_OUTPUT_TOKENS = 2_048;
 // 1,0, LA DEL MODELO (2026-10-21). La ficha de V4.1 mide todo a 1,0 y la de la
 // 1017 lo recomienda; la API de DeepSeek ignora la temperatura cuando piensa
