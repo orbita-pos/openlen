@@ -90,8 +90,14 @@ export function resolveRoleProviders(
   env: Readonly<Record<string, string | undefined>>,
   only?: readonly ProviderId[],
 ): ResolvedProvider[] {
-  const models = new Map(providersForRole(role).map((p) => [p.provider, p.modelId] as const));
-  const names = (env.OPENLEN_AGENT_PROVIDERS?.trim() || DEFAULT_AGENT_PROVIDERS).split(",").map((n) => n.trim()).filter(Boolean);
+  const roleProviders = providersForRole(role);
+  const models = new Map(roleProviders.map((p) => [p.provider, p.modelId] as const));
+  const explicit = env.OPENLEN_AGENT_PROVIDERS?.trim();
+  const names = explicit
+    ? explicit.split(",").map((n) => n.trim()).filter(Boolean)
+    : roleProviders.length > 0
+      ? roleProviders.map((p) => p.provider)
+      : DEFAULT_AGENT_PROVIDERS.split(",");
   const out: ResolvedProvider[] = [];
   for (const name of names) {
     const id = name as ProviderId;

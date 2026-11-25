@@ -7,11 +7,11 @@ import {
   type FireworksStreamEvent,
   type FireworksStreamRequest,
 } from "@/lib/ai/fireworks-stream-client";
-import { resolveAgentProviders, type ProviderId, type ResolvedProvider } from "@/lib/ai/providers";
+import { resolveRoleProviders, type ProviderId, type ResolvedProvider } from "@/lib/ai/providers";
 import type { WireBody } from "@/lib/ai/fireworks-stream-client";
 import type { CallKind } from "@/lib/agent/telemetry/cache-break";
 import { messagesForFireworks, toolsForFireworks } from "@/lib/agent/fireworks-bridge";
-import { MODEL_POLICY, esfuerzoDisponible, modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
+import { MODEL_POLICY, esfuerzoDisponible, modelIdForRole } from "@/lib/generation/model-policy";
 import type { CreditRate } from "@/lib/credits";
 import { esfuerzoEfectivo, operatorEffort } from "./esfuerzo-efectivo";
 import { caparEsfuerzo, capacidadDeEsfuerzo, type EsfuerzoAgente } from "./esfuerzo";
@@ -257,79 +257,45 @@ const TOP_P = 1.0;
 export function operacionDeLaVuelta(
   conFotos: boolean,
   agenteVe: boolean = MODEL_POLICY.agent.veImagenes,
-): "agent_turn" | "page_write_with_reference" {
-  return conFotos && !agenteVe ? "page_write_with_reference" : "agent_turn";
+  isDynamis = false,
+): "agent_turn" | "odyssey_turn" | "page_write_with_reference" {
+  if (conFotos && !agenteVe) return "page_write_with_reference";
+  return isDynamis ? "odyssey_turn" : "agent_turn";
 }
 
 export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
   // Una vuelta con fotos y un agente que NO ve la corre el PAPEL CON VISION
   // (`operacionDeLaVuelta`), y cada papel trae su tarifa. Sin esta bandera se
   // cobraria al precio del que no corrio — la misma clase de error que
-  // `lib/credits.ts` documenta. Hoy el agente ve, así que no se enciende.
-  //
-  // ⚠️ HOY LOS DOS CUESTAN LO MISMO (desde el 2026-09-12 comparten modelo), asi
-  // que este reparto no cambia ni un centimo. Se queda porque la pregunta que
-  // contesta —quien corrio— sigue siendo real, y el dia que los papeles se
-  // separen tiene que estar ya puesta: ponerla DESPUES es como se cobran seis
-  // veces de mas durante semanas.
-  //
-  // ⚰️ Se llamaba `ranOnQwen`. El nombre afirmaba un proveedor en el
-  // compilador, y ese proveedor salio del repo el 2026-09-13.
+  // `lib/credits.ts` documenta. Hoy tanto `agent` como `odyssey` ven, así que no se enciende.
   let mirado = false;
 
-  // LA POSTURA SE RESUELVE UNA SOLA VEZ para todo el turno — incluido su
-  // cierre por tope (`closeOut`): darle una postura distinta sería tomar, sin
-  // medir, una decisión nueva sobre una constante, que es exactamente el error
-  // que esta capa existe para corregir. `options.env` gana aquí su primer
-  // lector real: es `OPENLEN_AGENT_EFFORT`, la palanca del operador, por
-  // encima del turno y de la preferencia guardada — mismo orden que
-  // `CLAUDE_CODE_EFFORT_LEVEL` en Claude Code (ver `esfuerzo-efectivo.ts`).
   const env = options.env ?? process.env;
-  // 🔴 Y SE RECORTA A LO QUE ESTE MODELO OFRECE, que es el último paso de
-  // Claude Code al resolver el nivel. Sin esto la tabla por modelo sería
-  // decorativa: la postura se GUARDA en `users.agentEffort`, así que quien
-  // eligió `max` con un modelo medido lo seguiría mandando el día que el papel
-  // cambie a uno sin medir —225 a un dial que nadie ha comprobado— y encima con
-  // el mando sin enseñar siquiera esa opción. El papel del Agente ha cambiado
-  // de modelo dos veces en tres semanas; esto no es hipotético.
-  //
-  // Va DESPUÉS de la precedencia y no dentro: el recorte es del MODELO, y las
-  // capas son de QUIÉN MANDA. Mezclarlos haría que la palanca del operador
-  // pudiera saltarse el techo medido, que es justo lo que no debe poder hacer.
+  const isDynamis = options.mode === "dynamis";
+  const role = isDynamis ? "odyssey" : "agent";
+  const papel = MODEL_POLICY[role];
+
+  // LA POSTURA SE RESUELVE UNA SOLA VEZ para todo el turno — incluido su
+  // cierre por tope (`closeOut`) — y se recorta a lo que ofrece el modelo de ESTE papel.
   const esfuerzoPedido = caparEsfuerzo(
     esfuerzoEfectivo({
       env: env.OPENLEN_AGENT_EFFORT,
       delTurno: options.esfuerzoDelTurno,
       delUsuario: options.esfuerzoDelUsuario,
     }),
-    capacidadDeEsfuerzo(MODEL_POLICY.agent.modelId),
+    capacidadDeEsfuerzo(papel.modelId),
   );
-  // ÚNICO LLAMADOR de `esfuerzoDisponible` (Task 2 la dejó sin uno, a la
-  // espera de este cable). Si el modelo del papel `agent` no pensara, el nivel
-  // pedido no valdría; hoy es inalcanzable porque `MODEL_POLICY.agent.piensa`
-  // es siempre `true`, pero la puerta se comprueba de todas formas y, si algún
-  // día se cierra, SE DICE en vez de esconderse — la otra mitad de su diseño —
-  // porque el log del servidor es hoy el único canal que existe para eso.
-  const disponibilidad = esfuerzoDisponible(esfuerzoPedido);
-  // 🔴 CON LA PUERTA CERRADA SE MANDA `null`, NO `"auto"`. Hasta el 2026-09-11
-  // esta línea caía a `"auto"` y era correcta, porque entonces `auto` OMITÍA el
-  // campo. Ya no: `auto` resuelve al nivel por defecto y manda su número, así
-  // que caer ahí le encendería el pensamiento precisamente al papel que acaba
-  // de declarar que no piensa. `null` es «este turno no tiene postura», y el
-  // cable lo traduce a `"none"` — apagarlo a propósito, no por omisión.
+  const disponibilidad = esfuerzoDisponible(esfuerzoPedido, papel.piensa);
   const esfuerzo: EsfuerzoAgente | null = disponibilidad.ok ? esfuerzoPedido : null;
   if (!disponibilidad.ok) {
     console.warn(`[agent/brain] ${disponibilidad.motivo} — este turno va sin pensamiento.`);
   }
 
-  // LEN DYNAMIS (`lib/agent/dynamis.ts`): la receta del modo Minimal de
-  // DeepSeek en el cable. Temperatura 1,0, un solo techo de salida para todas
-  // las llamadas del turno —el cierre también: con el razonamiento al máximo,
-  // sus 2.048 se irían en pensar— y la PALABRA `"max"`, que no pasa por el dial
-  // de números ni por su recorte a `high`. Dos capas siguen por encima, como
-  // con el mando: el operador (`OPENLEN_AGENT_EFFORT`) y la puerta de un papel
-  // que no piensa (`esfuerzo === null`). Sin el modo, todo como antes.
-  const isDynamis = options.mode === "dynamis";
+  // LEN ODYSSEY (`lib/agent/dynamis.ts`): corre en el papel `odyssey` (Kimi K3.1 Pro),
+  // temperatura 1,0, techo de salida 65.536 también en `closeOut` y la palabra `"max"`,
+  // fija durante todo el turno (en la plantilla de K3 `thinking-effort` va delante de todos
+  // los mensajes: cambiarlo a mitad de turno invalidaría su caché KV). Dos capas siguen por
+  // encima: el operador (`OPENLEN_AGENT_EFFORT`) y un papel que no piensa (`esfuerzo === null`).
   const temperature = isDynamis ? DYNAMIS_TEMPERATURE : TEMPERATURE;
   const loopCeiling = isDynamis ? DYNAMIS_MAX_OUTPUT_TOKENS : LOOP_MAX_OUTPUT_TOKENS;
   const closeOutCeiling = isDynamis ? DYNAMIS_MAX_OUTPUT_TOKENS : CLOSEOUT_MAX_OUTPUT_TOKENS;
@@ -340,11 +306,9 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
 
   // ─── QUIÉN ATIENDE EL TURNO (spec local 2026-10-16-second-provider §3.4) ───
   //
-  // El orden se decide UNA vez, al empezar, y el turno se queda en su
-  // proveedor —también el cierre— salvo que tenga que pasar al respaldo. Cada
-  // proveedor, una sola vez por turno: no hay vaivén. Sin ningún proveedor con
-  // clave, el cliente de siempre, que lo dice con `missing_key`.
-  const order = providerOrder(resolveAgentProviders(env, options.providers), {
+  // El orden se decide UNA vez, al empezar, para el papel que corre (`agent` u
+  // `odyssey`), y el turno se queda en su proveedor salvo que pase al respaldo.
+  const order = providerOrder(resolveRoleProviders(role, env, options.providers), {
     preferred: options.preferredProvider ?? null,
     now: Date.now(),
   });
@@ -377,7 +341,7 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
 
   const noteUsage = (provider: ResolvedProvider | null, u: UsageTotals): void => {
     const id = provider?.id ?? "fireworks";
-    const row = uses.get(id) ?? { provider: id, model: provider?.modelId ?? modelIdForRole("agent"), ...zeroUsage() };
+    const row = uses.get(id) ?? { provider: id, model: provider?.modelId ?? modelIdForRole(role), ...zeroUsage() };
     addUsage(row, u);
     uses.set(id, row);
     if (awaitingFirstUsageAfterSwitch) {
@@ -524,7 +488,7 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
           options.onCall({
             kind,
             provider: provider?.id ?? "fireworks",
-            model: servedModel ?? provider?.modelId ?? modelIdForRole("agent"),
+            model: servedModel ?? provider?.modelId ?? modelIdForRole(role),
             effort: sent?.reasoningEffort == null ? null : String(sent.reasoningEffort),
             startedAt,
             durationMs: Date.now() - startedAt,
@@ -545,12 +509,15 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
     ((): ReturnType<typeof asAgentStream> => {
       // LAS FOTOS VAN DENTRO DE SU MENSAJE (`Message.images`) y viajan en todas
       // las vueltas, como una imagen pegada en Claude Code. Quién corre la
-      // vuelta lo decide la política: con un agente que ve, él mismo.
-      const operation = operacionDeLaVuelta(messages.some((m) => m.images?.length));
-      if (operation !== "agent_turn") mirado = true;
+      // vuelta lo decide la política: con un agente que ve (`agent` u `odyssey`), él mismo.
+      const operation = operacionDeLaVuelta(messages.some((m) => m.images?.length), papel.veImagenes, isDynamis);
+      if (operation === "page_write_with_reference") mirado = true;
+      const esDelAgente = operation === "agent_turn" || operation === "odyssey_turn";
       // Plan Ruta 98 % (P4b): auto-unlock `low`/`medium` -> `high` adaptive for one
-      // step when the loop hits a stall. Never overrides Dynamis, operator pin, or `high`/`auto`.
+      // step when the loop hits a stall. Never overrides Odyssey/Dynamis (where changing
+      // `thinking-effort` mid-turn invalidates Kimi's KV cache), operator pin, or `high`/`auto`.
       const pasoEsfuerzo: EsfuerzoAgente | null =
+        !isDynamis &&
         streamOpts?.effortUnlock === "high" &&
         operation === "agent_turn" &&
         esfuerzo !== null &&
@@ -566,24 +533,15 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
           // 🔴 A7 · EL CIERRE LLEVA LAS MISMAS HERRAMIENTAS, con `tool_choice:
           // "none"`: no puede llamar ninguna, y su prefijo es el del bucle (la
           // plantilla del modelo pone las herramientas en el prompt de sistema).
-          // Sin ellas, la llamada del cierre se pagaba entera sin caché
-          // (auditoría de los sospechosos, `cache-suspects.test.ts`).
-          // A turn can refresh custom agent choices after editing their files. Read its declarations
-          // for each request; unchanged declarations still serialize byte for byte identically.
           tools: toolsForFireworks(options.tools),
           ...(withTools ? {} : { toolChoice: "none" as const }),
-          // LOS TROZOS DE LOS ARGUMENTOS, para pintar un Write mientras se
-          // escribe. Sólo en el bucle: el cierre no llama a nada.
           ...(withTools ? { streamToolArgs: true } : {}),
           maxOutputTokens,
           temperature,
           topP: TOP_P,
           requestId: options.requestId,
           operation,
-          // La POSTURA sólo tiene sentido para `agent_turn`: si una vuelta con
-          // fotos va al papel con visión (agente que no ve), ese papel mantiene
-          // el valor de la tabla, no el elegido por el usuario para el Agente.
-          ...(operation === "agent_turn"
+          ...(esDelAgente
             ? { esfuerzo: pasoEsfuerzo, ...(effortWord ? { reasoningEffortWord: effortWord } : {}) }
             : {}),
         },
@@ -595,16 +553,11 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
 
   return {
     // El del PRIMER proveedor elegido: la línea del diario y el libro lo leen.
-    modelId: legacy ? modelIdForRole(roleForOperation("agent_turn")) : order[0]!.modelId,
-    // El proveedor que corrió el turno es el que lo paga. Dos papeles, dos
-    // tarifas: si MIRO, la del papel con vision; si no, la del Agente. Aqui
-    // habia un tercero —Gemini, con `ranOnGemini`— que salio el 2026-08-28.
-    // 🔴 LA TARIFA SALE DEL PAPEL, no de un literal — 2026-09-11. Estaba escrita
-    // a mano (`"deepseek-pro"`), así que cambiar el modelo del papel `agent` en
-    // la política le habría cobrado al usuario 6x por turnos que costaron 1x.
-    // El papel que MIRA y el que razona son dos, y cada uno trae la suya.
+    modelId: legacy ? modelIdForRole(role) : order[0]!.modelId,
+    // El proveedor que corrió el turno es el que lo paga: si cayó al papel con
+    // visión, la suya; si no, la del papel del turno (`agent` u `odyssey`).
     creditRate: () =>
-      mirado ? MODEL_POLICY.visualCritic.creditRate : MODEL_POLICY.agent.creditRate,
+      mirado ? MODEL_POLICY.visualCritic.creditRate : papel.creditRate,
     // ⚰️ Aquí la foto se anclaba SÓLO a la vuelta cuyo último mensaje era el
     // prompt (por el canal de `request.images`, que la pega al último mensaje
     // de usuario y no puede ir junto a resultados de herramientas). Con A va

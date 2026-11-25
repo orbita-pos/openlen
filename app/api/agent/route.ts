@@ -47,7 +47,7 @@ import { createStepStore, type StepStore } from "@/lib/agent/telemetry/step-stor
 import { drizzleStepStoreDb } from "@/lib/agent/telemetry/step-store-db";
 import { billedUsage, preferredProviderFrom, withForgiven } from "@/lib/agent/provider-billing";
 import { noteTurn } from "@/lib/agent/provider-health";
-import { resolveAgentProviders } from "@/lib/ai/providers";
+import { resolveRoleProviders } from "@/lib/ai/providers";
 import { takeTypesAndLint } from "@/lib/agent/types-and-lint";
 import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
 import {
@@ -1162,7 +1162,7 @@ async function correrTurno(
   // sólo `DEEPINFRA_API_KEY` también—. El mensaje de cuando no hay ninguno es
   // el de siempre.
   const faltaKey =
-    resolveAgentProviders(process.env).length > 0
+    resolveRoleProviders(mode === "dynamis" ? "odyssey" : "agent", process.env).length > 0
       ? null
       : faltaCredencial(credencialDelTurno()) ??
         `Len has no provider with a key — OPENLEN_AGENT_PROVIDERS=${process.env.OPENLEN_AGENT_PROVIDERS ?? "(default)"}`;
@@ -2525,7 +2525,13 @@ async function correrTurno(
               // The provider Len is on now: its cache holds his prefix (a fork's whole request).
               preferredProvider: brain.lastProvider(),
             });
-            return { openStream: b.openStream, closeOut: b.closeOut, modelId: b.modelId, lastProvider: () => b.lastProvider() };
+            return {
+              openStream: b.openStream,
+              closeOut: b.closeOut,
+              modelId: b.modelId,
+              lastProvider: () => b.lastProvider(),
+              creditRate: () => b.creditRate(),
+            };
           },
           runTool: runToolWithAgentTypes,
           store: { createRun, saveProgress, settleRun, reopenRun, runsOfCurrentConversation, runOfCurrentConversation, setWorktree, setWorktreeOutcome },

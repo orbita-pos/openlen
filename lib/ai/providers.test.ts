@@ -72,8 +72,14 @@ describe("resolveRoleProviders — the reasoner and the vision role, like the ag
 
   it("one switch for all of them: OPENLEN_AGENT_PROVIDERS=fireworks turns DeepInfra off everywhere", () => {
     const env = { ...BOTH, OPENLEN_AGENT_PROVIDERS: "fireworks" };
-    for (const role of ["agent", "reasoner", "visual_critic"] as const) {
+    for (const role of ["agent", "odyssey", "reasoner", "visual_critic"] as const) {
       expect(resolveRoleProviders(role, env).map((p) => p.id), role).toEqual(["fireworks"]);
     }
+  });
+
+  it("odyssey defaults to its own policy order (Fireworks first, DeepInfra fallback)", () => {
+    const [first, second] = resolveRoleProviders("odyssey", BOTH);
+    expect(first).toMatchObject({ id: "fireworks", modelId: "accounts/fireworks/models/kimi-k3p1-pro" });
+    expect(second).toMatchObject({ id: "deepinfra", modelId: "moonshotai/Kimi-K3.1-Pro" });
   });
 });

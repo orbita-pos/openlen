@@ -260,84 +260,17 @@ export function paraLaTerminal(texto: string): string {
   return PARA_LA_TERMINAL.reduce((t, [de, a]) => t.split(de).join(a), texto);
 }
 
-/**
- * SÓLO TERMINAL (F4 de plans/len-agente-2026, punto 4): sin Read, Edit ni
- * Write, como el modo mínimo de DeepSeek (una terminal y nada más para los
- * ficheros; quitaron su editor el 03/09 porque «the shell already provides file
- * inspection and mutation»). Es la mitad de Len Dynamis que toca las
- * herramientas (`lib/agent/dynamis.ts`); la otra mitad va en el cable.
- *
- * ⚰️ Era el brazo de F4, detrás de `OPENLEN_SOLO_TERMINAL=1`, para el servidor
- * entero. Ahora lo decide el MODO DEL TURNO, y esa variable no hace nada: lo
- * vigila declaracion.test.ts.
- *
- * Sólo CON la terminal encendida: quitar las herramientas de ficheros sin
- * `bash` dejaría a Len sin manos. Las demás herramientas (mirar, usar,
- * publicar…) se quedan.
- */
-export function terminalOnly(mode: AgentMode, env: Readonly<Record<string, string | undefined>> = process.env): boolean {
-  return mode === "dynamis" && terminalEncendida(env);
-}
-
-/** Lo que quita Dynamis, además de Grep y Glob. */
-export const SUSTITUIDAS_EN_SOLO_TERMINAL: readonly string[] = ["Read", "Edit", "MultiEdit", "Write"];
-
-/**
- * Las frases del prompt, de `bash` y de /AGENTS.md que nombran Read, Edit o
- * Write, dichas con la terminal. Se aplican DESPUÉS de `paraLaTerminal` (la
- * primera parte de su frase ya habla de `bash`). Fuera de Dynamis no se aplican
- * y nada cambia. Cada una tiene que encontrar su frase: lo vigila
- * declaracion.test.ts, como con las de arriba.
- */
-export const PARA_SOLO_LA_TERMINAL: readonly (readonly [string, string])[] = [
-  // El prompt de sistema.
-  [
-    "Read to read, Edit to change an exact piece, Write to create a new page or rewrite a whole one, and bash, a terminal over the same files, to search the whole site (grep -rn), list them (find) or change many at once (sed -i).",
-    "bash, a terminal over those files, to read them (cat, sed -n), search the whole site (grep -rn), list them (find) and change them (sed -i, or a heredoc to write a whole one).",
-  ],
-  // El de una app (`lib/agent/modo-app.ts`), que dice «fichero» donde la página dice «página».
-  [
-    "Read to read, Edit to change an exact piece, Write to create a new file or rewrite a whole one, and bash, a terminal over the same files, to search the whole site (grep -rn), list them (find) or change many at once (sed -i).",
-    "bash, a terminal over those files, to read them (cat, sed -n), search the whole site (grep -rn), list them (find) and change them (sed -i, or a heredoc to write a whole one).",
-  ],
-  ["with the smallest Edit that does it", "with the smallest change that does it"],
-  ["or rewrite it whole with Write to improve it", "or rewrite it whole to improve it"],
-  ["are changed the same way, with Edit.", "are changed the same way, with bash."],
-  ["To remove something, one Edit that deletes THAT piece", "To remove something, one change that deletes THAT piece"],
-  [
-    "agent: Read of /index.html, one Edit that deletes the gallery section and another that deletes its link in the menu;",
-    "agent: reads /index.html and deletes with bash the gallery section and its link in the menu;",
-  ],
-  ["After each Edit or Write the change is ALREADY saved", "After each command that changes a file, the change is ALREADY saved"],
-  ["A new page is a Write to /<slug>/index.html", "A new page is a new file, /<slug>/index.html"],
-  ["(Edit, with replace_all if it repeats identically)", "(with sed -i, which changes them all at once)"],
-  ["fixes it with Edit in every file where it appears", "fixes it with bash in every file where it appears"],
-  ["open a note with Read when", "open a note with cat when"],
-  // La descripción de `bash`.
-  ["is saved like a Write, through the same checks and", "is saved through the same checks as any edit of the site, and"],
-  // La de `propose_skills` (lib/agent/skills/propose-tool.ts).
-  ["write those with Write, not with this.", "write those as files with bash, not with this."],
-  // La de `publish_artifact` (lib/len-artifacts/tools.ts).
-  ["First write its files with Write and Edit in", "First write its files with bash in"],
-  // /AGENTS.md. ⚰️ Los tres de la receta de STORES (`data-ol-stores`) se fueron
-  // el 2026-10-04 con ella: los datos de una página son su backend de Supabase.
-  ["you write the SQL in it with Write or Edit,", "you write the SQL in it,"],
-];
-
-export function paraSoloLaTerminal(texto: string): string {
-  return PARA_SOLO_LA_TERMINAL.reduce((t, [de, a]) => t.split(de).join(a), texto);
-}
-
-/** Lo que leen el prompt y las descripciones según la palanca y el modo del
- *  turno: nada, la terminal, o la terminal sola (Dynamis). */
+/** Lo que leen el prompt y las descripciones según la palanca de la terminal.
+ *  ⚰️ Aquí vivían `terminalOnly`, `SUSTITUIDAS_EN_SOLO_TERMINAL` y `PARA_SOLO_LA_TERMINAL`
+ *  (el Minimal Mode del 03/10 que quitaba Read/Edit/Write en Dynamis). Retirados el 25/11:
+ *  Len Odyssey corre con las herramientas completas de ficheros junto con `bash`. */
 export function segunLasPalancas(
   texto: string,
   env: Readonly<Record<string, string | undefined>> = process.env,
-  mode: AgentMode = "len",
+  _mode: AgentMode = "len",
 ): string {
   if (!terminalEncendida(env)) return texto;
-  const conTerminal = paraLaTerminal(texto);
-  return terminalOnly(mode, env) ? paraSoloLaTerminal(conTerminal) : conTerminal;
+  return paraLaTerminal(texto);
 }
 
 export const DECLARACION_BASH: Record<string, unknown> = {

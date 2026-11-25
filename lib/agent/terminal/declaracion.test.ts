@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { buildAgentSystemPrompt, buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { buildManualDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import type { AgentMode } from "@/lib/agent/dynamis";
-import { COMMITTING_WITH_GIT, DECLARACION_BASH, NOMBRE_BASH, PARA_LA_TERMINAL, PARA_SOLO_LA_TERMINAL, terminalEncendida, terminalOnly, withGit, withGitRemote, withSandbox } from "./declaracion";
+import { COMMITTING_WITH_GIT, DECLARACION_BASH, NOMBRE_BASH, PARA_LA_TERMINAL, terminalEncendida, withGit, withGitRemote, withSandbox } from "./declaracion";
 
 const CON = { OPENLEN_TERMINAL: "1" };
 const SIN = { OPENLEN_TERMINAL: "0" };
@@ -75,11 +75,11 @@ describe("la palanca de la terminal", () => {
   });
 });
 
-// F4 (plans/len-agente-2026), punto 4: sólo la terminal para los ficheros,
-// como el modo mínimo de DeepSeek. Desde el 03/10 es la mitad de Len Dynamis
-// que toca las herramientas, y lo decide el MODO DEL TURNO (`lib/agent/dynamis.ts`),
-// no una variable del servidor.
-describe("Len Dynamis: sólo la terminal para los ficheros", () => {
+// LEN ODYSSEY (`mode: "dynamis"`, `lib/agent/dynamis.ts`): el 03/10 corrió en
+// modo mínimo sin `Read`/`Edit`/`Write`; hoy corre Kimi K3.1 Pro con las mismas
+// herramientas completas de ficheros que Len (`Read`, `Edit`, `MultiEdit`,
+// `Write` + `bash`), sin partir ni el prompt ni el catálogo.
+describe("Len Odyssey (dynamis): conserva las herramientas completas de ficheros", () => {
   const nombresEn = (env: Record<string, string>, mode: AgentMode) =>
     buildFunctionDeclarations(env, {}, mode).map((d) => String(d.name));
   const todo = (env: Record<string, string>, mode: AgentMode = "len") =>
@@ -89,60 +89,32 @@ describe("Len Dynamis: sólo la terminal para los ficheros", () => {
       buildManualDeLaPlataforma(env, mode),
     ].join("\n");
 
-  it("sólo con el modo Dynamis y la terminal encendida", () => {
-    expect(terminalOnly("dynamis", CON)).toBe(true);
-    expect(terminalOnly("dynamis", SIN)).toBe(false);
-    expect(terminalOnly("len", CON)).toBe(false);
-  });
-
-  it("en Dynamis: bash y nada más para los ficheros; lo demás se queda", () => {
+  it("en Dynamis se declaran Read, Edit, MultiEdit, Write y bash igual que en Len", () => {
     const n = nombresEn(CON, "dynamis");
-    expect(n).toContain(NOMBRE_BASH);
-    for (const fuera of ["Read", "Edit", "MultiEdit", "Write", "Grep", "Glob"]) expect(n).not.toContain(fuera);
-    for (const queda of ["view_page", "use_page", "publish", "ask_user_question", "undo_last_change", "web_search", "web_fetch"]) expect(n).toContain(queda);
+    expect(n).toEqual(nombresEn(CON, "len"));
+    for (const herramienta of [NOMBRE_BASH, "Read", "Edit", "MultiEdit", "Write", "view_page", "use_page", "publish", "ask_user_question", "undo_last_change", "web_search", "web_fetch"]) {
+      expect(n).toContain(herramienta);
+    }
+    for (const fuera of ["Grep", "Glob"]) expect(n).not.toContain(fuera);
   });
 
-  // «Read-only» no es la herramienta; «Read the current session goal» (la
-  // descripción de `get_goal`, literal de DeepSeek, pieza 8) tampoco: es el verbo.
-  // Ni «Read what the visuals you drew…» (`read_widget_context`, bfd4c9967, el
-  // ReadWidgetContext de Claude Code): también el verbo.
-  const NOMBRA_UNA_DE_FICHEROS = /\b(Read|Edit|Write|Grep|Glob)\b(?!-| the current session goal| what the visuals you drew)/;
-
-  it("🔴 en Dynamis, ni el prompt, ni las descripciones, ni /AGENTS.md nombran una herramienta que no tiene", () => {
-    expect(todo(CON, "dynamis")).not.toMatch(NOMBRA_UNA_DE_FICHEROS);
+  it("el prompt, las descripciones y /AGENTS.md en Dynamis son byte a byte los de Len (página y app)", () => {
+    expect(todo(CON, "dynamis")).toBe(todo(CON, "len"));
+    expect(textosDeApp(CON, "dynamis")).toBe(textosDeApp(CON, "len"));
   });
 
   // 🔴 LA LÁPIDA de la palanca vieja: el valor que antes quitaba Read, Edit y
   // Write ahora no cambia nada. Una variable que sigue en un .env viejo no
-  // puede volver a convertir un servidor entero en Dynamis.
+  // puede volver a quitar herramientas en silencio.
   it("OPENLEN_SOLO_TERMINAL=1 ya no hace nada", () => {
     const VIEJA = { OPENLEN_TERMINAL: "1", OPENLEN_SOLO_TERMINAL: "1" };
     expect(todo(VIEJA)).toBe(todo(CON));
     expect(nombresEn(VIEJA, "len")).toEqual(expect.arrayContaining(["Read", "Edit", "Write"]));
   });
 
-  it("con la terminal apagada, Dynamis no quita nada: Len sin manos no existe", () => {
+  it("con la terminal apagada, Dynamis tampoco cambia nada", () => {
     expect(todo(SIN, "dynamis")).toBe(todo(SIN));
     expect(nombresEn(SIN, "dynamis")).toEqual(expect.arrayContaining(["Read", "Edit", "Write", "Grep", "Glob"]));
-  });
-
-  it("🔴 tampoco en una APP en Dynamis", () => {
-    expect(textosDeApp(CON, "dynamis")).not.toMatch(NOMBRA_UNA_DE_FICHEROS);
-  });
-
-  it("cada sustitución encuentra su frase en lo que lee el modelo con la terminal (en una página o en una app)", () => {
-    const conTerminal = [
-      buildAgentSystemPrompt(CON),
-      ...buildFunctionDeclarations(CON).map((d) => JSON.stringify(d)),
-      buildManualDeLaPlataforma(CON),
-      textosDeApp(CON),
-    ].join("\n");
-    expect(PARA_SOLO_LA_TERMINAL.map(([de]) => de).filter((de) => !conTerminal.includes(de))).toEqual([]);
-  });
-
-  it("en Len (el modo por defecto), todo sale como con la terminal", () => {
-    expect(todo(CON, "len")).toBe(todo(CON));
-    expect(nombres(CON)).toEqual(expect.arrayContaining(["Read", "Edit", "Write"]));
   });
 });
 

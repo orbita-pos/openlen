@@ -145,18 +145,25 @@ describe("la POSTURA del turno viaja en la petición", () => {
 describe("Len Dynamis en el cable", () => {
   const pedido = (i = 0) => fireworksStream.mock.calls[i][0];
 
-  it("temperatura 1,0, la palabra \"max\" y 65.536 de salida", async () => {
+  it("corre en `odyssey_turn`, cobra a `MODEL_POLICY.odyssey.creditRate`, temperatura 1,0, la palabra \"max\" y 65.536 de salida", async () => {
     const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {}, mode: "dynamis" });
     await drain(brain.openStream([USER]));
+    expect(pedido().operation).toBe("odyssey_turn");
     expect(pedido().temperature).toBe(1);
     expect(pedido().topP).toBe(1);
     expect(pedido().reasoningEffortWord).toBe("max");
     expect(pedido().maxOutputTokens).toBe(65_536);
+    expect(brain.modelId).toBe(modelIdForRole("odyssey"));
+    expect(brain.creditRate()).toBe(MODEL_POLICY.odyssey.creditRate);
+    const tarifa = creditRate(MODEL_POLICY.odyssey.creditRate);
+    expect(tarifa.input).toBeGreaterThan(0);
+    expect(tarifa.output).toBeGreaterThan(0);
   });
 
-  it("el cierre también: con el razonamiento al máximo, 2.048 se irían en pensar", async () => {
+  it("el cierre también: `odyssey_turn`, con el razonamiento al máximo y 65.536 de salida", async () => {
     const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {}, mode: "dynamis" });
     await drain(brain.closeOut([USER]));
+    expect(pedido().operation).toBe("odyssey_turn");
     expect(pedido().temperature).toBe(1);
     expect(pedido().reasoningEffortWord).toBe("max");
     expect(pedido().maxOutputTokens).toBe(65_536);
@@ -297,13 +304,17 @@ describe("operacionDeLaVuelta", () => {
     expect(operacionDeLaVuelta(false, true)).toBe("agent_turn");
   });
 
-  it("con fotos y un agente que ve, el agente; si no ve, el papel con visión", () => {
+  it("con fotos y un agente que ve, el agente (u odyssey); si no ve, el papel con visión", () => {
     expect(operacionDeLaVuelta(true, true)).toBe("agent_turn");
     expect(operacionDeLaVuelta(true, false)).toBe("page_write_with_reference");
+    expect(operacionDeLaVuelta(false, true, true)).toBe("odyssey_turn");
+    expect(operacionDeLaVuelta(true, true, true)).toBe("odyssey_turn");
+    expect(operacionDeLaVuelta(true, false, true)).toBe("page_write_with_reference");
   });
 
-  it("hoy la política dice que el agente ve (medido en Fireworks el 01/10)", () => {
+  it("hoy la política dice que tanto `agent` como `odyssey` ven imágenes", () => {
     expect(MODEL_POLICY.agent.veImagenes).toBe(true);
+    expect(MODEL_POLICY.odyssey.veImagenes).toBe(true);
   });
 });
 

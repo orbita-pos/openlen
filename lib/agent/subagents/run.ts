@@ -22,7 +22,7 @@ import { runSubagent } from "@/lib/agent/subagente";
 import type { CompactionMark } from "@/lib/agent/compaction/mark";
 import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
 import type { LedgerUse } from "@/lib/credit-ledger";
-import { creditsForUsage } from "@/lib/credits";
+import { creditsForUsage, type CreditRate } from "@/lib/credits";
 import { creditRateForRole, roleForOperation } from "@/lib/generation/model-policy";
 import type { AppDeProyecto } from "@/lib/projects/types";
 import type { NivelEsfuerzo } from "@/lib/agent/esfuerzo";
@@ -117,6 +117,7 @@ export interface SubagentBrain {
   closeOut(messages: Message[]): AsyncIterable<import("@/lib/ai-gateway").StreamEvent>;
   readonly modelId: string;
   lastProvider(): LedgerUse["provider"];
+  creditRate?(): CreditRate;
 }
 
 export interface SubagentRunStore {
@@ -335,8 +336,9 @@ type PreloadedMessage = Message & { readonly loadedSkill?: string; readonly runn
 const NOTHING_YET: ChildSpec["prior"] = { toolUses: 0, durationMs: 0, charged: 0, usage: NO_USAGE, actions: [] };
 
 export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): SubagentsDeps {
-  const rate = creditRateForRole(roleForOperation("subagent"));
-  const centicreditsOf = (g: Usage) => (g.inputTokens + g.outputTokens > 0 ? Math.max(1, creditsForUsage(g.inputTokens, g.outputTokens, rate, g.cachedTokens)) : 0);
+  const defaultRate = creditRateForRole(ctx.mode === "dynamis" ? "odyssey" : roleForOperation("subagent"));
+  const centicreditsOf = (g: Usage, rate: CreditRate = defaultRate) =>
+    g.inputTokens + g.outputTokens > 0 ? Math.max(1, creditsForUsage(g.inputTokens, g.outputTokens, rate, g.cachedTokens)) : 0;
   const log = io.log ?? ((line: string) => console.warn(line));
 
   function preload(type: ChildType, messages: Message[]): Message[] {
@@ -535,7 +537,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
           : turnLimitReached ? "turn_limit" : "completed";
     if (status === "error") diagnostic ??= result?.errorCode ?? "error";
     const usage = result?.usage ?? NO_USAGE;
-    const charged = centicreditsOf(usage);
+    const charged = centicreditsOf(usage, brain?.creditRate?.() ?? defaultRate);
     ctx.spend.settle(id, charged);
     if (charged > 0) {
       await io

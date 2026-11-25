@@ -90,6 +90,14 @@ const QWEN3P8_27B = { input: 0.2, output: 2.5, cached: 0.05 } as const;
 const V4_PRO = { input: 1.32, output: 3.96, cached: 0.044 } as const;
 
 /**
+ * Kimi K3.1 Pro (`accounts/fireworks/models/kimi-k3p1-pro` y `moonshotai/Kimi-K3.1-Pro`).
+ * El papel `odyssey` (Len Odyssey, `lib/agent/dynamis.ts`). Leído y comprobado en vivo el
+ * 2026-11-25 contra `docs.fireworks.ai/serverless/pricing.md` (Standard: $2.00 / $0.20 / $10.00)
+ * y `api.deepinfra.com/models/list` (lista idéntica: $2.00 / $0.20 / $10.00).
+ */
+const KIMI_K3P1_PRO = { input: 2.0, output: 10.0, cached: 0.2 } as const;
+
+/**
  * La tabla. La clave es el PUNTO DE PRECIO, no el modelo: dos modelos al mismo
  * precio comparten fila, que es lo que hace imposible que se separen.
  *
@@ -109,6 +117,7 @@ export const TARIFAS_POR_MILLON = {
   "deepseek-flash": V4_FLASH,
   "deepseek-flash-4p1": V4P1_FLASH,
   "deepseek-pro": V4_PRO,
+  "kimi-k3p1-pro": KIMI_K3P1_PRO,
   "qwen-3p8-27b": QWEN3P8_27B,
 } as const satisfies Readonly<Record<string, TarifaPorMillon>>;
 

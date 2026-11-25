@@ -208,6 +208,29 @@ export const MODEL_POLICY = Object.freeze({
       Object.freeze({ provider: "fireworks" as ProviderId, modelId: "accounts/fireworks/models/deepseek-v4p1-flash-1017" }),
     ]),
   }),
+  // LEN ODYSSEY (`lib/agent/dynamis.ts`), PAPEL PROPIO desde el 2026-11-25 (Jesús).
+  // Hasta aquí Dynamis corría el mismo `DeepSeek V4.1 Flash` que Len quitándole Read/Edit/Write y forzando `"max"`
+  // (empató en `encargo-grande` y cayó a 1/3 en `hard`). Aquí pasa a ser un salto real de modelo —Kimi K3.1 Pro
+  // (2,8T total / 104B activos, 1M contexto, visión nativa MoonViT-V2)— manteniendo todas las herramientas de Len
+  // (Read, Edit, Write, bash y subagentes).
+  //
+  // ORDEN DE PROVEEDORES (`fireworks` → `deepinfra`), medido en vivo el 25/11: a diferencia de V4.1 Flash (donde
+  // DeepInfra cuesta ~3x menos), aquí la tarifa es casi idéntica ($2,00/$0,20/$10,00 en Fireworks frente a
+  // $1,90/$0,19/$9,50 en DeepInfra, `is_partner: false`), y en hora punta de EE. UU. DeepInfra devolvió 429
+  // `engine_overloaded` sostenido varios minutos seguidos mientras Fireworks respondió 200 al instante en todas.
+  // Fireworks va delante para no pagar 4 reintentos de espera al abrir turno; DeepInfra queda de respaldo real.
+  odyssey: Object.freeze({
+    modelId: "accounts/fireworks/models/kimi-k3p1-pro",
+    creditRate: "kimi-k3p1-pro" as CreditRate,
+    displayName: "Kimi K3.1 Pro",
+    capturaRuntime: false,
+    piensa: true,
+    veImagenes: true,
+    providers: Object.freeze([
+      Object.freeze({ provider: "fireworks" as ProviderId, modelId: "accounts/fireworks/models/kimi-k3p1-pro" }),
+      Object.freeze({ provider: "deepinfra" as ProviderId, modelId: "moonshotai/Kimi-K3.1-Pro" }),
+    ]),
+  }),
   // EL JUEZ DE LEN-BENCH (`len_bench_juez`, lib/len-bench/juez.ts), PAPEL PROPIO desde el 2026-11-15 (Jesús).
   // Era el razonador —la misma 1017 que Len, y sólo por Fireworks—, y la guía de evals de Anthropic pide que
   // el juez nunca sea el modelo que se prueba (spec local 2026-11-12-len-3-1-ruta, §8.5 y §9 fila 7). Otra
@@ -254,6 +277,8 @@ export type ModelOperation =
    *  Existe separada de `page_edit` porque aquélla la comparten el Chat, el
    *  rediseño y la reparación, y sólo ésta tiene continuidad entre turnos. */
   | "agent_turn"
+  /** UN turno de Len Odyssey (`lib/agent/dynamis.ts`): el mismo bucle de herramientas sobre el papel `odyssey`. */
+  | "odyssey_turn"
   | "agent_visual_verify"
   | "template_autofill"
   /** Escribir una página MIRANDO una referencia adjunta. Papel con visión: al
@@ -332,6 +357,7 @@ const OPERATION_POLICY: Readonly<Record<ModelOperation, { role: ModelRole; effor
   // el compilador exige que quien la escriba decida, y `null` deja dicho en
   // voz alta que la decisión es "no aquí, a propósito".
   agent_turn: { role: "agent", effort: null },
+  odyssey_turn: { role: "odyssey", effort: null },
   page_write_with_reference: { role: "visual_critic", effort: "none" },
   // Los ojos del Agente: mirar una captura y decir si la edición dejó rotura
   // OBJETIVA. Es el papel con visión, y su esfuerzo es el único que la política
@@ -516,7 +542,7 @@ export function reasoningEffortAllowed(role: ModelRole, effort: FireworksReasoni
   // los niveles con nombre de `FireworksReasoningEffort`. Decir `"none"` aquí
   // leería como que el Agente corre con el pensamiento apagado, que es
   // exactamente el despiste que este comentario existe para no repetir.
-  if (role === "agent") return false;
+  if (role === "agent" || role === "odyssey") return false;
   if (role === "reasoner") return effort === "none" || effort === "high";
   // El juez no razona: contesta PASS o FAIL.
   if (role === "judge") return effort === "none";

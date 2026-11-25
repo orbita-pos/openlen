@@ -53,6 +53,10 @@ export const TOKEN_COST_RATES: Readonly<Record<string, TokenCostRate>> = {
   // 0.20 / 2.50 per million, cached at 0.25 of the input — list price; the list also shows a 0.25 discount,
   // not subtracted. It replaced Qwen3.8-Flash the same day (a partner's model: see model-policy.ts).
   "deepinfra/Qwen/Qwen3.8-27B": { input: 0.2, cached: 0.05, output: 2.5 },
+  // Len Odyssey (role `odyssey`, 2026-11-25): Kimi K3.1 Pro on DeepInfra (5 % promotion on $2.00 / $0.20 / $10.00,
+  // verified live against usage.estimated_cost on 2026-11-25) with Fireworks Serverless at list price as fallback.
+  "deepinfra/moonshotai/Kimi-K3.1-Pro": { input: 1.9, cached: 0.19, output: 9.5 },
+  "fireworks/accounts/fireworks/models/kimi-k3p1-pro": { input: 2.0, cached: 0.2, output: 10.0 },
 };
 
 export const UNIT_COSTS_USD = {

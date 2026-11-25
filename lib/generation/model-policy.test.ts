@@ -80,14 +80,18 @@ describe("Fable model policy", () => {
   // Hallazgo 6 (revisión final 2026-09-11): `effort: null` en la fila de
   // `agent_turn` tiene que FALLAR RUIDOSO, no colarse como un valor silencioso
   // — su esfuerzo vive en la capa de POSTURA, no en esta tabla.
-  it("agent_turn no tiene esfuerzo en la política — falla ruidoso, no en silencio", () => {
+  it("agent_turn y odyssey_turn no tienen esfuerzo en la política — fallan ruidoso, no en silencio", () => {
     expect(() => reasoningEffortFor("agent", "agent_turn")).toThrow();
+    expect(() => reasoningEffortFor("odyssey", "odyssey_turn")).toThrow();
   });
 });
 
 describe("el interruptor de pensamiento está SEPARADO del mando", () => {
-  it("el papel `agent` declara si piensa, y hoy piensa", () => {
+  it("los papeles `agent` y `odyssey` declaran si piensan y si ven, y hoy ambos piensan y ven", () => {
     expect(MODEL_POLICY.agent.piensa).toBe(true);
+    expect(MODEL_POLICY.odyssey.piensa).toBe(true);
+    expect(MODEL_POLICY.odyssey.veImagenes).toBe(true);
+    expect(roleForOperation("odyssey_turn")).toBe("odyssey");
   });
 
   it("con el pensamiento encendido, los niveles están disponibles", () => {
@@ -128,5 +132,6 @@ describe("el interruptor de pensamiento está SEPARADO del mando", () => {
     // explícito, y entonces esta línea es la que hay que venir a cambiar.
     expect(capturaRuntimeDelPapel("reasoner")).toBe(true);
     expect(capturaRuntimeDelPapel("visual_critic")).toBe(true);
+    expect(capturaRuntimeDelPapel("odyssey")).toBe(false);
   });
 });

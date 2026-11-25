@@ -81,34 +81,42 @@ async function responde(
   provider: ProviderId,
   modelId: string,
   apiKey: string,
-): Promise<{ ok: true } | { ok: false; detalle: string }> {
-  let r: Response;
-  try {
-    r = await fetch(PROVIDER_DIALECTS[provider].endpoint, {
-      method: "POST",
-      headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
-      // El aviso más corto que el proveedor acepta. No se lee la respuesta: lo
-      // que se comprueba es que el modelo EXISTA y sea alcanzable con esta
-      // clave, y eso ya lo contesta el código HTTP.
-      body: JSON.stringify({
-        model: modelId,
-        messages: [{ role: "user", content: "hi" }],
-        max_tokens: 1,
-      }),
-    });
-  } catch (e) {
-    // Un fallo de red no es un modelo muerto. Se dice distinto a propósito:
-    // confundirlos mandaría a alguien a cambiar la política por un wifi caído.
-    return { ok: false, detalle: `sin red: ${e instanceof Error ? e.message : String(e)}` };
+): Promise<{ ok: true } | { ok: false; status?: number; detalle: string }> {
+  for (let intento = 0; ; intento++) {
+    let r: Response;
+    try {
+      r = await fetch(PROVIDER_DIALECTS[provider].endpoint, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+        // El aviso más corto que el proveedor acepta. No se lee la respuesta: lo
+        // que se comprueba es que el modelo EXISTA y sea alcanzable con esta
+        // clave, y eso ya lo contesta el código HTTP.
+        body: JSON.stringify({
+          model: modelId,
+          messages: [{ role: "user", content: "hi" }],
+          max_tokens: 1,
+        }),
+      });
+    } catch (e) {
+      // Un fallo de red no es un modelo muerto. Se dice distinto a propósito:
+      // confundirlos mandaría a alguien a cambiar la política por un wifi caído.
+      return { ok: false, detalle: `sin red: ${e instanceof Error ? e.message : String(e)}` };
+    }
+    if (r.ok) return { ok: true };
+    let cuerpo = "";
+    try {
+      cuerpo = (await r.text()).slice(0, 200);
+    } catch {
+      /* sin cuerpo */
+    }
+    // Un 429/503 aislado («engine_overloaded») es congestión momentánea de flota, no un 404;
+    // si sigue fallando tras dos reintentos cortos, se devuelve con su código HTTP.
+    if ((r.status === 429 || r.status === 502 || r.status === 503 || r.status === 504) && intento < 2) {
+      await new Promise((res) => setTimeout(res, 1_500 * (intento + 1)));
+      continue;
+    }
+    return { ok: false, status: r.status, detalle: `http_${r.status}${cuerpo ? `: ${cuerpo}` : ""}` };
   }
-  if (r.ok) return { ok: true };
-  let cuerpo = "";
-  try {
-    cuerpo = (await r.text()).slice(0, 200);
-  } catch {
-    /* sin cuerpo */
-  }
-  return { ok: false, detalle: `http_${r.status}${cuerpo ? `: ${cuerpo}` : ""}` };
 }
 
 /** El cable del papel con visión en UN proveedor, por el cliente de producción. `null` = todo bien. */
@@ -265,7 +273,7 @@ function cotejaUno(
 
   // Mismo enlace, distinta región o modo. Nunca elegir por el precio que coincida.
   const globales = todas.filter((f) => !/\(\s*[A-Z]{2}\s*\)\s*$/.test(f.etiqueta)
-    && !/\sUltra-fast\s+\(Preview\)\s*$/i.test(f.etiqueta)
+    && !/\sUltra-fast(?:\s+\(Preview\))?\s*$/i.test(f.etiqueta)
     && !/\sFlex\s*$/i.test(f.etiqueta));
   if (globales.length !== 1) {
     return {
@@ -324,12 +332,28 @@ async function main(): Promise<void> {
   }
   console.log(`comprobando ${modelos.length} modelos…\n`);
 
+  const resultados = new Map<string, Awaited<ReturnType<typeof responde>>>();
+  for (const m of modelos) {
+    resultados.set(`${m.provider}/${m.modelId}`, await responde(m.provider, m.modelId, claves.get(m.provider)!));
+  }
+  const papelesConProveedorVivo = new Set<string>();
+  for (const m of modelos) {
+    if (resultados.get(`${m.provider}/${m.modelId}`)?.ok) {
+      for (const rol of m.roles) papelesConProveedorVivo.add(rol);
+    }
+  }
   const muertos: string[] = [];
   for (const m of modelos) {
-    const r = await responde(m.provider, m.modelId, claves.get(m.provider)!);
+    const r = resultados.get(`${m.provider}/${m.modelId}`)!;
     const quien = m.roles.join(", ");
     if (r.ok) {
       console.log(`  ok    ${m.provider}/${m.modelId}  (${quien})`);
+    } else if (r.status === 429 && m.roles.every((rol) => papelesConProveedorVivo.has(rol))) {
+      // 429 (`engine_overloaded`) confirma que el modelo existe pero su cola en este proveedor está llena ahora;
+      // si cada papel que lo nombra ya tiene otro proveedor respondiendo 200, se avisa sin bloquear (un 404 o un
+      // papel sin ningún proveedor libre sigue siendo MUERTO).
+      console.log(`  429   ${m.provider}/${m.modelId}  (${quien} — saturado ahora; cubierto por otro proveedor)`);
+      console.log(`         ${r.detalle}`);
     } else {
       console.log(`  MUERTO ${m.provider}/${m.modelId}  (${quien})`);
       console.log(`         ${r.detalle}`);
@@ -371,6 +395,12 @@ async function main(): Promise<void> {
   // La tarifa de un papel se coteja donde sale su `creditRate`: Fireworks (su página de precios) o DeepInfra
   // (la lista pública de su API, una descarga sin clave, sólo si algún papel la necesita).
   let listaDeDeepinfra: unknown = null;
+  const leerListaDeDeepinfra = async (): Promise<unknown> => {
+    listaDeDeepinfra ??= await fetch(LISTA_DE_DEEPINFRA)
+      .then((r) => (r.ok ? r.json() : `http_${r.status}`))
+      .catch((e: unknown) => `sin red: ${e instanceof Error ? e.message : String(e)}`);
+    return listaDeDeepinfra;
+  };
   const ajenos: string[] = [];
   const vistos = new Set<string>();
   for (const [papel, cfg] of Object.entries(MODEL_POLICY)) {
@@ -379,17 +409,9 @@ async function main(): Promise<void> {
     const nuestra: TarifaPorMillon = TARIFAS_POR_MILLON[cfg.creditRate];
     let c: Cotejo;
     if (tariffedProvider(cfg) === "deepinfra") {
-      listaDeDeepinfra ??= await fetch(LISTA_DE_DEEPINFRA).then((r) => (r.ok ? r.json() : `http_${r.status}`)).catch((e: unknown) => `sin red: ${e instanceof Error ? e.message : String(e)}`);
-      const suya = deepinfraListPrice(listaDeDeepinfra, cfg.modelId);
+      const lista = await leerListaDeDeepinfra();
+      const suya = deepinfraListPrice(lista, cfg.modelId);
       c = typeof suya === "string" ? { ok: false, detalle: suya } : cotejaTarifa(nuestra, suya, `${cfg.modelId} en DeepInfra`);
-      // Quien lo sirve, además de lo que cuesta: un modelo de socio se lo pasa DeepInfra a otro, y lo que lee
-      // (el juez lee pedidos y páginas de clientes) sale hacia él y pasa su moderación (15/11, Qwen3.8-Flash).
-      const sirve = deepinfraServesItself(listaDeDeepinfra, cfg.modelId);
-      if (sirve !== true) {
-        console.log(`  AJENO ${cfg.modelId}  (lo pide ${papel})`);
-        console.log(`         ${sirve}`);
-        ajenos.push(`${cfg.modelId} — ${sirve}`);
-      }
     } else {
       c = cotejaUno(cfg.modelId, nuestra, tabla);
     }
@@ -399,6 +421,20 @@ async function main(): Promise<void> {
       console.log(`  DERIVA ${cfg.modelId}  (${cfg.creditRate}, lo pide ${papel})`);
       console.log(`         ${c.detalle}`);
       desviadas.push(`${cfg.modelId} — ${cfg.creditRate}: ${c.detalle}`);
+    }
+  }
+
+  // Quien lo sirve en DeepInfra (`is_partner: false`), para TODOS los papeles que tienen DeepInfra en `providers`
+  // (no sólo el juez): un modelo de socio se lo pasa DeepInfra a un tercero y pasa por su moderación (15/11).
+  for (const m of policyModels()) {
+    if (m.provider !== "deepinfra") continue;
+    const lista = await leerListaDeDeepinfra();
+    const sirve = deepinfraServesItself(lista, m.modelId);
+    if (sirve !== true) {
+      const quien = m.roles.join(", ");
+      console.log(`  AJENO ${m.modelId}  (lo pide ${quien})`);
+      console.log(`         ${sirve}`);
+      ajenos.push(`${m.modelId} — ${sirve}`);
     }
   }
 

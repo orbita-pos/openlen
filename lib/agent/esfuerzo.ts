@@ -163,6 +163,8 @@ const DIAL_MEDIDO: Readonly<
   "accounts/fireworks/models/deepseek-v4p1-flash": { defecto: "high", tope: "high" },
   "accounts/fireworks/models/deepseek-v4p1-flash-1017": { defecto: "high", tope: "high" },
   "deepseek-ai/DeepSeek-V4.1-Flash-1017": { defecto: "high", tope: "high" },
+  "accounts/fireworks/models/kimi-k3p1-pro": { defecto: "high", tope: "max" },
+  "moonshotai/Kimi-K3.1-Pro": { defecto: "high", tope: "max" },
 };
 
 /** NUESTRA reserva para un modelo sin sonda: los tres de en medio, con el

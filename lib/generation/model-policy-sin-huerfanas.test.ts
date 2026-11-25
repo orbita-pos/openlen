@@ -75,7 +75,7 @@ describe("la política de modelos no cría filas muertas", () => {
     // el CABLE acepta, no lo que nosotros pedimos. Lo que se retiró es el único
     // papel que lo admitía. Esto es la prueba invertida: no se borra el
     // vocabulario del proveedor, se deja escrito que no hay puerta.
-    for (const papel of ["reasoner", "visual_critic", "agent"] as const) {
+    for (const papel of ["reasoner", "visual_critic", "agent", "odyssey"] as const) {
       expect(reasoningEffortAllowed(papel, "max"), `${papel} admite max`).toBe(false);
     }
   });

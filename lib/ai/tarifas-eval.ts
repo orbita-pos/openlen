@@ -58,6 +58,17 @@ const RATES_PER_M: Readonly<Record<string, TarifaPorMillon>> = Object.freeze(
   ),
 );
 
+/** También por el id de cada proveedor declarado en la política (`deepseek-ai/...`, `moonshotai/...`), para que un
+ *  turno corrido en DeepInfra no caiga a `LA_MAS_CARA` ($10/M de Odyssey) cuando `len-bench` mide `brain.modelId`. */
+const PROVIDER_RATES_PER_M: Readonly<Record<string, TarifaPorMillon>> = Object.freeze(
+  Object.fromEntries(
+    Object.values(MODEL_POLICY).flatMap((papel) => {
+      const rate = deCreditos(papel.creditRate);
+      return [[papel.modelId, rate] as const, ...papel.providers.map((p) => [p.modelId, rate] as const)];
+    }),
+  ),
+);
+
 /** Los modelos que esta tabla sabe tarifar. Se exporta para que la prueba pueda
  *  comprobar PROPIEDADES sobre la tabla entera en vez de la identidad de una
  *  constante — que es como el respaldo de abajo llegó a ser el más barato. */
@@ -82,7 +93,7 @@ export const VISION_RATE: TarifaPorMillon = RATES_PER_M[MODEL_POLICY.visualCriti
 /** Un modelo desconocido se cobra al MÁS CARO que conocemos: equivocarse hacia
  *  arriba detiene la batería antes de tiempo; hacia abajo, vacía la cuenta. */
 export function rateFor(modelId: string): TarifaPorMillon {
-  return RATES_PER_M[modelId] ?? LA_MAS_CARA;
+  return PROVIDER_RATES_PER_M[modelId] ?? LA_MAS_CARA;
 }
 
 /** Lo que cuesta un turno, en dólares, a partir de sus tokens medidos. */

@@ -378,7 +378,7 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
               : // Len Dynamis: la palabra, tal cual (ver `reasoningEffortWord`).
                 request.reasoningEffortWord
               ? { reasoning_effort: request.reasoningEffortWord }
-              : request.esfuerzo !== undefined || request.operation === "agent_turn"
+              : request.esfuerzo !== undefined || request.operation === "agent_turn" || request.operation === "odyssey_turn"
               ? (() => {
                   // CON POSTURA va lo que diga `presupuestoDeEsfuerzo`: un
                   // número, o NADA en el nivel por defecto —el

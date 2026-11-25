@@ -25,7 +25,6 @@ import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
 import { swapJsClauses } from "@/lib/ai/js-clause";
 import { conContratoMinimo, contratoParaSuperficie } from "@/lib/publish-contract-min";
 import { bloqueDeLibrerias } from "@/lib/librerias";
-import { paraSoloLaTerminal, terminalOnly } from "@/lib/agent/terminal/declaracion";
 import { realTerminalFor } from "@/lib/agent/sandbox/config";
 import type { AgentMode } from "@/lib/agent/dynamis";
 import { GUIA_DE_LA_APP, manualDeLaApp } from "@/lib/agent/modo-app";
@@ -264,10 +263,9 @@ export function partirElManual(entero: string = manualSinPartir(), conSkills = f
   };
 }
 
-/** El contenido de /AGENTS.md: lo que Read devuelve y lo que se adjunta. En Len
- *  Dynamis no nombra Read, Edit ni Write, que no tiene. En una APP es el suyo
- *  (`lib/agent/modo-app.ts`), con las secciones que valen en los dos sitios
- *  tomadas enteras de éste. */
+/** El contenido de /AGENTS.md: lo que Read devuelve y lo que se adjunta. En una
+ *  APP es el suyo (`lib/agent/modo-app.ts`), con las secciones que valen en los
+ *  dos sitios tomadas enteras de éste. */
 // ─── Edge Functions (spec local 2026-10-11, Parte 1) ──────────────────────────
 // Sólo donde hay motor: la frase de «no existen» cambia y sus líneas van dentro
 // de THE BACKEND, tras las de Realtime. El manual de la app copia esa sección
@@ -390,7 +388,8 @@ export function buildManualDeLaPlataforma(
   const withArtifacts = env.OPENLEN_ARTIFACTS === "1" ? `${agents}\n\n${skillsEnabled(env) ? ARTIFACT_MANUAL_INDEX_SKILLS : ARTIFACT_MANUAL_INDEX}` : agents;
   const withTool = tool && app ? manualOfTool(withArtifacts) : withArtifacts;
   const withMcp = connectorsEnabled(env) ? `${withTool}\n\n${mcpConnectorsManual(env)}` : withTool;
-  return terminalOnly(mode, env) ? paraSoloLaTerminal(withMcp) : withMcp;
+  void mode;
+  return withMcp;
 }
 
 /** LEN'S MCP CONNECTORS (spec local 2026-11-06-conectores-mcp, §5.5): the person's MCP servers, as a file. */

@@ -45,12 +45,15 @@ describe("las tarifas salen de donde se cobra", () => {
     expect(delJuez).not.toEqual(rateFor("un-modelo-que-no-existe"));
   });
 
-  it("el arnés tarifica el papel `agent` EXACTAMENTE a lo que se le cobra al usuario", () => {
-    const delArnes = rateFor(MODEL_POLICY.agent.modelId);
-    const delCobro = creditRate(MODEL_POLICY.agent.creditRate);
-    expect(delArnes.input).toBe(delCobro.input);
-    expect(delArnes.output).toBe(delCobro.output);
-    expect(delArnes.cached).toBe(delCobro.cached ?? 0);
+  it("el arnés tarifica los papeles `agent` y `odyssey` (y sus ids de proveedor) EXACTAMENTE a lo que se le cobra al usuario", () => {
+    for (const papel of [MODEL_POLICY.agent, MODEL_POLICY.odyssey] as const) {
+      const delCobro = creditRate(papel.creditRate);
+      const esperada = { input: delCobro.input, cached: delCobro.cached ?? 0, output: delCobro.output };
+      expect(rateFor(papel.modelId)).toEqual(esperada);
+      for (const p of papel.providers) {
+        expect(rateFor(p.modelId)).toEqual(esperada);
+      }
+    }
   });
 
   // 🔴 ESTA PRUEBA SUJETABA LA MENTIRA. Decía «al más caro que conocemos» y
@@ -105,6 +108,7 @@ describe("las tarifas salen de donde se cobra", () => {
       MODEL_POLICY.reasoner.modelId,
       MODEL_POLICY.visualCritic.modelId,
       MODEL_POLICY.agent.modelId,
+      MODEL_POLICY.odyssey.modelId,
       MODEL_POLICY.judge.modelId,
     ]);
     expect([...MODELOS_TARIFADOS].sort()).toEqual([...corriendo].sort());

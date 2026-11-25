@@ -35,10 +35,8 @@ import {
   DECLARACION_BASH,
   NOMBRE_BASH,
   segunLasPalancas,
-  SUSTITUIDAS_EN_SOLO_TERMINAL,
   SUSTITUIDAS_POR_LA_TERMINAL,
   terminalEncendida,
-  terminalOnly,
   withGit,
   withGitRemote,
 } from "@/lib/agent/terminal/declaracion";
@@ -247,8 +245,6 @@ function declaracionesDelModo(
   // F1 (plans/len-agente-2026): con la terminal, `bash` entra y Grep y Glob salen.
   const conTerminal = terminalEncendida(_env);
   if (conTerminal) for (const n of SUSTITUIDAS_POR_LA_TERMINAL) fuera.add(n);
-  // Len Dynamis: sólo la terminal para los ficheros, sin Read/Edit/Write.
-  if (terminalOnly(mode, _env)) for (const n of SUSTITUIDAS_EN_SOLO_TERMINAL) fuera.add(n);
   const declaraciones = conTerminal
     ? [
         ...buildTodasLasDeclaraciones(gitEnabled(_env), eventTasksEnabled(_env)),

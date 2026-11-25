@@ -234,6 +234,23 @@ describe("the launcher of Len's subagents", () => {
     await s.settled("r1");
   });
 
+  it("charges an Odyssey (mode=dynamis) subagent at the odyssey role's creditRate, not Flash's", async () => {
+    const bigUsage: StreamEvent = { type: "usage", inputTokens: 100_000, outputTokens: 20_000, cachedTokens: 0, thinkingTokens: 0 };
+    const lenRun = setup({ scripts: [[{ type: "text_delta", text: "ok" }, bigUsage, done]] });
+    await lenRun.launcher.launch({ description: "Len child", prompt: "Do it", preset: "Explore" });
+    await lenRun.settled("r1");
+    const lenCharged = (lenRun.charges[0] as { centicredits: number }).centicredits;
+    forgetAllSubagents();
+
+    const odysseySetup = setup({ scripts: [[{ type: "text_delta", text: "ok" }, bigUsage, done]] });
+    const odysseyLauncher = createSubagentLauncher({ ...odysseySetup.ctx, mode: "dynamis" }, odysseySetup.io);
+    await odysseyLauncher.launch({ description: "Odyssey child", prompt: "Do it", preset: "Explore" });
+    await odysseySetup.settled("r1");
+    const odysseyCharged = (odysseySetup.charges[0] as { centicredits: number }).centicredits;
+
+    expect(odysseyCharged).toBeGreaterThan(lenCharged * 5);
+  });
+
   // DeepSeek's Creator activation (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): an output schema declares
   // structured_output, whose call ends the run; delivered to the caller, no notice reaches Len.
   const READY = { type: "object", properties: { ready: { type: "boolean" } }, required: ["ready"] } as const;

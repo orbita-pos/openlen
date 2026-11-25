@@ -50,18 +50,14 @@ describe("el mensaje que se manda, según el modo", () => {
     return JSON.stringify(r.messages);
   };
 
-  it("en Dynamis, ni el prompt ni el manual nombran Read, Edit ni Write", () => {
+  it("en Dynamis conserva Read, Edit y Write y comparte byte a byte el prefijo de Len", () => {
     vi.stubEnv("OPENLEN_TERMINAL", "1");
-    expect(armar("dynamis")).not.toMatch(/\b(Read|Edit|Write|Grep|Glob)\b(?!-)/);
-  });
-
-  it("BRAZO DE CONTROL: en Len, con la misma terminal, sí los nombra", () => {
-    vi.stubEnv("OPENLEN_TERMINAL", "1");
-    expect(armar("len")).toMatch(/\bEdit\b/);
+    expect(armar("dynamis")).toMatch(/\bEdit\b/);
+    expect(armar("dynamis")).toBe(armar("len"));
     expect(armar()).toBe(armar("len"));
   });
 
-  it("sin la terminal, el modo no cambia ni un byte", () => {
+  it("sin la terminal, el modo tampoco cambia ni un byte", () => {
     // Encendida por defecto desde N45: apagarla es el literal "0".
     vi.stubEnv("OPENLEN_TERMINAL", "0");
     expect(armar("dynamis")).toBe(armar());
