@@ -32,8 +32,8 @@ export interface AgentListingDelta {
 /** OpenLen's cap on a custom type's description in the list (it was the declaration's). */
 export const AGENT_LISTING_DESCRIPTION_MAX = 500;
 
-/** Claude Code's closing line, after a removal. */
-const AMBIENT = "This is ambient context — do not narrate it to the user unless they ask or it is directly relevant to their request.";
+/** Claude Code's closing line, after a removal (the connector tools delta closes the same way). */
+export const AMBIENT = "This is ambient context — do not narrate it to the user unless they ask or it is directly relevant to their request.";
 
 /** As Claude Code folds them: the types the conversation has announced so far. */
 export function announcedAgentTypes(messages: readonly Pick<Message, "agentListing">[]): Set<string> {

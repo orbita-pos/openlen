@@ -73,6 +73,10 @@ export interface Message {
    *  `agent_listing_delta`): which ones it added and removed. Saved with the row and folded from the conversation,
    *  never sent: the model reads `content`. */
   agentListing?: { readonly added: readonly string[]; readonly removed: readonly string[] };
+  /** A user message that announced the tools of the person's connectors (lib/mcp-connectors/tools-delta.ts): which
+   *  ones it added and removed. Saved with the row and folded from the conversation, never sent: the model reads
+   *  `content`. */
+  connectorTools?: { readonly added: readonly string[]; readonly removed: readonly string[] };
   /** Asistente: lo que el modelo PENSÓ en ese paso, entero y tal cual llegó.
    *  Vuelve al modelo en los pasos siguientes del turno (H15, como el arnés de
    *  DeepSeek); al dueño no se le enseña, y no se guarda en la base. */

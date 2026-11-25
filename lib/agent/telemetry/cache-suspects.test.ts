@@ -22,6 +22,7 @@ import { plegarEquipo } from "@/lib/agent/plegar-equipo";
 import { _resetProviderHealth } from "@/lib/agent/provider-health";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { agentListingMessage } from "@/lib/agent/subagents/agent-listing";
+import { connectorToolsMessage } from "@/lib/mcp-connectors/tools-delta";
 import { resolveAgentTypes } from "@/lib/agent/subagents/agent-registry";
 import { checkReplay, jsonbRoundTrip } from "@/lib/agent/testing/replay-invariant";
 import { startFaultServer, type FaultServer } from "@/lib/agent/testing/llm-fault-server";
@@ -216,6 +217,54 @@ describe("cache suspects, pinned as they are today (A7: closeOut and screenshots
     expect(diffConsecutive(after!, next)).toEqual({ match: true });
     // Announced once in the whole conversation.
     expect(next.messages.filter((m) => String(m.content).includes("New agent types")).length).toBe(1);
+  });
+
+  // The connector tools delta (lib/mcp-connectors/tools-delta.ts). Seen in production on 25/11: Google Calendar's nine
+  // tools were declared (the same `toolsHash` as in a fresh chat that used them), and Len, reading an earlier failure in
+  // the history, said they «hadn't arrived». The conversation now says what changed: a user message at the end, before
+  // the turn's first call, saved with the row, and folded by the next turn so it says nothing twice.
+  it("🔴 connector tools that appear between turns: announced at the end before the first call, kept by the row, never twice", async () => {
+    server = await startFaultServer({
+      "/deepinfra": [
+        { kind: "ok", text: "Hecho." },
+        { kind: "ok", text: "Leo tu agenda." },
+        { kind: "ok", text: "Sigo." },
+      ],
+    });
+    const calls: BrainCall[] = [];
+    const tools = buildFunctionDeclarations({});
+    const brain = brainOn(server, calls, { tools });
+    let declared: string[] = [];
+    const turn = (messages: Message[]) =>
+      runAgentLoop({
+        messages,
+        tools,
+        openStream: brain.openStream,
+        runTool: async () => ({ response: { ok: true } }),
+        connectorTools: (m) => connectorToolsMessage(declared, m),
+        emit: () => {},
+      });
+    const initial: Message[] = [{ role: "system", content: "s" }, { role: "user", content: "hola" }];
+    // A turn with no connector tools says nothing.
+    const first = await turn([...initial]);
+    expect(calls[0]!.wire!.messages.some((m) => String(m.content).includes("connectors are available"))).toBe(false);
+    const firstRow = { userText: "hola", assistantReasoning: "", transcript: jsonbRoundTrip(transcripcionParaGuardar(first.transcripcion!, new Map())) };
+    // The person connects Google Calendar; the next turn's first call ends with the announcement.
+    declared = ["mcp__google-calendar__list_events"];
+    const second = await turn([initial[0]!, ...(historialDesdeLaBase([firstRow]) as Message[]), { role: "user", content: "¿qué tengo esta semana?" }]);
+    expect(calls[1]!.wire!.messages.at(-1)).toEqual({
+      role: "user",
+      content:
+        "<system-reminder>\nThese tools from the person's connectors are available from now on; call them directly when they help:\n- mcp__google-calendar__list_events\n</system-reminder>",
+    });
+    // The row keeps it with what it announced, and the turn after it announces nothing more.
+    const saved = transcripcionParaGuardar(second.transcripcion!, new Map());
+    expect(saved.mensajes.filter((m) => m.connectorTools)).toEqual([expect.objectContaining({ connectorTools: { added: ["mcp__google-calendar__list_events"], removed: [] } })]);
+    const secondRow = { userText: "¿qué tengo esta semana?", assistantReasoning: "", transcript: jsonbRoundTrip(saved) };
+    const history = historialDesdeLaBase([firstRow, secondRow]) as Message[];
+    expect(connectorToolsMessage(declared, history)).toBeNull();
+    await turn([initial[0]!, ...history, { role: "user", content: "sigue" }]);
+    expect(calls[2]!.wire!.messages.filter((m) => String(m.content).includes("connectors are available")).length).toBe(1);
   });
 
   // Review, finding 1: the prompt of the mode was asked for once, at the top of a step. A compaction right after

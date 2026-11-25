@@ -36,6 +36,8 @@ import { createStepRecorder } from "@/lib/agent/telemetry/step-recorder";
 import { flushOnExit } from "@/lib/agent/exit-flush";
 import { SUBAGENT_TOOL, subagentsEnabled } from "@/lib/agent/subagents/enabled";
 import { agentListingMessage } from "@/lib/agent/subagents/agent-listing";
+import { SUGGEST_CONNECTORS_TOOL } from "@/lib/mcp-connectors/tool-names";
+import { connectorToolsMessage } from "@/lib/mcp-connectors/tools-delta";
 import { createSubagentLauncher, type RunnerIO } from "@/lib/agent/subagents/run";
 import { createTurnSpend } from "@/lib/agent/subagents/spend";
 import { hasNotices, liveCount, noticeTurnPending, setNoticeTurnPending, takeNotices, waitForNoticeOrIdle } from "@/lib/agent/subagents/registry";
@@ -2934,6 +2936,18 @@ async function correrTurno(
           // The custom agent types the conversation hasn't announced — at its first step, or after a step that wrote a
           // type's file (`refreshAgentTypes`) —, folded from the conversation itself, so a rebuilt turn repeats none.
           ...(listsAgentTypes ? { agentListing: (msgs: readonly Message[]) => agentListingMessage(agentTypes, msgs) } : {}),
+          // The tools this turn's connectors give (lib/mcp-connectors/tools-delta.ts): what appeared or went since the
+          // conversation last said so reaches Len as a message, not only as a change of the declarations. Without the
+          // connectors read (a failure, or OPENLEN_MCP=0) nothing is said, rather than a false «gone».
+          ...(conectores
+            ? {
+                connectorTools: (msgs: readonly Message[]) =>
+                  connectorToolsMessage(
+                    conectores.declarations.map((d) => String(d.name)).filter((name) => name !== SUGGEST_CONNECTORS_TOOL),
+                    msgs,
+                  ),
+              }
+            : {}),
           closeOut: (msgs) => {
             const conModo = planEnElHistorial ? msgs : withPlanSection(msgs, planActivo);
             const s = conSenales(streamWithRetry(() => brain.closeOut(conModo), { signal: upstreamAbort.signal }), reloj.vivo);

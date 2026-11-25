@@ -344,6 +344,8 @@ function limpio<M extends Message | MensajeDelHistorial>(m: M, siguiente?: Messa
     ...(m.screenshotsDropped !== undefined ? { screenshotsDropped: m.screenshotsDropped } : {}),
     // What an agent listing announced: the next turn folds it from the history (lib/agent/subagents/agent-listing.ts).
     ...(m.agentListing ? { agentListing: { added: [...m.agentListing.added], removed: [...m.agentListing.removed] } } : {}),
+    // What a connector tools delta announced: the next turn folds it from the history (lib/mcp-connectors/tools-delta.ts).
+    ...(m.connectorTools ? { connectorTools: { added: [...m.connectorTools.added], removed: [...m.connectorTools.removed] } } : {}),
   } as M;
 }
 

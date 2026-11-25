@@ -7109,6 +7109,19 @@ describe("POST /api/agent — the person's own assistant", () => {
       expect(connectorsSent()).not.toBe(SHARED_PROJECT_CONTEXT);
     });
 
+    // The connector tools delta (lib/mcp-connectors/tools-delta.ts): the loop is handed the tools this turn's connectors
+    // give, so a conversation that hasn't announced them says so, and one that announced them hears they're gone.
+    it("🔴 the loop gets the connector tools delta of this turn: announced when new, said to be gone when the project is shared", async () => {
+      await readEvents(await pedir({}));
+      const announced = loopArgs().connectorTools?.([]) ?? null;
+      expect(announced?.connectorTools?.added).toEqual(expect.arrayContaining(["mcp__notion__search", ...RESOURCE_TOOL_NAMES]));
+      expect(announced?.connectorTools?.added).not.toContain("suggest_connectors");
+      expect(loopArgs().connectorTools?.([announced!])).toBeNull();
+      mocks.proyectoCompartido.mockImplementation(async () => true);
+      await readEvents(await pedir({}));
+      expect(loopArgs().connectorTools?.([announced!])?.connectorTools).toEqual({ added: [], removed: announced!.connectorTools!.added });
+    });
+
     it("🔴 RF 4: when asking whether the project is shared fails, no connectors", async () => {
       mocks.proyectoCompartido.mockImplementation(async () => {
         throw new Error("the database is down");

@@ -10,7 +10,7 @@
 // @openlen/ai-gateway / @/lib/html-engine .node bindings, which vite/vitest
 // cannot load — see loop.test.ts's header comment for the same constraint.
 
-// Cache effect: append-only within a turn — each step adds the assistant message and its results, reminders at the end; the only rewrites are compaction and, past forty screenshots in the conversation, the oldest twenty dropped at once (./screenshots-in-context.ts); a correction is a new message, a change of plan mode appends the mode's prompt as a system message (`systemUpdate`), and a change of custom agent types appends its delta (`agentListing`).
+// Cache effect: append-only within a turn — each step adds the assistant message and its results, reminders at the end; the only rewrites are compaction and, past forty screenshots in the conversation, the oldest twenty dropped at once (./screenshots-in-context.ts); a correction is a new message, a change of plan mode appends the mode's prompt as a system message (`systemUpdate`), a change of custom agent types appends its delta (`agentListing`), and so does a change of the connector tools (`connectorTools`).
 import type { InlineImage, Message, StopReason, StreamEvent } from "@/lib/ai-gateway";
 import { keepRecentScreenshots, screenshotsLabel, type BatchScreenshots } from "@/lib/agent/screenshots-in-context";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
@@ -365,6 +365,10 @@ export interface AgentLoopArgs {
    *  conversation hasn't announced, or announced and are gone — is appended, saved with the turn, and the tools never
    *  change for it. `null`: the conversation already says it. */
   agentListing?(messages: readonly Message[]): Message | null;
+  /** THE CONNECTOR TOOLS DELTA (lib/mcp-connectors/tools-delta.ts): asked before every model call with the
+   *  conversation as it stands; the user message it returns — the tools of the person's connectors the conversation
+   *  hasn't announced, or announced and are gone — is appended and saved with the turn. `null`: it already says it. */
+  connectorTools?(messages: readonly Message[]): Message | null;
   /** For a turn nobody watches (thread, email, scheduled): when it would close with children still
    *  running, it waits here. `true` = a notice arrived (take it and go on); `false` = none is left. */
   awaitAgentNotices?(): Promise<boolean>;
@@ -1535,6 +1539,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // And the agent types a step before this one created or deleted, as their own message behind its results.
     const agentListing = args.agentListing?.(messages) ?? null;
     if (agentListing) messages.push(agentListing);
+    // And the connector tools that appeared or went since the conversation last said so (they change between turns).
+    const connectorTools = args.connectorTools?.(messages) ?? null;
+    if (connectorTools) messages.push(connectorTools);
     if (mutatingTurns >= maxTurns) {
       return await finishOnCap("turn_limit");
     }
