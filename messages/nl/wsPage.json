@@ -82,7 +82,8 @@
       "subagent_fork": "Subagent starten met dit gesprek",
       "send_message": "Bericht naar een subagent sturen",
       "interrupt_agent": "Subagent stoppen",
-      "list_agents": "Subagents weergeven"
+      "list_agents": "Subagents weergeven",
+      "run_code": "Toolscript uitvoeren"
     },
     "toolApp": {
       "Read": "De code lezen",

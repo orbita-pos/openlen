@@ -674,6 +674,8 @@ export default defineConfig({
       "lib/agent/subagente.test.ts",
       // Len's subagents (spec local 2026-11-01-subagentes-de-len). LISTA BLANCA.
       "lib/agent/subagents/**/*.test.ts",
+      // Code Mode / Programmatic Tool Calling (`run_code` in Len Odyssey). LISTA BLANCA.
+      "lib/agent/code-mode/**/*.test.ts",
       // «Len que avisa»: event tasks (spec local 2026-11-03-len-que-avisa). LISTA BLANCA.
       "lib/event-tasks/**/*.test.ts",
       // Tools made by Len (spec local 2026-11-04-herramientas-hechas-por-len). LISTA BLANCA.

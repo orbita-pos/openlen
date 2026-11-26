@@ -82,7 +82,8 @@
       "subagent_fork": "この会話でサブエージェントを起動中",
       "send_message": "サブエージェントにメッセージを送信中",
       "interrupt_agent": "サブエージェントを停止中",
-      "list_agents": "サブエージェントを一覧表示中"
+      "list_agents": "サブエージェントを一覧表示中",
+      "run_code": "ツールスクリプトを実行中"
     },
     "toolApp": {
       "Read": "コードを読み込み中",

@@ -66,6 +66,7 @@ const nextConfig = {
       // Len's own skills, read from disk at /.openlen/skills (lib/agent/skills/bundled.ts).
       "./lib/agent/skills/bundled/**/*",
       "./node_modules/just-bash/**/*",
+      "./node_modules/quickjs-wasi/quickjs.wasm",
       // The apps' type and lint checker (plans/app-catalog-and-bundler/03):
       // `lib/apps/checker/check-app.ts` starts `checker-worker.mjs` by path, and
       // TypeScript reads its `lib.*.d.ts` by path too. The packages themselves
@@ -142,6 +143,7 @@ const nextConfig = {
     "globals",
     // El empaquetador de las apps (plan 02): ver `outputFileTracingIncludes`.
     "esbuild-wasm",
+    "quickjs-wasi",
     // La terminal real (lib/agent/sandbox/e2b-driver.ts): el SDK de E2B se carga en
     // ejecución y su árbol (undici, tar, glob…) va entero, sin pasar por webpack.
     "e2b",

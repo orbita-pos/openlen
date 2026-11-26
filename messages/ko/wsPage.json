@@ -82,7 +82,8 @@
       "subagent_fork": "이 대화로 서브에이전트 시작 중",
       "send_message": "서브에이전트에 메시지 보내는 중",
       "interrupt_agent": "서브에이전트 중지 중",
-      "list_agents": "서브에이전트 목록 보는 중"
+      "list_agents": "서브에이전트 목록 보는 중",
+      "run_code": "도구 스크립트 실행 중"
     },
     "toolApp": {
       "Read": "코드를 읽는 중",

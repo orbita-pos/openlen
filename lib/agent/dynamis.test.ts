@@ -50,10 +50,11 @@ describe("el mensaje que se manda, según el modo", () => {
     return JSON.stringify(r.messages);
   };
 
-  it("en Dynamis conserva Read, Edit y Write y comparte byte a byte el prefijo de Len", () => {
+  it("en Dynamis conserva Read, Edit y Write, incluye la guía de run_code y deja Len normal intacto", () => {
     vi.stubEnv("OPENLEN_TERMINAL", "1");
     expect(armar("dynamis")).toMatch(/\bEdit\b/);
-    expect(armar("dynamis")).toBe(armar("len"));
+    expect(armar("dynamis")).toMatch(/\brun_code\b/);
+    expect(armar("len")).not.toMatch(/\brun_code\b/);
     expect(armar()).toBe(armar("len"));
   });
 

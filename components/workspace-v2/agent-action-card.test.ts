@@ -101,7 +101,14 @@ describe("toda herramienta que deja tarjeta tiene NOMBRE", () => {
   // agentes relacionados: `message_agent`. No salen del catálogo, así que se nombran aquí.
   const declaradas = [
     ...new Set(
-      [...buildFunctionDeclarations({}), ...buildFunctionDeclarations({ OPENLEN_TERMINAL: "1" }), ASK_LEN_DECLARATION, MESSAGE_LEN_DECLARATION, MESSAGE_AGENT_DECLARATION].map((d) => String(d.name)),
+      [
+        ...buildFunctionDeclarations({}),
+        ...buildFunctionDeclarations({ OPENLEN_TERMINAL: "1" }),
+        ...buildFunctionDeclarations({ OPENLEN_TERMINAL: "1" }, {}, "dynamis"),
+        ASK_LEN_DECLARATION,
+        MESSAGE_LEN_DECLARATION,
+        MESSAGE_AGENT_DECLARATION,
+      ].map((d) => String(d.name)),
     ),
   ];
 

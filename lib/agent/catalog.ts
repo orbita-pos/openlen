@@ -43,6 +43,8 @@ import {
 import { gitEnabled } from "@/lib/git/enabled";
 import { realTerminalFor } from "@/lib/agent/sandbox/config";
 import type { AgentMode } from "@/lib/agent/dynamis";
+import { CODE_MODE_GUIDANCE, DECLARACION_RUN_CODE } from "@/lib/agent/code-mode/declaration";
+import { codeModeEnabled } from "@/lib/agent/code-mode/enabled";
 import { RUTA_GUIA } from "@/lib/agent/ficheros/manual";
 import { buildManualDeLaPlataforma, documentosDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import { ASK_USER_QUESTION, CONNECT_EMAIL_DOMAIN, REQUEST_SECRETS } from "@/lib/agent/ask-user-question";
@@ -244,12 +246,14 @@ function declaracionesDelModo(
   }
   // F1 (plans/len-agente-2026): con la terminal, `bash` entra y Grep y Glob salen.
   const conTerminal = terminalEncendida(_env);
+  const conCodeMode = codeModeEnabled(mode, _env);
   if (conTerminal) for (const n of SUSTITUIDAS_POR_LA_TERMINAL) fuera.add(n);
   const declaraciones = conTerminal
     ? [
         ...buildTodasLasDeclaraciones(gitEnabled(_env), eventTasksEnabled(_env)),
         // GIT (spec local 2026-10-15-git-for-len, §5): with git on, bash says so and carries the commit protocol.
         gitEnabled(_env) ? { ...DECLARACION_BASH, description: withGit(String(DECLARACION_BASH.description)) } : DECLARACION_BASH,
+        ...(conCodeMode ? [DECLARACION_RUN_CODE] : []),
       ].map((d) =>
         // Lo que nombra las herramientas que salen se dice con la terminal.
         typeof d.description === "string" ? { ...d, description: segunLasPalancas(d.description, _env, mode) } : d,
@@ -781,6 +785,7 @@ export function buildAgentSystemPrompt(
   // SUBAGENTS (spec local 2026-11-01-subagentes-de-len, §4.12): DeepSeek's `tool:subagent` section,
   // only while the tool is declared. A child's prompt takes it out (`childSystemPrompt`).
   const lineaDeSubagentes = subagentsEnabled(env) ? `\n- ${SUBAGENT_GUIDANCE}` : "";
+  const lineaDeCodeMode = codeModeEnabled(mode, env) ? `\n- ${CODE_MODE_GUIDANCE}` : "";
   // «THE SITE IS FILES» — leer una página es para cuando el mensaje la necesita
   // (2026-10-17; igual en `modo-app.ts`). Decía «otherwise, read it first or
   // don't describe it», y en una conversación nueva Len leía la página para
@@ -810,7 +815,7 @@ HOW TO WORK:
 - The <new-diagnostics> and a tool's "aviso" field are checked facts about what YOUR last edit left on the page: fix them in this turn or tell the user; never finish while keeping quiet about them.
 - Long work doesn't have to be rushed: when the conversation grows long, its older part is summarized automatically and you keep working from that summary, so finish what was asked instead of wrapping up early or leaving it half done.
 - ${SESSION_QUERY_PROMPT}${lineaDeBash}
-- ${GOAL_PROMPT}${lineaDeSubagentes}
+- ${GOAL_PROMPT}${lineaDeSubagentes}${lineaDeCodeMode}
 
 THE SITE IS FILES:
 Each page is a file: /index.html is the home page and /<slug>/index.html each of the others. Read to read, Edit to change an exact piece, Write to create a new page or rewrite a whole one, Grep to search the whole site and Glob to list files. The project's state comes in your context; the pages don't. You read a page when what the user asks needs it —a question about the page, a change to it—; a greeting, or a message that isn't about the page, needs nothing read. And whatever you say about a page —what it has, what it lacks, what its parts are called— comes from having read it in this conversation: if you haven't read it, don't describe it.

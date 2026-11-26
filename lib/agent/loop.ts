@@ -47,6 +47,8 @@ import { createWidgetPreview } from "./visuals/widget-preview";
 import { READ_ME, type VisualWidget } from "./visuals/widget";
 import { READ_WIDGET_CONTEXT } from "./visuals/read-widget-context";
 import type { DeliveredFile } from "./skills/present";
+import { RUN_CODE_TOOL } from "./code-mode/enabled";
+import { executeCodeMode } from "./code-mode/runtime";
 
 // F2 Task 10: a coded error lets the panel show a localized message instead
 // of the raw Spanish `message` (which stays as the server-side/fallback
@@ -900,6 +902,9 @@ const READ_ONLY_TOOLS = new Set([
   // Code no cuenta las lecturas. `show_widget` sigue contando: dibuja.
   READ_ME,
   READ_WIDGET_CONTEXT,
+  // Code Mode (`run_code`): its own wrapper doesn't pre-charge `budgetedToolCalls`;
+  // each non-read-only sub-call inside it charges `budgetedToolCalls` and `ejecutadasDeTrabajo`.
+  RUN_CODE_TOOL,
   // ⚰️ Aquí iba `ToolSearch` (H2), retirada con las diferidas en Len 2.1, y
   // `TodoWrite`, retirada en F4 (plans/len-agente-2026).
 ]);
@@ -1979,8 +1984,15 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // al empezar y todo lo de después van en el orden del modelo. Con el ■ no
     // empieza ninguna más. Sustituye a F1, que sólo juntaba las lecturas del
     // principio, sin tope, y seguía ejecutando la tanda entera tras el ■.
+    type CodeModeMeta = {
+      readonly mutatingExecuted: number;
+      readonly aplicado: readonly string[];
+      readonly rotoPorLaUltima: readonly string[] | null;
+      readonly sawVisitorData: boolean;
+      readonly innerNotices: readonly string[];
+    };
     type Rechazo = { kind: "rechazo"; name: string; motivo: string; args: Record<string, unknown>; response: Record<string, unknown> };
-    type Ejecutada = { kind: "ejecutada"; call: PendingCall; readOnly: boolean; summary: string; sig: string; outcome: ToolOutcome };
+    type Ejecutada = { kind: "ejecutada"; call: PendingCall; readOnly: boolean; summary: string; sig: string; outcome: ToolOutcome; codeMode?: CodeModeMeta };
     const reparar = (original: PendingCall) =>
       declaradas.length ? repararNombre(original.name, declaradas) : { arreglado: original.name };
     const nombreDe = (original: PendingCall): string => {
@@ -2074,9 +2086,126 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
 
         // La tarjeta sale AL EMPEZAR (como DeepSeek y Claude Code): con varias a
         // la vez, el dueño ve todas las que están en marcha.
-        const summary = sobreQue(call.args);
+        const summary =
+          call.name === RUN_CODE_TOOL
+            ? (typeof call.args.description === "string" ? call.args.description.trim().slice(0, 80) : "")
+            : sobreQue(call.args);
         args.emit({ type: "action", tool: call.name, status: "running", summary });
         empezadas.set(indice, { tool: call.name, summary });
+        if (call.name === RUN_CODE_TOOL) {
+          const declaredSet: ReadonlySet<string> =
+            declaradas.length > 0
+              ? new Set(declaradas)
+              : ({ has: () => true } as unknown as ReadonlySet<string>);
+          return {
+            kind: "dispatch",
+            run: async (): Promise<Ejecutada> => {
+              let mutatingExecuted = 0;
+              let innerMutoDurable = false;
+              const innerDiagnosticos: Diagnostico[] = [];
+              const innerImages: InlineImage[] = [];
+              const innerNotices: string[] = [];
+              let innerTodos: readonly TodoItem[] | undefined;
+              let sawVisitorData = false;
+              let latestRoto: readonly string[] | null = null;
+              const innerAplicado: string[] = [];
+
+              const execResult = await executeCodeMode({
+                code: typeof call.args.code === "string" ? call.args.code : "",
+                declaredTools: declaredSet,
+                isParallel: (subName, subArgs) => isConcurrencySafe(subName, subArgs),
+                maxParallel: args.maxParallelToolCalls ?? DEFAULT_MAX_PARALLEL_TOOL_CALLS,
+                signal: args.signal,
+                callTool: async (subName, subArgs) => {
+                  if (guardarSinSalida && !READ_ONLY_TOOLS.has(subName)) {
+                    return { ok: false, error: GUARDAR_YA_CHOCO };
+                  }
+                  const subReadOnly = READ_ONLY_TOOLS.has(subName);
+                  if (!subReadOnly) {
+                    if (budgetedToolCalls >= maxToolCalls) {
+                      throw new Error("Tool call budget reached for this turn.");
+                    }
+                    budgetedToolCalls += 1;
+                  }
+                  toolCalls += 1;
+                  const subOut = await args.runTool(subName, subArgs);
+                  if (!subReadOnly) mutatingExecuted += 1;
+                  if (subOut.guardarSinSalida) guardarSinSalida = true;
+                  if (subOut.terminal) args.emit({ type: "terminal", ...subOut.terminal });
+                  if (subOut.updatedHtml) {
+                    args.emit({
+                      type: "html",
+                      html: subOut.updatedHtml,
+                      page: subOut.page ?? null,
+                      ...(subOut.versionPrevia ? { versionPrevia: subOut.versionPrevia } : {}),
+                    });
+                  }
+                  for (const otra of subOut.masPaginas ?? []) {
+                    args.emit({
+                      type: "html",
+                      html: otra.html,
+                      page: otra.page,
+                      ...(otra.versionPrevia ? { versionPrevia: otra.versionPrevia } : {}),
+                    });
+                  }
+                  if (subOut.toolCard) args.emit({ type: "tool_card", card: subOut.toolCard });
+                  if (subOut.mcpApproval) args.emit({ type: "mcp_approval", card: subOut.mcpApproval });
+                  if (subOut.diagnosticos?.length) innerDiagnosticos.push(...subOut.diagnosticos);
+                  if (subOut.notice) innerNotices.push(subOut.notice);
+                  if (subOut.todos) innerTodos = subOut.todos;
+                  if (subOut.images?.length) innerImages.push(...subOut.images);
+                  if (subOut.mutoDurable || subOut.updatedHtml) innerMutoDurable = true;
+
+                  const subCambio = subOut.response.cambio;
+                  const subEvidencia =
+                    subCambio === undefined
+                      ? Boolean(subOut.mutoDurable || subOut.updatedHtml)
+                      : subCambio !== "sin_cambio";
+                  if (subEvidencia) {
+                    innerAplicado.push(subOut.action?.summary ?? (sobreQue(subArgs) || subName));
+                    const rotas = (subOut.response as { referencias_rotas?: unknown }).referencias_rotas;
+                    latestRoto = Array.isArray(rotas) ? rotas.map(String) : [];
+                  }
+                  if (carriesVisitorData(subName, contenidoDeRespuesta(subOut.response))) {
+                    sawVisitorData = true;
+                  }
+                  return subOut.response;
+                },
+              });
+
+              const cardSummary =
+                summary ||
+                (execResult.calls.length > 0
+                  ? [...new Set(execResult.calls.map((c) => c.name))].join(", ")
+                  : "");
+              const outcome: ToolOutcome = {
+                response: execResult.ok
+                  ? { ok: true, [CLAVE_TOOL_RESULT]: execResult.formatted }
+                  : { ok: false, error: execResult.error ?? "run_code failed", [CLAVE_TOOL_RESULT]: execResult.formatted },
+                action: { tool: RUN_CODE_TOOL, ok: execResult.ok, summary: cardSummary },
+                ...(innerMutoDurable ? { mutoDurable: true } : {}),
+                ...(innerDiagnosticos.length ? { diagnosticos: innerDiagnosticos } : {}),
+                ...(innerImages.length ? { images: innerImages } : {}),
+                ...(innerTodos ? { todos: innerTodos } : {}),
+              };
+              return {
+                kind: "ejecutada",
+                call,
+                readOnly,
+                summary: cardSummary,
+                sig,
+                outcome,
+                codeMode: {
+                  mutatingExecuted,
+                  aplicado: innerAplicado,
+                  rotoPorLaUltima: latestRoto,
+                  sawVisitorData,
+                  innerNotices,
+                },
+              };
+            },
+          };
+        }
         return {
           kind: "dispatch",
           run: async () => ({ kind: "ejecutada", call, readOnly, summary, sig, outcome: await args.runTool(call.name, call.args) }),
@@ -2090,8 +2219,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           functionResponses.push({ name: paso.name, response: paso.response });
           return;
         }
-        const { call, readOnly, summary, sig, outcome } = paso;
-        if (!readOnly) ejecutadasDeTrabajo += 1;
+        const { call, readOnly, summary, sig, outcome, codeMode } = paso;
+        if (codeMode) ejecutadasDeTrabajo += codeMode.mutatingExecuted;
+        else if (!readOnly) ejecutadasDeTrabajo += 1;
         if (outcome.guardarSinSalida) guardarSinSalida = true;
         // MCP's error result (an installed tool's operation, phase 4) is a failure too, though it carries no `ok`.
         const ok = outcome.response.ok !== false && outcome.response.isError !== true;
@@ -2211,38 +2341,44 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         if (outcome.dismissed) ownerTookOver = true;
         if (outcome.final) handedBack = true;
         if (outcome.notice) avisos.push(outcome.notice);
+        if (codeMode?.innerNotices.length) avisos.push(...codeMode.innerNotices);
         // La lista vigente es la última que escribió (también vacía).
         if (outcome.todos) currentTodos = outcome.todos;
         if (outcome.images?.length) capturas.push({ tool: call.name, images: outcome.images, ...(screenshots.length === outcome.images.length ? { urls: screenshots } : {}) });
         const respuesta = outcome.response;
-        // LA EVIDENCIA, contada aquí y no fiada del texto del modelo. `cambio`
-        // viene de `declararCambio` (hash antes ≠ hash después); lo durable cubre
-        // las que no tocan el documento — módulos, páginas.
-        //
-        // 🔴 H01 (2026-09-22): LO QUE LA HERRAMIENTA DECLARA MANDA. La condición
-        // era `cambio === "cambio" || mutoDurable || updatedHtml`, y las puertas
-        // de edición devuelven `updatedHtml` SIEMPRE que guardan — también cuando
-        // acaban de declarar `sin_cambio`. Así una edición nula pasaba por hecha:
-        // la tarea sin hacer no se reclamaba, y al topar el cierre recibía «SÍ se
-        // aplicó» sobre algo que no pasó (G1 y G3 de la auditoría). Es la forma
-        // de Claude Code: la acción informa de su propio efecto, y una edición
-        // que no cambia nada no cuenta como hecha.
-        //
-        // `no_se` SÍ cuenta, y es una decisión: sólo sale cuando no había
-        // documento anterior que comparar, o sea cuando la escritura CREÓ lo que
-        // hay. Descontarla haría reclamar una página que sí existe.
-        const esEvidencia =
-          cambioDeclarado === undefined
-            ? Boolean(outcome.mutoDurable || outcome.updatedHtml)
-            : cambioDeclarado !== "sin_cambio";
-        if (esEvidencia) {
-          // El MISMO sitio que cuenta la evidencia guarda su nombre: si se
-          // contaran en dos lados, uno se quedaría atrás — que es la clase de
-          // fallo que este repositorio ya tiene documentada tres veces.
-          aplicado.push(outcome.action?.summary ?? (summary || call.name));
-          // I6 — y el estado en que la deja. Aquí mismo, por el mismo motivo.
-          const rotas = (outcome.response as { referencias_rotas?: unknown }).referencias_rotas;
-          rotoPorLaUltima = Array.isArray(rotas) ? rotas.map(String) : [];
+        if (codeMode) {
+          aplicado.push(...codeMode.aplicado);
+          if (codeMode.rotoPorLaUltima !== null) rotoPorLaUltima = [...codeMode.rotoPorLaUltima];
+        } else {
+          // LA EVIDENCIA, contada aquí y no fiada del texto del modelo. `cambio`
+          // viene de `declararCambio` (hash antes ≠ hash después); lo durable cubre
+          // las que no tocan el documento — módulos, páginas.
+          //
+          // 🔴 H01 (2026-09-22): LO QUE LA HERRAMIENTA DECLARA MANDA. La condición
+          // era `cambio === "cambio" || mutoDurable || updatedHtml`, y las puertas
+          // de edición devuelven `updatedHtml` SIEMPRE que guardan — también cuando
+          // acaban de declarar `sin_cambio`. Así una edición nula pasaba por hecha:
+          // la tarea sin hacer no se reclamaba, y al topar el cierre recibía «SÍ se
+          // aplicó» sobre algo que no pasó (G1 y G3 de la auditoría). Es la forma
+          // de Claude Code: la acción informa de su propio efecto, y una edición
+          // que no cambia nada no cuenta como hecha.
+          //
+          // `no_se` SÍ cuenta, y es una decisión: sólo sale cuando no había
+          // documento anterior que comparar, o sea cuando la escritura CREÓ lo que
+          // hay. Descontarla haría reclamar una página que sí existe.
+          const esEvidencia =
+            cambioDeclarado === undefined
+              ? Boolean(outcome.mutoDurable || outcome.updatedHtml)
+              : cambioDeclarado !== "sin_cambio";
+          if (esEvidencia) {
+            // El MISMO sitio que cuenta la evidencia guarda su nombre: si se
+            // contaran en dos lados, uno se quedaría atrás — que es la clase de
+            // fallo que este repositorio ya tiene documentada tres veces.
+            aplicado.push(outcome.action?.summary ?? (summary || call.name));
+            // I6 — y el estado en que la deja. Aquí mismo, por el mismo motivo.
+            const rotas = (outcome.response as { referencias_rotas?: unknown }).referencias_rotas;
+            rotoPorLaUltima = Array.isArray(rotas) ? rotas.map(String) : [];
+          }
         }
 
         // LA RETENCIÓN DE DEEPSEEK, en el post-execute como allí: lo que no cabe
@@ -2256,7 +2392,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           ? await retainOversized(contenidoDeRespuesta(respuesta), {
               maxTokens: spill.maxInlineTokens,
               path: `/tmp/spill/${turns}-${indice}-${call.name}.txt`,
-              save: (path, text) => (carriesVisitorData(call.name, text) ? Promise.resolve(false) : spill.save(path, text)),
+              save: (path, text) => (codeMode?.sawVisitorData || carriesVisitorData(call.name, text) ? Promise.resolve(false) : spill.save(path, text)),
             })
           : null;
         functionResponses.push({

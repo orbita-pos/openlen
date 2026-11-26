@@ -82,7 +82,8 @@
       "subagent_fork": "Lancement d'un sous-agent avec cette conversation",
       "send_message": "Envoi d'un message à un sous-agent",
       "interrupt_agent": "Arrêt d'un sous-agent",
-      "list_agents": "Liste des sous-agents"
+      "list_agents": "Liste des sous-agents",
+      "run_code": "Exécution d'un script d'outils"
     },
     "toolApp": {
       "Read": "Lecture du code",

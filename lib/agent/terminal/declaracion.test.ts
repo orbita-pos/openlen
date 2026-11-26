@@ -78,8 +78,8 @@ describe("la palanca de la terminal", () => {
 // LEN ODYSSEY (`mode: "dynamis"`, `lib/agent/dynamis.ts`): el 03/10 corrió en
 // modo mínimo sin `Read`/`Edit`/`Write`; hoy corre Kimi K3.1 Pro con las mismas
 // herramientas completas de ficheros que Len (`Read`, `Edit`, `MultiEdit`,
-// `Write` + `bash`), sin partir ni el prompt ni el catálogo.
-describe("Len Odyssey (dynamis): conserva las herramientas completas de ficheros", () => {
+// `Write` + `bash`) MÁS `run_code` (Code Mode / Programmatic Tool Calling).
+describe("Len Odyssey (dynamis): conserva herramientas completas de ficheros y añade run_code", () => {
   const nombresEn = (env: Record<string, string>, mode: AgentMode) =>
     buildFunctionDeclarations(env, {}, mode).map((d) => String(d.name));
   const todo = (env: Record<string, string>, mode: AgentMode = "len") =>
@@ -89,18 +89,21 @@ describe("Len Odyssey (dynamis): conserva las herramientas completas de ficheros
       buildManualDeLaPlataforma(env, mode),
     ].join("\n");
 
-  it("en Dynamis se declaran Read, Edit, MultiEdit, Write y bash igual que en Len", () => {
-    const n = nombresEn(CON, "dynamis");
-    expect(n).toEqual(nombresEn(CON, "len"));
-    for (const herramienta of [NOMBRE_BASH, "Read", "Edit", "MultiEdit", "Write", "view_page", "use_page", "publish", "ask_user_question", "undo_last_change", "web_search", "web_fetch"]) {
-      expect(n).toContain(herramienta);
+  it("en Dynamis se declaran Read, Edit, MultiEdit, Write, bash y run_code; en Len normal no entra run_code", () => {
+    const nDynamis = nombresEn(CON, "dynamis");
+    const nLen = nombresEn(CON, "len");
+    expect(nLen).not.toContain("run_code");
+    expect(nDynamis).toEqual([...nLen, "run_code"]);
+    for (const herramienta of [NOMBRE_BASH, "run_code", "Read", "Edit", "MultiEdit", "Write", "view_page", "use_page", "publish", "ask_user_question", "undo_last_change", "web_search", "web_fetch"]) {
+      expect(nDynamis).toContain(herramienta);
     }
-    for (const fuera of ["Grep", "Glob"]) expect(n).not.toContain(fuera);
+    for (const fuera of ["Grep", "Glob"]) expect(nDynamis).not.toContain(fuera);
   });
 
-  it("el prompt, las descripciones y /AGENTS.md en Dynamis son byte a byte los de Len (página y app)", () => {
-    expect(todo(CON, "dynamis")).toBe(todo(CON, "len"));
-    expect(textosDeApp(CON, "dynamis")).toBe(textosDeApp(CON, "len"));
+  it("con OPENLEN_CODE_MODE=0, Dynamis iguala byte a byte a Len (página y app)", () => {
+    const SIN_CODE_MODE = { ...CON, OPENLEN_CODE_MODE: "0" };
+    expect(todo(SIN_CODE_MODE, "dynamis")).toBe(todo(SIN_CODE_MODE, "len"));
+    expect(textosDeApp(SIN_CODE_MODE, "dynamis")).toBe(textosDeApp(SIN_CODE_MODE, "len"));
   });
 
   // 🔴 LA LÁPIDA de la palanca vieja: el valor que antes quitaba Read, Edit y

@@ -152,6 +152,8 @@ export const KNOWN_TOOLS = new Set([
   // aquí desde que existe y la tarjeta decía «bash» crudo: la guarda de la
   // prueba sólo miraba el catálogo SIN la palanca.
   "bash",
+  // Code Mode (Odyssey `mode="dynamis"`): programmatic tool calling (`run_code`).
+  "run_code",
   // ⚠️ RETIRADAS DEL CATÁLOGO con Len 2.0 y que SIGUEN AQUÍ a propósito: las
   // conversaciones guardadas (`projectChatMessages.actions`) las nombran, y sin
   // su etiqueta el historial de un dueño enseñaría el nombre crudo. Son

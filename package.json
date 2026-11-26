@@ -239,6 +239,7 @@
     "image-size": "2.0.4",
     "jszip": "^3.10.1",
     "just-bash": "3.6.0",
+    "quickjs-wasi": "2.2.0",
     "lucide-react": "^1.16.0",
     "mcp-handler": "^2.3.0",
     "mdast-util-from-markdown": "^2.1.0",

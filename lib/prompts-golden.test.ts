@@ -126,7 +126,7 @@ describe("golden de los prompts de producción", () => {
     expect(normaliza(decls)).toMatchSnapshot();
   });
 
-  // Las de Len Dynamis: `bash` y lo que no es de ficheros, sin Read/Edit/Write.
+  // Las de Len Odyssey (`dynamis`): herramientas completas (`Read`, `Edit`, `Write`, `bash`) + `run_code`.
   it("las declaraciones de herramientas de Len Dynamis, enteras", () => {
     const decls = JSON.stringify(buildFunctionDeclarations(CON_TERMINAL, {}, "dynamis"), null, 2);
     expect(normaliza(decls)).toMatchSnapshot();
