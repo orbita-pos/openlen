@@ -1577,19 +1577,20 @@ describe("~/.len/mcp.json as a file (spec local 2026-11-06-conectores-mcp)", () 
   });
 });
 
-// LEN DYNAMIS (`lib/agent/dynamis.ts`): el /AGENTS.md que lee la terminal es el
-// de su modo. Con `cat /AGENTS.md` en un turno Dynamis, mandarle a usar Edit
-// sería mandarle a una herramienta que no tiene.
-describe("Len Dynamis · el /AGENTS.md de la terminal", () => {
-  it("en Dynamis no nombra Read, Edit ni Write; en Len sí (brazo de control)", async () => {
+// LEN ODYSSEY (`lib/agent/dynamis.ts`): conserva las herramientas completas de
+// ficheros (Read, Edit, Write), así que el /AGENTS.md de la terminal coincide
+// con el de Len y sirve también `len-builder` y `len-qa` en /.openlen/agents.
+describe("Len Odyssey · el /AGENTS.md y los subagentes de la terminal", () => {
+  it("en Odyssey conserva Read, Edit y Write igual que Len y sirve len-builder y len-qa", async () => {
     const { deps } = makeDepsCompletos({ html: HOME });
     const antes = process.env.OPENLEN_TERMINAL;
     process.env.OPENLEN_TERMINAL = "1";
     try {
-      const dynamis = (await cargarFicherosDeLaTerminal({ ...makeSession(), mode: "dynamis" }, deps))["/AGENTS.md"]!;
+      const filesDynamis = await cargarFicherosDeLaTerminal({ ...makeSession(), mode: "dynamis" }, deps);
+      const dynamis = filesDynamis["/AGENTS.md"]!;
       const len = (await cargarFicherosDeLaTerminal(makeSession(), deps))["/AGENTS.md"]!;
-      assert.doesNotMatch(dynamis, /\b(Read|Edit|Write)\b(?!-)/);
-      assert.match(len, /\bEdit\b/);
+      assert.equal(dynamis, len);
+      assert.match(dynamis, /\bEdit\b/);
     } finally {
       if (antes === undefined) delete process.env.OPENLEN_TERMINAL;
       else process.env.OPENLEN_TERMINAL = antes;

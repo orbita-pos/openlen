@@ -1260,8 +1260,7 @@ export interface AgentSession {
    *  (plans/mcp-de-openlen). Cambia cómo se llama su versión y, con `"mcp"`,
    *  que no toque las skills de la persona (no es ella: mayWritePersonalSkills). */
   desde?: "editor" | "mcp";
-  /** El modo del turno (`lib/agent/dynamis.ts`). Ausente = Len. Lo lee el
-   *  /AGENTS.md que ve la terminal: en Dynamis no nombra Read, Edit ni Write. */
+  /** El modo del turno (`lib/agent/dynamis.ts`). Ausente = Len. */
   mode?: AgentMode;
   /** UNA APP WEB (F3 de la spec local 2026-10-07-apps): `project.data.app` al
    *  empezar el turno. Ausente o `null` = una página. Lo leen el manual que

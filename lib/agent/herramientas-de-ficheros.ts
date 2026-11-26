@@ -1211,7 +1211,7 @@ export async function cargarFicherosDeLaTerminal(session: TerminalFilesOwner, de
   if (v.mcpConfig !== null) ficheros[MCP_CONFIG_PATH] = v.mcpConfig;
   for (const [ruta, texto] of v.folder) ficheros[ruta] = texto;
   for (const [ruta, texto] of v.artifacts) ficheros[ruta] = texto;
-  // En Len Dynamis, el que no nombra Read, Edit ni Write (`lib/agent/dynamis.ts`).
+  // Manual de la plataforma (/AGENTS.md): idéntico entre Len y Len Odyssey (`lib/agent/dynamis.ts`).
   ficheros[RUTA_MANUAL] = buildManualDeLaPlataforma(process.env, session.mode, session.app ?? null, realTerminalFor(session.userId, process.env, session.ownerPaid === true), session.tool === true, session.game === true);
   // F4 · /.openlen/docs NO va aquí: es de la carpeta oculta de sólo lectura, y
   // la sirve `soloLecturaDeLaTerminal` como lo demás de /.openlen.
