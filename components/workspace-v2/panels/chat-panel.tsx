@@ -324,6 +324,7 @@ function AIDesignChat({
     mode,
     setMode,
     modeOffered,
+    dynamisUpgradeHref,
     agentModeUI,
     submit,
     handleRetry,
@@ -397,6 +398,7 @@ function AIDesignChat({
         // Sin la terminal en el servidor, Dynamis no existe y no se ofrece; y
         // el chat clásico (`ai-design`, la vía de escape) no sabe de modos.
         {...(modeOffered ? { onModeChange: setMode } : {})}
+        {...(modeOffered && dynamisUpgradeHref ? { dynamisUpgradeHref } : {})}
         agentMode={agentModeUI}
       />
       <ReplaceAssetModal
@@ -875,6 +877,7 @@ export function Composer({
   onEsfuerzoChange,
   mode = "len",
   onModeChange,
+  dynamisUpgradeHref,
   agentMode = false,
   comentarios = SIN_COMENTARIOS,
   onQuitarComentario,
@@ -913,6 +916,7 @@ export function Composer({
    *  bloquea: ese modo piensa siempre al máximo. */
   mode?: AgentMode;
   onModeChange?: (m: AgentMode) => void;
+  dynamisUpgradeHref?: string;
   /** Modo Agente. Aqui decia ademas que "esconde el ModelPicker": ese selector
    *  y todo su cableado salieron el 2026-08-28. Sigue existiendo porque cambia
    *  otras cosas de esta barra. */
@@ -1033,6 +1037,7 @@ export function Composer({
               <ModePicker
                 mode={mode}
                 onChange={onModeChange}
+                {...(dynamisUpgradeHref ? { dynamisUpgradeHref } : {})}
                 abierto={modeOpen}
                 onAbrir={(v) => {
                   setModeOpen(v);

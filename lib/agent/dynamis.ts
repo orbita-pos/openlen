@@ -19,22 +19,56 @@
 // (`composer.modeDynamis`). Detrás de `OPENLEN_DYNAMIS=1` mientras se valida en vivo antes de abrirlo a planes
 // de pago.
 
+import { PLAN_RANK, type Plan } from "@/lib/plan";
 import { terminalEncendida } from "./terminal/declaracion";
 
 export const AGENT_MODES = ["len", "dynamis"] as const;
 export type AgentMode = (typeof AGENT_MODES)[number];
 
-/** ¿Se puede ofrecer Dynamis? Sólo si se pide a propósito —está APARCADO, ver
- *  la cabecera— y con la terminal encendida: quitarle a Len Read, Edit y Write
- *  sin darle `bash` lo dejaría sin manos. */
+/** Plan mínimo que incluye Len Odyssey (Jesús, 25/11/2026: desde Max — Max y Ultra). */
+export const ODYSSEY_MIN_PLAN: Plan = "max";
+
+/** ¿El plan incluye Len Odyssey? Max ($19.99, 1.300 cr) y Ultra ($99.99, 8.000 cr) sí; Gratis y Pro no. */
+export function odysseyPlanAllowed(plan: Plan): boolean {
+  return PLAN_RANK[plan] >= PLAN_RANK[ODYSSEY_MIN_PLAN];
+}
+
+function allowlistedForOdyssey(
+  userId: string | null | undefined,
+  env: Readonly<Record<string, string | undefined>>,
+): boolean {
+  if (typeof userId !== "string" || userId.length === 0) return false;
+  const raw = `${env.OPENLEN_ODYSSEY_ONLY_USERS ?? ""},${env.OPENLEN_SANDBOX_ONLY_USERS ?? ""}`;
+  return raw
+    .split(",")
+    .map((u) => u.trim())
+    .some((u) => u.length > 0 && u === userId);
+}
+
+/** ¿Puede esta cuenta correr un turno de Len Odyssey? Plan Max/Ultra o cuenta interna de prueba. */
+export function odysseyUserAllowed(
+  access: { readonly plan?: Plan | null; readonly userId?: string | null },
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): boolean {
+  if (access.plan && odysseyPlanAllowed(access.plan)) return true;
+  return allowlistedForOdyssey(access.userId, env);
+}
+
+/** ¿Está encendido Len Odyssey en este despliegue? Requiere `OPENLEN_DYNAMIS=1` y la terminal activa. */
 export function dynamisAvailable(env: Readonly<Record<string, string | undefined>> = process.env): boolean {
   return env.OPENLEN_DYNAMIS?.trim() === "1" && terminalEncendida(env);
 }
 
-/** El modo de ESTE turno, saneado: entra de fuera. Cualquier otra cosa —o
- *  Dynamis con la terminal apagada— es Len. */
-export function modeOfTurn(raw: unknown, env: Readonly<Record<string, string | undefined>> = process.env): AgentMode {
-  return raw === "dynamis" && dynamisAvailable(env) ? "dynamis" : "len";
+/** El modo de ESTE turno, saneado en el servidor: requiere `OPENLEN_DYNAMIS=1`, terminal activa
+ *  y (cuando se pasa `access`) plan Max/Ultra o cuenta autorizada. Si no cumple, cae a Len. */
+export function modeOfTurn(
+  raw: unknown,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+  access?: { readonly plan?: Plan | null; readonly userId?: string | null },
+): AgentMode {
+  if (raw !== "dynamis" || !dynamisAvailable(env)) return "len";
+  if (access !== undefined && !odysseyUserAllowed(access, env)) return "len";
+  return "dynamis";
 }
 
 /** La temperatura de la ficha de V4.1. Len usa la misma desde el 21/10 (`brain.ts`, con su porqué). */

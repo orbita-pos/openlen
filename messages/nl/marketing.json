@@ -213,7 +213,8 @@
       "features": {
         "0": "Alles uit Pro",
         "1": "{credits, number} credits per maand — {times, number}× Pro",
-        "2": "Een goedkopere credit: {cents, number}¢ in plaats van {proCents, number}¢"
+        "2": "Een goedkopere credit: {cents, number}¢ in plaats van {proCents, number}¢",
+        "3": "Len Odyssey inbegrepen voor grote projecten en 3D"
       }
     },
     "ultra": {

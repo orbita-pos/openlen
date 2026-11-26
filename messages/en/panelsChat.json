@@ -168,7 +168,9 @@
     "dropTooBig": "Too big to attach: {names}.",
     "dropLimit": "{count, plural, one {# file was} other {# files were}} left out: up to 4 photos and 4 files per message.",
     "fileFailedNamed": "{name} couldn't be uploaded. Try again.",
-    "pointLabel": "Point"
+    "pointLabel": "Point",
+    "modeDynamisPlanBadge": "Max",
+    "modeDynamisUpgradeDesc": "For big builds, complex apps, and 3D. Included on Max and Ultra — click to upgrade"
   },
   "equipo": {
     "paraLen": "To Len",

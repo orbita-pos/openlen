@@ -168,7 +168,9 @@
     "dropTooBig": "Trop volumineux pour être joint : {names}.",
     "dropLimit": "{count, plural, one {# fichier n'a pas été joint} other {# fichiers n'ont pas été joints}} : 4 photos et 4 fichiers au maximum par message.",
     "fileFailedNamed": "{name} n'a pas pu être envoyé. Réessayez.",
-    "pointLabel": "Pointer"
+    "pointLabel": "Pointer",
+    "modeDynamisPlanBadge": "Max",
+    "modeDynamisUpgradeDesc": "Pour les gros projets, apps complexes et 3D. Inclus dès le forfait Max — cliquer pour passer à Max"
   },
   "equipo": {
     "paraLen": "À Len",

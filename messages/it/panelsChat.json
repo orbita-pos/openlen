@@ -168,7 +168,9 @@
     "dropTooBig": "Troppo grande da allegare: {names}.",
     "dropLimit": "{count, plural, one {# file è rimasto} other {# file sono rimasti}} fuori: massimo 4 foto e 4 file per messaggio.",
     "fileFailedNamed": "Impossibile caricare {name}. Riprova.",
-    "pointLabel": "Indica"
+    "pointLabel": "Indica",
+    "modeDynamisPlanBadge": "Max",
+    "modeDynamisUpgradeDesc": "Per grandi progetti, app complesse e 3D. Incluso dal piano Max — clicca per passare a Max"
   },
   "equipo": {
     "paraLen": "A Len",

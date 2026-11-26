@@ -509,9 +509,6 @@ async function correrTurno(
   // las capas hasta la preferencia guardada, que es la degradación correcta.
   const esfuerzoCrudo = typeof body?.esfuerzo === "string" ? body.esfuerzo.trim().toLowerCase() : "";
   const esfuerzoDelTurno = ESFUERZOS.find((e) => e === esfuerzoCrudo) ?? null;
-  // LEN DYNAMIS, con el mismo pestillo: el modo que el usuario veía al pulsar
-  // enviar. Con la terminal apagada no existe, y el turno es de Len.
-  const mode = modeOfTurn(body?.mode);
   // Pieza 3: sólo el literal `true` cuenta (entra de fuera).
   const answersQuestions = body?.answersQuestions === true;
   // Pieza 7: la elección del dueño, con el mismo pestillo (lo que veía al
@@ -874,9 +871,11 @@ async function correrTurno(
   // EDGE FUNCTIONS (fase 2): sin motor no hay dónde guardar un secreto.
   // LA TERMINAL REAL: lo que bash y el manual dicen de la terminal sigue a la caja del dueño (en un
   // despliegue por fases, quien no está en la lista tiene la de siempre: terminalForTurn).
-  // THE BOX IS FOR THE OWNER'S PAID PLAN (Jesús, 05/11; spec local 2026-11-05-modo-juego-design, §11): read once,
-  // here, for what Len is told and for the box the turn opens. A failed read is Free: only the list then decides.
-  const ownerPaid = await getUserPlan(userId).then((p) => p !== "free").catch(() => false);
+  // THE BOX IS FOR THE OWNER'S PAID PLAN (Jesús, 05/11; spec local 2026-11-05-modo-juego-design, §11), AND LEN ODYSSEY
+  // IS FOR MAX/ULTRA (Jesús, 25/11): read the owner's plan once here for both. A failed read falls back to Free.
+  const ownerPlan = await getUserPlan(userId).catch(() => "free" as const);
+  const ownerPaid = ownerPlan !== "free";
+  const mode = modeOfTurn(body?.mode, process.env, { plan: ownerPlan, userId });
   const realTerminal = realTerminalFor(userId, process.env, ownerPaid);
   // GITHUB (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §8): with a remote, bash carries Claude Code's push
   // and pull request protocol; without one it stays byte for byte as before.

@@ -5,7 +5,8 @@ import { db, schema } from "@/lib/db";
 import { ESFUERZOS, caparEsfuerzo, capacidadDeEsfuerzo } from "@/lib/agent/esfuerzo";
 import { MODEL_POLICY } from "@/lib/generation/model-policy";
 import { getEsfuerzoGuardado } from "@/lib/agent/esfuerzo-guardado";
-import { dynamisAvailable } from "@/lib/agent/dynamis";
+import { dynamisAvailable, odysseyUserAllowed } from "@/lib/agent/dynamis";
+import { getUserPlan } from "@/lib/limits";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EL ESFUERZO DE LEN — la preferencia GUARDADA de la persona.
@@ -38,7 +39,10 @@ export async function GET() {
   }
   // `null` = nunca eligió. El cliente lo pinta como `auto`, que es lo que
   // `esfuerzoEfectivo` hará con él de todas formas.
-  const guardado = await getEsfuerzoGuardado(session.user.id);
+  const [guardado, plan] = await Promise.all([
+    getEsfuerzoGuardado(session.user.id),
+    getUserPlan(session.user.id).catch(() => "free" as const),
+  ]);
   // 🔴 LA ESCALERA LA DICE EL MODELO, no una constante. Eso sí es de Claude Code:
   // qué niveles admite y a cuál resuelve salen de la entrada del catálogo de
   // ESE modelo.
@@ -53,6 +57,7 @@ export async function GET() {
   // en su versión callada: no un interruptor sin destino, un dato sin lector.
   // Ahora es la única fuente, y por eso el mando deja de importar `NIVELES`.
   const capacidad = capacidadDeEsfuerzo(MODEL_POLICY.agent.modelId);
+  const dynamis = dynamisAvailable();
   return Response.json({
     // Se DEVUELVE recortado: si el papel cambió a un modelo con menos peldaños,
     // lo guardado puede ser un nivel que ya no se ofrece, y el mando pintaría
@@ -60,10 +65,11 @@ export async function GET() {
     esfuerzo: caparEsfuerzo(guardado ?? "auto", capacidad),
     niveles: capacidad.niveles,
     resuelveA: capacidad.defecto,
-    // ¿Se ofrece Len Dynamis? Sólo con la terminal encendida
-    // (`lib/agent/dynamis.ts`). Lo lee el selector del chat, que sin esto no se
-    // pinta: un modo que el servidor convertiría en Len no se enseña.
-    dynamis: dynamisAvailable(),
+    // ¿Se ofrece Len Odyssey? Sólo con `OPENLEN_DYNAMIS=1` y la terminal encendida
+    // (`lib/agent/dynamis.ts`). En Gratis y Pro se enseña con insignia `Max` y
+    // enlace de mejora; en Max y Ultra queda desbloqueado.
+    dynamis,
+    dynamisLocked: dynamis && !odysseyUserAllowed({ plan, userId: session.user.id }),
     // ⚰️ Aquí devolví `medido: capacidad.medido` y NO LO LEÍA NADIE. Es
     // exactamente el patrón que este mismo fichero acababa de cerrar con
     // `niveles` —un dato sin lector, [[la-palanca-que-no-vuelve-a-ningun-sitio]]

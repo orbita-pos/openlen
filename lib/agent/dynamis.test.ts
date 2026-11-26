@@ -2,7 +2,7 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildAgentMessages } from "./context";
-import { dynamisAvailable, modeOfTurn } from "./dynamis";
+import { dynamisAvailable, modeOfTurn, odysseyPlanAllowed, odysseyUserAllowed } from "./dynamis";
 
 const CON = { OPENLEN_TERMINAL: "1", OPENLEN_DYNAMIS: "1" };
 const SIN = {};
@@ -30,6 +30,23 @@ describe("el modo del turno, saneado en la ruta", () => {
     for (const raro of ["", "0", "true", "yes", " 2"]) {
       expect(dynamisAvailable({ OPENLEN_TERMINAL: "1", OPENLEN_DYNAMIS: raro })).toBe(false);
     }
+  });
+
+  it("exige plan Max o Ultra salvo cuenta autorizada en OPENLEN_ODYSSEY_ONLY_USERS / OPENLEN_SANDBOX_ONLY_USERS", () => {
+    expect(odysseyPlanAllowed("free")).toBe(false);
+    expect(odysseyPlanAllowed("pro")).toBe(false);
+    expect(odysseyPlanAllowed("max")).toBe(true);
+    expect(odysseyPlanAllowed("ultra")).toBe(true);
+
+    expect(modeOfTurn("dynamis", CON, { plan: "free", userId: "u1" })).toBe("len");
+    expect(modeOfTurn("dynamis", CON, { plan: "pro", userId: "u1" })).toBe("len");
+    expect(modeOfTurn("dynamis", CON, { plan: "max", userId: "u1" })).toBe("dynamis");
+    expect(modeOfTurn("dynamis", CON, { plan: "ultra", userId: "u1" })).toBe("dynamis");
+
+    const vipEnv = { ...CON, OPENLEN_ODYSSEY_ONLY_USERS: "u-vip, u-qa" };
+    expect(odysseyUserAllowed({ plan: "free", userId: "u-vip" }, vipEnv)).toBe(true);
+    expect(modeOfTurn("dynamis", vipEnv, { plan: "free", userId: "u-vip" })).toBe("dynamis");
+    expect(modeOfTurn("dynamis", vipEnv, { plan: "free", userId: "u-other" })).toBe("len");
   });
 });
 

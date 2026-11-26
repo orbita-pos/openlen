@@ -168,7 +168,9 @@
     "dropTooBig": "Grande demais para anexar: {names}.",
     "dropLimit": "{count, plural, one {# arquivo ficou} other {# arquivos ficaram}} de fora: até 4 fotos e 4 arquivos por mensagem.",
     "fileFailedNamed": "Não foi possível enviar {name}. Tente de novo.",
-    "pointLabel": "Apontar"
+    "pointLabel": "Apontar",
+    "modeDynamisPlanBadge": "Max",
+    "modeDynamisUpgradeDesc": "Para grandes projetos, apps complexos e 3D. Incluído a partir do plano Max — clique para fazer upgrade"
   },
   "equipo": {
     "paraLen": "Para o Len",

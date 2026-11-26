@@ -213,7 +213,8 @@
       "features": {
         "0": "Tout ce qui est inclus dans Pro",
         "1": "{credits, number} crédits par mois — {times, number}× Pro",
-        "2": "Un crédit moins cher : {cents, number} ¢ au lieu de {proCents, number} ¢"
+        "2": "Un crédit moins cher : {cents, number} ¢ au lieu de {proCents, number} ¢",
+        "3": "Len Odyssey inclus pour les gros projets et la 3D"
       }
     },
     "ultra": {

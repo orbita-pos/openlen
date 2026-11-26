@@ -213,7 +213,8 @@
       "features": {
         "0": "Everything in Pro",
         "1": "{credits, number} credits a month — {times, number}× Pro",
-        "2": "A cheaper credit: {cents, number}¢ instead of {proCents, number}¢"
+        "2": "A cheaper credit: {cents, number}¢ instead of {proCents, number}¢",
+        "3": "Len Odyssey included for big builds and 3D"
       }
     },
     "ultra": {

@@ -891,12 +891,27 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
       (mocks.buildFunctionDeclarations.mock.calls.at(-1) as unknown as unknown[])[2];
     afterEach(() => vi.unstubAllEnvs());
 
-    it("con la terminal y OPENLEN_DYNAMIS=1, \"dynamis\" llega a las declaraciones y al cerebro", async () => {
+    it("con la terminal, OPENLEN_DYNAMIS=1 y plan Max o Ultra, \"dynamis\" llega a las declaraciones y al cerebro; en Gratis o Pro se queda en Len", async () => {
       vi.stubEnv("OPENLEN_TERMINAL", "1");
       vi.stubEnv("OPENLEN_DYNAMIS", "1");
+      vi.stubEnv("OPENLEN_SANDBOX_ONLY_USERS", "");
+      vi.stubEnv("OPENLEN_ODYSSEY_ONLY_USERS", "");
+      mocks.getUserPlan.mockResolvedValueOnce("max");
       await turno({ mode: "dynamis" });
       expect(modoDeLasDeclaraciones()).toBe("dynamis");
       expect(modoDelCerebro()).toBe("dynamis");
+
+      mocks.getUserPlan.mockResolvedValueOnce("ultra");
+      await turno({ mode: "dynamis" });
+      expect(modoDeLasDeclaraciones()).toBe("dynamis");
+      expect(modoDelCerebro()).toBe("dynamis");
+
+      for (const planSinOdyssey of ["free", "pro"] as const) {
+        mocks.getUserPlan.mockResolvedValueOnce(planSinOdyssey);
+        await turno({ mode: "dynamis" });
+        expect(modoDeLasDeclaraciones()).toBe("len");
+        expect(modoDelCerebro()).toBe("len");
+      }
     });
 
     it("sin la terminal, \"dynamis\" se queda en Len", async () => {
@@ -5252,7 +5267,7 @@ describe("POST /api/agent — Len's subagents", () => {
       try {
         await pedir();
         // The built-ins are the three presets AND OpenLen's own types: neither needs the store.
-        expect(launcherArgs()[0].agentTypes.names()).toEqual(["general-purpose", "Explore", "Plan", "len-design", "len-office", "len-review"]);
+        expect(launcherArgs()[0].agentTypes.names()).toEqual(["general-purpose", "Explore", "Plan", "len-design", "len-office", "len-review", "len-builder", "len-qa"]);
       } finally { agentTypeStore.list.mockImplementation(async () => []); }
     }
   });

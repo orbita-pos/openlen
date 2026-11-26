@@ -30,6 +30,7 @@ export function ModePicker({
   onChange,
   abierto,
   onAbrir,
+  dynamisUpgradeHref,
   variant = "chip",
   t,
 }: {
@@ -37,6 +38,9 @@ export function ModePicker({
   onChange: (m: AgentMode) => void;
   abierto: boolean;
   onAbrir: (v: boolean) => void;
+  /** En Gratis y Pro, enlace para subir al plan Max (`/api/billing/checkout?plan=max&locale=…`).
+   *  Cuando viene, «Len Odyssey» muestra insignia `Max` y abre la mejora en vez de activar el modo. */
+  dynamisUpgradeHref?: string;
   /** El traductor del panel, como en `MandoEsfuerzo`: así la prueba no monta
    *  el proveedor de next-intl. */
   t: (clave: string, valores?: Record<string, string>) => string;
@@ -88,21 +92,39 @@ export function ModePicker({
           aria-label={t("composer.mode")}
           className={`absolute bottom-full ${variant === "pill" ? "right-0" : "left-0"} z-20 mb-1.5 w-64 overflow-hidden rounded-md bg-card ring-1 ring-[color:var(--border)] shadow-lg fade-in`}
         >
-          {OPTIONS.map((o) => (
-            <button
-              key={o.mode}
-              type="button"
-              role="menuitemradio"
-              aria-checked={mode === o.mode}
-              onClick={() => pick(o.mode)}
-              className={`flex w-full flex-col items-start gap-0.5 px-2.5 py-1.5 text-left transition hover:bg-hover ${
-                mode === o.mode ? "bg-accent-soft" : ""
-              }`}
-            >
-              <span className={`text-[11px] font-medium ${mode === o.mode ? "text-accent" : ""}`}>{t(o.label)}</span>
-              <span className="text-[10px] leading-tight fg-faint">{t(o.desc)}</span>
-            </button>
-          ))}
+          {OPTIONS.map((o) =>
+            o.mode === "dynamis" && dynamisUpgradeHref ? (
+              <a
+                key={o.mode}
+                href={dynamisUpgradeHref}
+                role="menuitem"
+                onClick={() => onAbrir(false)}
+                className="flex w-full flex-col items-start gap-0.5 px-2.5 py-1.5 text-left transition hover:bg-hover"
+              >
+                <span className="flex w-full items-center justify-between gap-2 text-[11px] font-medium">
+                  <span>{t(o.label)}</span>
+                  <span className="rounded-full bg-accent-soft px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide text-accent">
+                    {t("composer.modeDynamisPlanBadge")}
+                  </span>
+                </span>
+                <span className="text-[10px] leading-tight fg-faint">{t("composer.modeDynamisUpgradeDesc")}</span>
+              </a>
+            ) : (
+              <button
+                key={o.mode}
+                type="button"
+                role="menuitemradio"
+                aria-checked={mode === o.mode}
+                onClick={() => pick(o.mode)}
+                className={`flex w-full flex-col items-start gap-0.5 px-2.5 py-1.5 text-left transition hover:bg-hover ${
+                  mode === o.mode ? "bg-accent-soft" : ""
+                }`}
+              >
+                <span className={`text-[11px] font-medium ${mode === o.mode ? "text-accent" : ""}`}>{t(o.label)}</span>
+                <span className="text-[10px] leading-tight fg-faint">{t(o.desc)}</span>
+              </button>
+            ),
+          )}
         </div>
       )}
     </div>

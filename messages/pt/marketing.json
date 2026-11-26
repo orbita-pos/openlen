@@ -213,7 +213,8 @@
       "features": {
         "0": "Tudo do Pro",
         "1": "{credits, number} créditos por mês — {times, number}× o Pro",
-        "2": "Um crédito mais barato: {cents, number}¢ em vez de {proCents, number}¢"
+        "2": "Um crédito mais barato: {cents, number}¢ em vez de {proCents, number}¢",
+        "3": "Len Odyssey incluído para grandes projetos e 3D"
       }
     },
     "ultra": {

@@ -168,7 +168,9 @@
     "dropTooBig": "너무 커서 첨부할 수 없어요: {names}",
     "dropLimit": "{count, plural, other {파일 #개}}는 첨부되지 않았어요. 메시지당 사진 4장, 파일 4개까지예요.",
     "fileFailedNamed": "{name}을(를) 올리지 못했어요. 다시 시도해 주세요.",
-    "pointLabel": "가리키기"
+    "pointLabel": "가리키기",
+    "modeDynamisPlanBadge": "Max",
+    "modeDynamisUpgradeDesc": "대규모 작업, 복잡한 앱 및 3D용. Max 플랜부터 포함 — 클릭하여 업그레이드"
   },
   "equipo": {
     "paraLen": "Len에게",

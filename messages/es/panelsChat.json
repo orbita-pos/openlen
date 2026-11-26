@@ -168,7 +168,9 @@
     "dropTooBig": "Demasiado grande para adjuntar: {names}.",
     "dropLimit": "{count, plural, one {# archivo se quedó} other {# archivos se quedaron}} fuera: hasta 4 fotos y 4 archivos por mensaje.",
     "fileFailedNamed": "No se pudo subir {name}. Inténtalo de nuevo.",
-    "pointLabel": "Señalar"
+    "pointLabel": "Señalar",
+    "modeDynamisPlanBadge": "Max",
+    "modeDynamisUpgradeDesc": "Para encargos grandes, apps complejas y 3D. Incluido desde el plan Max — pulsa para mejorar"
   },
   "equipo": {
     "paraLen": "Para Len",

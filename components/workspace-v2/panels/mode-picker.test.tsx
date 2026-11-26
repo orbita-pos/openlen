@@ -74,4 +74,21 @@ describe("el selector «Len» / «Len Dynamis»", () => {
     expect(onAbrir).toHaveBeenCalledWith(false);
     expect(onChange).not.toHaveBeenCalled();
   });
+
+  it("en Gratis o Pro (`dynamisUpgradeHref`), Len Odyssey muestra insignia Max y enlaza al cambio de plan sin activar el modo", () => {
+    const onChange = vi.fn();
+    const onAbrir = vi.fn();
+    const host = montar({
+      dynamisUpgradeHref: "/api/billing/checkout?plan=max&locale=es",
+      onChange,
+      onAbrir,
+    });
+    expect(opciones(host)).toHaveLength(1);
+    const enlace = host.querySelector('a[role="menuitem"]') as HTMLAnchorElement | null;
+    expect(enlace).not.toBeNull();
+    expect(enlace?.getAttribute("href")).toBe("/api/billing/checkout?plan=max&locale=es");
+    expect(enlace?.textContent).toContain("composer.modeDynamis");
+    expect(enlace?.textContent).toContain("composer.modeDynamisPlanBadge");
+    expect(enlace?.textContent).toContain("composer.modeDynamisUpgradeDesc");
+  });
 });

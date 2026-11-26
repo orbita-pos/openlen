@@ -704,6 +704,7 @@ function AgentChatView({
             onEffortChange={chat.changeEsfuerzo}
             mode={chat.mode}
             {...(chat.modeOffered ? { onModeChange: chat.setMode } : {})}
+            {...(chat.modeOffered && chat.dynamisUpgradeHref ? { dynamisUpgradeHref: chat.dynamisUpgradeHref } : {})}
             planMode={chat.planMode}
             {...(chat.planOffered ? { onTogglePlan: chat.togglePlan } : {})}
             goalChip={chat.goalChip}

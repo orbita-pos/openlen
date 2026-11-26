@@ -12,6 +12,7 @@ import { GithubIcon } from "@/components/ui/brand-icons";
 import { Button, type ButtonVariant } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { countTemplates } from "@/lib/templates/store";
+import { dynamisAvailable } from "@/lib/agent/dynamis";
 import {
   MAX_CREDITS,
   MAX_PRICE,
@@ -101,6 +102,7 @@ export async function Pricing() {
           cents: centsPerCredit(MAX_PRICE, MAX_CREDITS),
           proCents: centsPerCredit(PRO_PRICE, PRO_CREDITS),
         }),
+        ...(dynamisAvailable() ? [t("pricing.max.features.3")] : []),
       ],
     },
     {

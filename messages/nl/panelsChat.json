@@ -168,7 +168,9 @@
     "dropTooBig": "Te groot om toe te voegen: {names}.",
     "dropLimit": "{count, plural, one {# bestand is} other {# bestanden zijn}} niet toegevoegd: maximaal 4 foto's en 4 bestanden per bericht.",
     "fileFailedNamed": "{name} kon niet worden geüpload. Probeer het opnieuw.",
-    "pointLabel": "Aanwijzen"
+    "pointLabel": "Aanwijzen",
+    "modeDynamisPlanBadge": "Max",
+    "modeDynamisUpgradeDesc": "Voor grote projecten, complexe apps en 3D. Inbegrepen vanaf Max — klik om te upgraden"
   },
   "equipo": {
     "paraLen": "Aan Len",

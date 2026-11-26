@@ -71,6 +71,7 @@ export function ChatComposer({
   onEffortChange,
   mode,
   onModeChange,
+  dynamisUpgradeHref,
   planMode = false,
   onTogglePlan,
   goalChip = false,
@@ -129,6 +130,8 @@ export function ChatComposer({
   mode: AgentMode;
   /** Sin él no se ofrece Len Dynamis (el servidor no lo ofrece). */
   onModeChange?: (m: AgentMode) => void;
+  /** En Gratis y Pro, enlace para subir al plan Max desde la opción «Len Odyssey». */
+  dynamisUpgradeHref?: string;
   /** Pieza 7: el modo plan que se ve y quien lo cambia. Sin `onTogglePlan` no
    *  se ofrece (el chat clásico no lo tiene). */
   planMode?: boolean;
@@ -506,6 +509,7 @@ export function ChatComposer({
               <ModePicker
                 mode={mode}
                 onChange={onModeChange}
+                {...(dynamisUpgradeHref ? { dynamisUpgradeHref } : {})}
                 abierto={modeOpen}
                 onAbrir={(v) => {
                   setModeOpen(v);

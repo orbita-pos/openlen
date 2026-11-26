@@ -12,11 +12,13 @@ const mocks = vi.hoisted(() => ({
   set: vi.fn(),
   where: vi.fn(),
   guardado: vi.fn(),
+  plan: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
 vi.mock("drizzle-orm", () => ({ eq: (l: unknown, r: unknown) => ({ op: "eq", l, r }) }));
 vi.mock("@/lib/agent/esfuerzo-guardado", () => ({ getEsfuerzoGuardado: mocks.guardado }));
+vi.mock("@/lib/limits", () => ({ getUserPlan: mocks.plan }));
 vi.mock("@/lib/db", () => ({
   db: { update: () => ({ set: mocks.set }) },
   schema: { users: { id: "users.id", agentEffort: "users.agentEffort" } },
@@ -34,6 +36,7 @@ beforeEach(() => {
   mocks.set.mockImplementation(() => ({ where: mocks.where }));
   mocks.where.mockResolvedValue(undefined);
   mocks.guardado.mockResolvedValue(null);
+  mocks.plan.mockResolvedValue("max");
 });
 
 describe("PUT /api/agent/esfuerzo", () => {
@@ -92,13 +95,22 @@ describe("GET /api/agent/esfuerzo", () => {
 
   // El selector «Len / Len Dynamis» sólo se pinta si esto dice que sí: con la
   // terminal apagada la ruta convertiría Dynamis en Len, y ofrecerlo mentiría.
-  it("ofrece Len Dynamis sólo con la terminal encendida", async () => {
+  it("ofrece Len Dynamis sólo con la terminal encendida, desbloqueado desde Max y bloqueado en Gratis/Pro", async () => {
     vi.stubEnv("OPENLEN_TERMINAL", "1");
     vi.stubEnv("OPENLEN_DYNAMIS", "1");
-    expect(await (await GET()).json()).toMatchObject({ dynamis: true });
+    vi.stubEnv("OPENLEN_SANDBOX_ONLY_USERS", "");
+    vi.stubEnv("OPENLEN_ODYSSEY_ONLY_USERS", "");
+    mocks.plan.mockResolvedValueOnce("max");
+    expect(await (await GET()).json()).toMatchObject({ dynamis: true, dynamisLocked: false });
+    mocks.plan.mockResolvedValueOnce("ultra");
+    expect(await (await GET()).json()).toMatchObject({ dynamis: true, dynamisLocked: false });
+    mocks.plan.mockResolvedValueOnce("pro");
+    expect(await (await GET()).json()).toMatchObject({ dynamis: true, dynamisLocked: true });
+    mocks.plan.mockResolvedValueOnce("free");
+    expect(await (await GET()).json()).toMatchObject({ dynamis: true, dynamisLocked: true });
     // Encendida por defecto desde N45: apagarla es el literal "0".
     vi.stubEnv("OPENLEN_TERMINAL", "0");
-    expect(await (await GET()).json()).toMatchObject({ dynamis: false });
+    expect(await (await GET()).json()).toMatchObject({ dynamis: false, dynamisLocked: false });
     vi.unstubAllEnvs();
   });
 

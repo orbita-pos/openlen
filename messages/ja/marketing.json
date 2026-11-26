@@ -213,7 +213,8 @@
       "features": {
         "0": "Pro のすべて",
         "1": "毎月{credits, number}クレジット — Proの{times, number}倍",
-        "2": "より安いクレジット：{proCents, number}¢ではなく{cents, number}¢"
+        "2": "より安いクレジット：{proCents, number}¢ではなく{cents, number}¢",
+        "3": "大規模制作・3D向けの Len Odyssey を搭載"
       }
     },
     "ultra": {

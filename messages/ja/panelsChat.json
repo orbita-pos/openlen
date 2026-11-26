@@ -168,7 +168,9 @@
     "dropTooBig": "大きすぎて添付できません: {names}",
     "dropLimit": "{count, plural, other {# 件のファイル}}は添付されませんでした。1 つのメッセージにつき写真 4 枚、ファイル 4 件までです。",
     "fileFailedNamed": "{name} をアップロードできませんでした。もう一度お試しください。",
-    "pointLabel": "指す"
+    "pointLabel": "指す",
+    "modeDynamisPlanBadge": "Max",
+    "modeDynamisUpgradeDesc": "大規模な制作・複雑なアプリ・3D向け。Maxプラン以上で利用可能（クリックしてアップグレード）"
   },
   "equipo": {
     "paraLen": "Len へ",

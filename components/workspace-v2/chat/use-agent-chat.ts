@@ -463,6 +463,7 @@ export function useAgentChat({
   /** La cadena de rondas paró porque no quedaba saldo (`done.round.stopped`). */
   const [goalStoppedForCredits, setGoalStoppedForCredits] = useState(false);
   const [dynamisOffered, setDynamisOffered] = useState(false);
+  const [dynamisLocked, setDynamisLocked] = useState(false);
   const [sending, setSending] = useState(false);
   // Agent mode — DEFAULT ON since graduation (alpha ruling 2026-07-08):
   // el Agente OpenLen es el chat. `ol:agent = "0"` is the per-browser
@@ -581,6 +582,7 @@ export function useAgentChat({
             niveles?: readonly NivelEsfuerzo[];
             resuelveA?: NivelEsfuerzo;
             dynamis?: boolean;
+            dynamisLocked?: boolean;
           } | null,
         ) => {
           if (!vivo || !d) return;
@@ -588,6 +590,9 @@ export function useAgentChat({
           if (d.niveles?.length) setEsfuerzoNiveles(d.niveles);
           if (d.resuelveA) setEsfuerzoResuelveA(d.resuelveA);
           setDynamisOffered(d.dynamis === true);
+          const locked = d.dynamisLocked === true;
+          setDynamisLocked(locked);
+          if (locked) setMode("len");
         },
       )
       .catch(() => {});
@@ -2817,6 +2822,7 @@ export function useAgentChat({
      *  chat clásico (`ai-design`, la vía de escape) no sabe de modos. */
     // None of Len's own controls for the person's own assistant: Dynamis, plan mode and the goal are Len's.
     modeOffered: dynamisOffered && agentModeUI && !assistantId,
+    dynamisUpgradeHref: dynamisLocked ? `/api/billing/checkout?plan=max&locale=${locale}` : undefined,
     agentModeUI,
     send,
     submit,

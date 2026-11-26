@@ -168,7 +168,9 @@
     "dropTooBig": "Zu groß zum Anhängen: {names}.",
     "dropLimit": "{count, plural, one {# Datei wurde} other {# Dateien wurden}} nicht angehängt: höchstens 4 Fotos und 4 Dateien pro Nachricht.",
     "fileFailedNamed": "{name} konnte nicht hochgeladen werden. Versuch es noch einmal.",
-    "pointLabel": "Zeigen"
+    "pointLabel": "Zeigen",
+    "modeDynamisPlanBadge": "Max",
+    "modeDynamisUpgradeDesc": "Für große Projekte, komplexe Apps und 3D. Ab dem Max-Tarif enthalten — zum Upgrade klicken"
   },
   "equipo": {
     "paraLen": "An Len",

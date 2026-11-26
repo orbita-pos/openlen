@@ -213,7 +213,8 @@
       "features": {
         "0": "包含 Pro 全部功能",
         "1": "每月 {credits, number} 个额度 — Pro 的 {times, number} 倍",
-        "2": "更便宜的额度：每个 {cents, number}¢，而不是 {proCents, number}¢"
+        "2": "更便宜的额度：每个 {cents, number}¢，而不是 {proCents, number}¢",
+        "3": "包含面向大型构建与 3D 的 Len Odyssey"
       }
     },
     "ultra": {

@@ -213,7 +213,8 @@
       "features": {
         "0": "Pro 플랜의 모든 기능",
         "1": "월 {credits, number}크레딧 — Pro의 {times, number}배",
-        "2": "더 저렴한 크레딧: {proCents, number}¢ 대신 {cents, number}¢"
+        "2": "더 저렴한 크레딧: {proCents, number}¢ 대신 {cents, number}¢",
+        "3": "대규모 구축 및 3D를 위한 Len Odyssey 포함"
       }
     },
     "ultra": {

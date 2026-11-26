@@ -168,7 +168,9 @@
     "dropTooBig": "文件太大，无法添加：{names}。",
     "dropLimit": "{count, plural, other {有 # 个文件}}未添加：每条消息最多 4 张照片和 4 个文件。",
     "fileFailedNamed": "{name} 上传失败，请重试。",
-    "pointLabel": "指向"
+    "pointLabel": "指向",
+    "modeDynamisPlanBadge": "Max",
+    "modeDynamisUpgradeDesc": "适合大型构建、复杂应用与 3D。Max 及以上方案包含 — 点击升级"
   },
   "equipo": {
     "paraLen": "发给 Len",
