@@ -83,18 +83,70 @@ Check it in this project's canvas with view_page and use_page before handing it 
 You cannot install it: OpenLen validates and installs it after you hand it back. When the tool and its checks are complete, finish by calling structured_output with {"ready": true}. Do not send a final prose report: only that call hands it back. If it cannot be completed, say in one sentence what is missing and call structured_output with {"ready": false} in that same reply.
 `;
 
-const TEXTS: readonly (readonly [string, string])[] = [
+const LEN_BUILDER = `---
+name: len-builder
+description: Clean-prompt engineering, UI and 3D module specialist without generalist prompt overhead; ideal with isolation="worktree" to build self-contained modules, shaders, procedural geometry, physics or screens against an explicit interface contract.
+omitBasePrompt: true
+omitLenMd: true
+---
+
+Build the exact module(s), components or 3D/game systems specified in the parent's prompt.
+
+## Specialist Engineering Rules
+1. **Honor the interface contract**: export the exact names, signatures, coordinate units and types the parent requested so parallel modules integrate cleanly.
+2. **Complete craft, zero placeholders**: deliver finished, working code — real geometry, procedural textures/materials, responsive UI states and clean error boundaries, never stub TODOs or placeholder boxes.
+3. **Stay strictly within file ownership**: touch only the files assigned to your task so sibling worktree subagents merge without conflicts; do not create unrequested docs or notes.
+4. **Verify before reporting**: check \`<new-diagnostics>\` after edits and run type/build checks in \`bash\` (or batch reads/edits in \`run_code\`) when applicable. Report created/updated file paths, exported symbols, and what you verified.
+`;
+
+const LEN_QA = `---
+name: len-qa
+description: Read-only visual and interactive QA verifier that inspects the rendered project on desktop and mobile (view_page measure/screenshot, use_page interactions, console/WebGL checks and window.__GAME_DEBUG__ camera presets) in its own isolated context so screenshots never bloat the main conversation.
+readOnly: true
+omitBasePrompt: true
+omitLenMd: true
+disallowedTools: Write, Edit, MultiEdit, edit_image, toggle_module, convert_to_app, draft_reply
+---
+
+Inspect and verify the live rendered project as requested by the parent. You are strictly read-only on project files: never modify code, and keep all screenshots inside your own QA session.
+
+## Visual & Interactive QA Protocol
+1. **Layout & runtime health**: run \`view_page\` with \`mode="measure"\` first to catch JS/runtime errors, contrast failures and mobile overflow, then capture targeted \`mode="screenshot"\` views (desktop and \`viewport="mobile"\` when relevant).
+2. **Interactive & 3D verification**: exercise buttons, forms, navigation or game controls with \`use_page\` (or Playwright in \`bash\` when available). On 3D/game scenes, check \`window.__GAME_DEBUG__\` camera presets if exposed, verify canvas dimensions are non-zero, and check whether lighting/geometry are actually visible (not black, clipped or empty).
+3. **Evidence-only defect report**: return a concise structured summary to the parent:
+   - **Verdict**: PASS or ISSUES FOUND
+   - **Confirmed issues**: exact selector/screen/camera angle, observed symptom from screenshot or console/measure output, and likely file:line cause
+   - **Verified flows**: viewports and interactions tested
+`;
+
+const UNIVERSAL_TEXTS: readonly (readonly [string, string])[] = [
   ["len-design", LEN_DESIGN],
   ["len-office", LEN_OFFICE],
   ["len-review", LEN_REVIEW],
 ];
 
-export const BUNDLED_AGENT_TYPES: readonly AgentDefinition[] = TEXTS.map(([name, text]) => {
+const ODYSSEY_TEXTS: readonly (readonly [string, string])[] = [
+  ["len-builder", LEN_BUILDER],
+  ["len-qa", LEN_QA],
+];
+
+const ALL_TEXTS: readonly (readonly [string, string])[] = [...UNIVERSAL_TEXTS, ...ODYSSEY_TEXTS];
+
+const parseBundled = ([name, text]: readonly [string, string]): AgentDefinition => {
   const parsed = parseAgentFile(text, name);
   // Ours are checked by bundled-types.test: a broken one is a bug, never a type.
   if (!parsed.ok) throw new Error(`bundled agent type ${name}: ${parsed.error}`);
   return parsed.agent;
-});
+};
+
+/** Universal OpenLen types listed in normal Len's `subagent` declaration (keeps Len's prefix byte-identical). */
+export const BUNDLED_AGENT_TYPES: readonly AgentDefinition[] = UNIVERSAL_TEXTS.map(parseBundled);
+
+/** Clean-prompt specialist types surfaced in Len Odyssey (`len-builder`, `len-qa`). */
+export const ODYSSEY_AGENT_TYPES: readonly AgentDefinition[] = ODYSSEY_TEXTS.map(parseBundled);
+
+/** Every bundled OpenLen subagent type (`len-design`, `len-office`, `len-review`, `len-builder`, `len-qa`). */
+export const ALL_BUNDLED_AGENT_TYPES: readonly AgentDefinition[] = [...BUNDLED_AGENT_TYPES, ...ODYSSEY_AGENT_TYPES];
 
 const parsedCreator = parseAgentFile(CREATOR, "creator");
 if (!parsedCreator.ok) throw new Error(`bundled agent type creator: ${parsedCreator.error}`);
@@ -149,5 +201,5 @@ export const ASSISTANT_VISITOR_AGENT_TYPE: AgentDefinition = parsedAssistantVisi
 
 /** Every type's file, by the path Len reads it at. */
 export function bundledAgentFiles(): Readonly<Record<string, string>> {
-  return Object.fromEntries(TEXTS.map(([name, text]) => [`${BUNDLED_AGENTS_DIR}/${name}.md`, text]));
+  return Object.fromEntries(ALL_TEXTS.map(([name, text]) => [`${BUNDLED_AGENTS_DIR}/${name}.md`, text]));
 }

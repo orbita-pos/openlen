@@ -174,6 +174,8 @@ describe("a bundled read-only type (len-review)", () => {
     const p = await import("./presets");
     const { NO_AGENT_TYPES } = await import("./agent-registry");
     expect(p.isReadOnlyFor(p.childTypeOf("len-review", NO_AGENT_TYPES)!, false)).toBe(true);
+    expect(p.isReadOnlyFor(p.childTypeOf("len-qa", NO_AGENT_TYPES)!, false)).toBe(true);
+    expect(p.isReadOnlyFor(p.childTypeOf("len-builder", NO_AGENT_TYPES)!, false)).toBe(false);
     expect(p.isReadOnlyFor(p.childTypeOf("len-design", NO_AGENT_TYPES)!, false)).toBe(false);
     expect(p.isReadOnlyFor(p.childTypeOf("len-office", NO_AGENT_TYPES)!, false)).toBe(false);
   });

@@ -44,7 +44,7 @@ import {
 } from "./notice";
 import { HIDDEN_AGENT_TYPES } from "./agent-paths";
 import type { AgentWorktree, FinishedWorktree } from "./worktree";
-import { childSystemPromptFor, childToolDeclarations, childToolsFor, childTypeOf, DELEGATION_SCOPE_STATEMENT, isReadOnlyFor, omitsLenMdFor, type ChildType, type SubagentPreset } from "./presets";
+import { childSystemPromptFor, childToolDeclarations, childToolsFor, childTypeOf, DELEGATION_SCOPE_STATEMENT, isReadOnlyFor, omitsBasePromptFor, omitsLenMdFor, type ChildType, type SubagentPreset } from "./presets";
 import { finalizingInput, isLive, noticeTurnPending, queueNotice, release, reserve, sendToRun, setFinalizingInput, setNoticeTurnPending, stop, takeRunInbox } from "./registry";
 import type { ConversationRun, SubagentRunRow } from "./store";
 import type { TurnSpend } from "./spend";
@@ -236,8 +236,16 @@ export function childMessages(turnArgs: BuildAgentMessagesArgs, preset: Subagent
     ...(omitsLenMdFor(type) ? { memoryMessage: null, userMemory: null } : {}),
   });
   if (!built.ok) throw new Error("the subagent's task does not fit");
-  const [system, ...rest] = built.messages;
-  return [{ ...system!, content: childSystemPromptFor(built.systemPrompt, type, SUBAGENT_GUIDANCE) }, ...rest];
+  const cleanSpecialist = omitsBasePromptFor(type);
+  // `built.messages` starts `[system, manual, ...tail]`; a clean-prompt specialist omits both Len's base prompt and `/AGENTS.md`.
+  const system = built.messages[0]!;
+  const tail = cleanSpecialist ? built.messages.slice(2) : built.messages.slice(1);
+  const content = childSystemPromptFor(built.systemPrompt, type, SUBAGENT_GUIDANCE, {
+    app: turnArgs.app ?? null,
+    game: turnArgs.game,
+    tool: turnArgs.tool,
+  });
+  return [{ ...system, content }, ...tail];
 }
 
 type Usage = AgentLoopResult["usage"];
@@ -400,7 +408,8 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     // Its compaction is the route's, and the latest summary it made is kept here (Len keeps his in the turn's row).
     const extras = io.loopExtras?.(session);
     // Preloaded instructions are part of the fixed head, so the summary keeps their bodies and state.
-    const firstIndex = Math.max(extras?.compaction?.firstIndex ?? 1, initial.findLastIndex((m: PreloadedMessage) => !!m.loadedSkill || !!m.runningSkill) + 1);
+    const baseFirstIndex = omitsBasePromptFor(spec.type) ? 1 : (extras?.compaction?.firstIndex ?? 1);
+    const firstIndex = Math.max(baseFirstIndex, initial.findLastIndex((m: PreloadedMessage) => !!m.loadedSkill || !!m.runningSkill) + 1);
     let mark: CompactionMark | null = null;
     const loopExtras = extras?.compaction
       ? {
@@ -789,7 +798,16 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       forked: row.forked,
       planMode: scope,
       messages: [
-        { role: "system", content: row.forked ? ctx.lenSystemPrompt : childSystemPromptFor(ctx.lenSystemPrompt, type, SUBAGENT_GUIDANCE) },
+        {
+          role: "system",
+          content: row.forked
+            ? ctx.lenSystemPrompt
+            : childSystemPromptFor(ctx.lenSystemPrompt, type, SUBAGENT_GUIDANCE, {
+                app: ctx.app,
+                game: ctx.turnArgs.game,
+                tool: ctx.turnArgs.tool,
+              }),
+        },
         ...head,
         ...transcript,
         ...(w ? [{ role: "user" as const, content: isolationLine(w.branch) }] : []),

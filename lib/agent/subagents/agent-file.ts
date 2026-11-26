@@ -36,6 +36,9 @@ export interface AgentDefinition {
   readonly maxTurns: number | null;
   /** Without `/LEN.md` and the person's notes (Claude Code's `omitClaudeMd`). */
   readonly omitLenMd: boolean;
+  /** Specialist clean prompt: omits Len's generalist website-owner prompt and `/AGENTS.md` manual,
+   *  giving the child a compact technical surface contract + its own `body` instructions. */
+  readonly omitBasePrompt: boolean;
   /** Works in its own copy of the project when launched (Claude Code's `isolation: worktree`). */
   readonly isolation: "worktree" | null;
   /** Read-only on the SERVER, like Explore and Plan: no tool that writes, and its session refuses what a command
@@ -51,7 +54,7 @@ export interface AgentDefinition {
 const TRUE = new Set(["true", "yes", "on", "1"]);
 const FALSE = new Set(["false", "no", "off", "0"]);
 const ITEM = /^[A-Za-z_][\w-]*$/;
-const KEYS = new Set(["name", "description", "tools", "disallowedTools", "skills", "effort", "maxTurns", "omitLenMd", "isolation", "readOnly", "initialPrompt"]);
+const KEYS = new Set(["name", "description", "tools", "disallowedTools", "skills", "effort", "maxTurns", "omitLenMd", "omitBasePrompt", "isolation", "readOnly", "initialPrompt"]);
 
 function template(name: string): string {
   return `---\nname: ${name}\ndescription: <what it does and when to use it, in one line>\ntools: Read, Grep, Glob\n---\n\n<the instructions for this type of subagent>\n`;
@@ -111,6 +114,9 @@ export function parseAgentFile(text: string, expectedName: string | null): { ok:
   const omitText = fields.get("omitLenMd")?.toLowerCase();
   const omitLenMd = omitText === undefined ? false : TRUE.has(omitText) ? true : FALSE.has(omitText) ? false : null;
   if (omitLenMd === null) return fail("omitLenMd must be true or false.");
+  const omitBaseText = fields.get("omitBasePrompt")?.toLowerCase();
+  const omitBasePrompt = omitBaseText === undefined ? false : TRUE.has(omitBaseText) ? true : FALSE.has(omitBaseText) ? false : null;
+  if (omitBasePrompt === null) return fail("omitBasePrompt must be true or false.");
   const readOnlyText = fields.get("readOnly")?.toLowerCase();
   const readOnly = readOnlyText === undefined ? false : TRUE.has(readOnlyText) ? true : FALSE.has(readOnlyText) ? false : null;
   if (readOnly === null) return fail("readOnly must be true or false.");
@@ -124,5 +130,5 @@ export function parseAgentFile(text: string, expectedName: string | null): { ok:
   if (body.length > AGENT_BODY_MAX) return fail(`The instructions are longer than ${AGENT_BODY_MAX} characters.`);
   const secret = findSecret(`${description}\n${initialPrompt ?? ""}\n${body}`);
   if (secret) return { ok: false, error: `The type seems to contain a ${secret}. Never save credentials in a subagent type.` };
-  return { ok: true, agent: { name, description, tools, disallowedTools, skills, effort, maxTurns, omitLenMd, isolation, readOnly, initialPrompt, body } };
+  return { ok: true, agent: { name, description, tools, disallowedTools, skills, effort, maxTurns, omitLenMd, omitBasePrompt, isolation, readOnly, initialPrompt, body } };
 }

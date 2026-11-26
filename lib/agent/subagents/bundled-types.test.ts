@@ -1,15 +1,25 @@
 import { describe, expect, it } from "vitest";
 
 import { parseAgentFile } from "./agent-file";
-import { OPENLEN_AGENT_TYPES } from "./agent-paths";
+import { OPENLEN_AGENT_TYPES, UNIVERSAL_OPENLEN_AGENT_TYPES } from "./agent-paths";
 import { NO_AGENT_TYPES } from "./agent-registry";
-import { BUNDLED_AGENT_TYPES, CREATOR_AGENT_TYPE, bundledAgentFiles } from "./bundled-types";
+import { ALL_BUNDLED_AGENT_TYPES, BUNDLED_AGENT_TYPES, CREATOR_AGENT_TYPE, ODYSSEY_AGENT_TYPES, bundledAgentFiles } from "./bundled-types";
 import { childTypeOf } from "./presets";
 
 describe("OpenLen's own subagent types", () => {
-  it("all parse and are OpenLen's names", () => {
-    expect(BUNDLED_AGENT_TYPES.map((a) => a.name)).toEqual([...OPENLEN_AGENT_TYPES]);
-    expect([...OPENLEN_AGENT_TYPES]).toEqual(["len-design", "len-office", "len-review"]);
+  it("universal types stay 3 for normal Len, and all 5 parse and match OPENLEN_AGENT_TYPES", () => {
+    expect(BUNDLED_AGENT_TYPES.map((a) => a.name)).toEqual([...UNIVERSAL_OPENLEN_AGENT_TYPES]);
+    expect(ALL_BUNDLED_AGENT_TYPES.map((a) => a.name)).toEqual([...OPENLEN_AGENT_TYPES]);
+    expect([...OPENLEN_AGENT_TYPES]).toEqual(["len-design", "len-office", "len-review", "len-builder", "len-qa"]);
+  });
+
+  it("len-builder and len-qa use clean specialist prompts (omitBasePrompt + omitLenMd), and len-qa is read-only", () => {
+    expect(ODYSSEY_AGENT_TYPES.map((a) => a.name)).toEqual(["len-builder", "len-qa"]);
+    const builder = ALL_BUNDLED_AGENT_TYPES.find((a) => a.name === "len-builder")!;
+    expect(builder).toMatchObject({ omitBasePrompt: true, omitLenMd: true, readOnly: false });
+    const qa = ALL_BUNDLED_AGENT_TYPES.find((a) => a.name === "len-qa")!;
+    expect(qa).toMatchObject({ omitBasePrompt: true, omitLenMd: true, readOnly: true });
+    expect(qa.disallowedTools).toEqual(expect.arrayContaining(["Write", "Edit", "MultiEdit", "edit_image"]));
   });
 
   it("len-office preloads office and brand", () => {
@@ -33,7 +43,13 @@ describe("OpenLen's own subagent types", () => {
 
   it("their files are served at /.openlen/agents", () => {
     const files = bundledAgentFiles();
-    expect(Object.keys(files)).toEqual(["/.openlen/agents/len-design.md", "/.openlen/agents/len-office.md", "/.openlen/agents/len-review.md"]);
+    expect(Object.keys(files)).toEqual([
+      "/.openlen/agents/len-design.md",
+      "/.openlen/agents/len-office.md",
+      "/.openlen/agents/len-review.md",
+      "/.openlen/agents/len-builder.md",
+      "/.openlen/agents/len-qa.md",
+    ]);
     for (const [path, text] of Object.entries(files)) {
       const name = path.slice("/.openlen/agents/".length, -".md".length);
       expect(parseAgentFile(text, name).ok, path).toBe(true);

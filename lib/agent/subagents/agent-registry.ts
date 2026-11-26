@@ -5,7 +5,7 @@ import type { SkillScope } from "@/lib/agent/skills/paths";
 import { parseAgentFile, type AgentDefinition } from "./agent-file";
 import { BUILT_IN_AGENT_TYPES, OPENLEN_AGENT_TYPES } from "./agent-paths";
 import type { StoredAgent } from "./agent-store";
-import { BUNDLED_AGENT_TYPES, CREATOR_AGENT_TYPE } from "./bundled-types";
+import { ALL_BUNDLED_AGENT_TYPES, CREATOR_AGENT_TYPE } from "./bundled-types";
 
 export interface ResolvedAgentType {
   readonly agent: AgentDefinition;
@@ -23,7 +23,7 @@ export interface AgentTypeSet {
 }
 
 export function resolveAgentTypes(o: { project: readonly StoredAgent[]; personal: readonly StoredAgent[]; bundled?: readonly AgentDefinition[] }): AgentTypeSet {
-  const bundled: ResolvedAgentType[] = (o.bundled ?? BUNDLED_AGENT_TYPES).map((agent) => ({ agent, scope: "bundled", covers: null }));
+  const bundled: ResolvedAgentType[] = (o.bundled ?? ALL_BUNDLED_AGENT_TYPES).map((agent) => ({ agent, scope: "bundled", covers: null }));
   const byName = new Map<string, ResolvedAgentType>();
   const refused: { name: string; scope: SkillScope; error: string }[] = [];
   for (const scope of ["project", "personal"] as const) {

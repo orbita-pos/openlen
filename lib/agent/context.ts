@@ -19,6 +19,8 @@ import type { Message } from "@/lib/ai-gateway";
 import { buildAgentSystemPrompt } from "@/lib/agent/catalog";
 import { adjuntoDelManual, buildManualDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import type { AgentMode } from "@/lib/agent/dynamis";
+import { terminalEncendida } from "@/lib/agent/terminal/declaracion";
+import { isGreenfieldTurn, odysseyContextPostureLine } from "./odyssey-posture";
 import type { AppDeProyecto } from "@/lib/projects/types";
 import { materializeSystemUpdates } from "@/lib/agent/plan-mode";
 import { notaDeLaFoto, textoDelHistorial, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
@@ -376,9 +378,8 @@ export function buildAgentContext(args: {
   mentionedFiles?: readonly MentionedFile[];
   /** EL MODO DISEÑO de una app: el bloque de `designBlock` (lib/agent/design-block.ts), o nada. */
   design?: string | null;
-  // ⚰️ `styleDirection` (26/10): el bloque `<visual-direction>` de la ficha de
-  // una URL, con lo que un modelo de visión vio en esa web. Una URL es ahora
-  // texto del mensaje y Len la mira cuando decide (`view_page` con `url`).
+  /** En Odyssey (`mode === "dynamis"`): línea dinámica de postura (obra nueva frente a proyecto vivo). */
+  odysseyPosture?: string | null;
 }): string {
   let imageBlock = "";
   const imagenes = args.attachedImages ?? [];
@@ -443,7 +444,7 @@ When asked to add the image, place it using this EXACT URL (verbatim) as the src
   // buscando con Grep—, igual que Claude Code, que no recibe los ficheros
   // pegados al mensaje. Qué ficheros hay y cuál tiene abierto el dueño va en el
   // ESTADO (`ficheros`, `abierta_en_el_editor`).
-  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${memoriaBlock}${hoy}${args.timeContext ? `${args.timeContext}\n\n` : ""}${args.assistantViewing ? `${args.assistantViewing}\n\n` : ""}${args.relatedAgents ? `${args.relatedAgents}\n\n` : ""}${idiomaBlock}${dispositivoBlock}${visualsBlock}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${seleccionesBlock(args.selecciones ?? (args.seleccion ? [args.seleccion] : []))}${mentionedFilesBlock(args.mentionedFiles ?? [])}${args.design ?? ""}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${gitStatusBlock(args.gitStatus)}${args.artifactIndex ? `${args.artifactIndex}\n` : ""}${args.personalSkills ?? ""}${args.connectors ?? ""}`;
+  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${memoriaBlock}${hoy}${args.timeContext ? `${args.timeContext}\n\n` : ""}${args.assistantViewing ? `${args.assistantViewing}\n\n` : ""}${args.relatedAgents ? `${args.relatedAgents}\n\n` : ""}${idiomaBlock}${dispositivoBlock}${visualsBlock}${args.odysseyPosture ?? ""}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${seleccionesBlock(args.selecciones ?? (args.seleccion ? [args.seleccion] : []))}${mentionedFilesBlock(args.mentionedFiles ?? [])}${args.design ?? ""}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${gitStatusBlock(args.gitStatus)}${args.artifactIndex ? `${args.artifactIndex}\n` : ""}${args.personalSkills ?? ""}${args.connectors ?? ""}`;
 }
 
 
@@ -599,6 +600,16 @@ export type BuildAgentMessagesResult =
  *  ahí van también sus fotos (la ruta) y, marcados, los avisos del turno. */
 export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMessagesResult {
   const systemPrompt = buildAgentSystemPrompt(process.env, args.mode, args.app ?? null, args.tool === true, args.game === true, args.space === true);
+  const odysseyPosture =
+    args.mode === "dynamis" && terminalEncendida(process.env)
+      ? odysseyContextPostureLine(
+          isGreenfieldTurn({
+            historyLength: args.history.length,
+            savedChangesCount: args.cambios?.length ?? 0,
+            ownerChangesCount: args.cambiosDelDueno?.length ?? 0,
+          }),
+        )
+      : null;
   const contextBlock = buildAgentContext({
     equipo: args.equipo,
     zona: args.zona,
@@ -623,6 +634,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     ...(args.selecciones ? { selecciones: args.selecciones } : {}),
     ...(args.mentionedFiles ? { mentionedFiles: args.mentionedFiles } : {}),
     design: args.design,
+    odysseyPosture,
   });
   const avisos = avisosDelTurno({
     degradaciones: args.degradaciones,

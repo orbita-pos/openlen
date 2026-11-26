@@ -16,7 +16,7 @@
 import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
 import type { SubagentStopReason } from "./notice";
 
-import { BUNDLED_AGENT_TYPES } from "./bundled-types";
+import { ALL_BUNDLED_AGENT_TYPES, BUNDLED_AGENT_TYPES } from "./bundled-types";
 import { INTERRUPT_AGENT_TOOL, LIST_AGENTS_TOOL, SEND_MESSAGE_TOOL, SUBAGENT_FORK_TOOL, SUBAGENT_TOOL } from "./enabled";
 import { LEN_AGENT_ID, startedLine } from "./notice";
 import { SUBAGENT_PRESETS } from "./presets";
@@ -32,18 +32,22 @@ const CONTINUABLE =
 const NOT_SHOWN = "Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.";
 const SHORT_DESCRIPTION = "A short (3-5 word) description of the delegated task, for display.";
 
-const DESCRIPTION = [
-  // DeepSeek's `providerWording(false)`.
-  "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps.",
-  CONTINUABLE,
-  // Ours: the three types (Claude Code's).
-  "Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on.",
-  // Ours: OpenLen's own types (bundled-types.ts), always offered.
-  `OpenLen's types: ${BUNDLED_AGENT_TYPES.map((a) => `${a.name}: ${a.description}`).join("; ")}`,
-  // Claude Code's line for the types its declaration doesn't list: ./agent-listing.ts.
-  "Custom types are listed in <system-reminder> messages in the conversation.",
-  NOT_SHOWN,
-].join(" ");
+const buildSubagentDescription = (types: readonly { name: string; description: string }[]): string =>
+  [
+    // DeepSeek's `providerWording(false)`.
+    "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps.",
+    CONTINUABLE,
+    // Ours: the three types (Claude Code's).
+    "Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on.",
+    // Ours: OpenLen's own types (bundled-types.ts), always offered.
+    `OpenLen's types: ${types.map((a) => `${a.name}: ${a.description}`).join("; ")}`,
+    // Claude Code's line for the types its declaration doesn't list: ./agent-listing.ts.
+    "Custom types are listed in <system-reminder> messages in the conversation.",
+    NOT_SHOWN,
+  ].join(" ");
+
+const DESCRIPTION = buildSubagentDescription(BUNDLED_AGENT_TYPES);
+const ODYSSEY_DESCRIPTION = buildSubagentDescription(ALL_BUNDLED_AGENT_TYPES);
 
 export const SUBAGENT_DECLARATION: Record<string, unknown> = {
   name: SUBAGENT_TOOL,
@@ -79,9 +83,11 @@ const withIsolation = (d: Record<string, unknown>, isolation: boolean): Record<s
   return { ...d, parameters: { ...parameters, properties: { ...parameters.properties, isolation: ISOLATION_PARAMETER } } };
 };
 
-/** `subagent`, with `isolation` when git is on (phase 4). The same whatever custom types exist. */
-export function subagentDeclaration(opts: { isolation: boolean } = { isolation: false }): Record<string, unknown> {
-  return withIsolation(SUBAGENT_DECLARATION, opts.isolation);
+/** `subagent`, with `isolation` when git is on (phase 4) and Odyssey's clean-prompt specialists (`len-builder`,
+ *  `len-qa`) when `odyssey` is true. Normal Len's declaration stays byte-for-byte identical. */
+export function subagentDeclaration(opts: { isolation: boolean; odyssey?: boolean } = { isolation: false }): Record<string, unknown> {
+  const base = opts.odyssey ? { ...SUBAGENT_DECLARATION, description: ODYSSEY_DESCRIPTION } : SUBAGENT_DECLARATION;
+  return withIsolation(base, opts.isolation);
 }
 
 /** `subagent_fork`, with `isolation` when git is on (phase 4). */

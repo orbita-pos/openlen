@@ -8,7 +8,7 @@ const base = "name: reviewer\ndescription: Reviews copy";
 describe("parseAgentFile", () => {
   it("parses every key of the subset", () => {
     const r = parseAgentFile(
-      file(`${base}\ntools: Read, Grep, Glob\ndisallowedTools: [bash]\nskills: dataviz, pdf\neffort: high\nmaxTurns: 12\nomitLenMd: true\nisolation: worktree\nreadOnly: true\ninitialPrompt: Hola, empecemos con tu nivel`),
+      file(`${base}\ntools: Read, Grep, Glob\ndisallowedTools: [bash]\nskills: dataviz, pdf\neffort: high\nmaxTurns: 12\nomitLenMd: true\nomitBasePrompt: true\nisolation: worktree\nreadOnly: true\ninitialPrompt: Hola, empecemos con tu nivel`),
       "reviewer",
     );
     expect(r).toEqual({
@@ -22,6 +22,7 @@ describe("parseAgentFile", () => {
         effort: "high",
         maxTurns: 12,
         omitLenMd: true,
+        omitBasePrompt: true,
         isolation: "worktree",
         readOnly: true,
         initialPrompt: "Hola, empecemos con tu nivel",
@@ -32,7 +33,7 @@ describe("parseAgentFile", () => {
 
   it("defaults", () => {
     const r = parseAgentFile(file(base), "reviewer");
-    expect(r.ok && r.agent).toMatchObject({ tools: null, disallowedTools: [], skills: [], effort: null, maxTurns: null, omitLenMd: false, isolation: null, readOnly: false, initialPrompt: null });
+    expect(r.ok && r.agent).toMatchObject({ tools: null, disallowedTools: [], skills: [], effort: null, maxTurns: null, omitLenMd: false, omitBasePrompt: false, isolation: null, readOnly: false, initialPrompt: null });
   });
 
   it("isolation: any other value is refused with its template", () => {
@@ -57,6 +58,7 @@ describe("parseAgentFile", () => {
       ["maxTurns 2.5", file(`${base}\nmaxTurns: 2.5`), "reviewer"],
       ["maxTurns 201", file(`${base}\nmaxTurns: 201`), "reviewer"],
       ["omitLenMd", file(`${base}\nomitLenMd: maybe`), "reviewer"],
+      ["omitBasePrompt", file(`${base}\nomitBasePrompt: maybe`), "reviewer"],
       ["readOnly", file(`${base}\nreadOnly: maybe`), "reviewer"],
       ["33 skills", file(`${base}\nskills: ${Array.from({ length: 33 }, (_, i) => `s${i}`).join(", ")}`), "reviewer"],
       ["a list item", file(`${base}\ntools: Read;rm`), "reviewer"],
@@ -89,7 +91,7 @@ describe("parseAgentFile", () => {
 });
 
 it("refuses malformed or multiline permission fields instead of widening the type", () => {
-  for (const front of ["disallowedTools:\n  - Write\n  - Edit", "disallowedTools Read, Write", "  tools: Read", "tools Read", "skills:\n  - dataviz", "maxTurns 2", "omitLenMd true", "readOnly true"]) {
+  for (const front of ["disallowedTools:\n  - Write\n  - Edit", "disallowedTools Read, Write", "  tools: Read", "tools Read", "skills:\n  - dataviz", "maxTurns 2", "omitLenMd true", "omitBasePrompt true", "readOnly true"]) {
     const parsed = parseAgentFile(file(`${base}\n${front}`), "reviewer");
     expect(parsed.ok, front).toBe(false);
   }

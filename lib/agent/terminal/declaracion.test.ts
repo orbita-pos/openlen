@@ -100,10 +100,11 @@ describe("Len Odyssey (dynamis): conserva herramientas completas de ficheros y a
     for (const fuera of ["Grep", "Glob"]) expect(nDynamis).not.toContain(fuera);
   });
 
-  it("con OPENLEN_CODE_MODE=0, Dynamis iguala byte a byte a Len (página y app)", () => {
+  it("con OPENLEN_CODE_MODE=0, Dynamis apaga run_code pero conserva su postura y especialistas", () => {
     const SIN_CODE_MODE = { ...CON, OPENLEN_CODE_MODE: "0" };
-    expect(todo(SIN_CODE_MODE, "dynamis")).toBe(todo(SIN_CODE_MODE, "len"));
-    expect(textosDeApp(SIN_CODE_MODE, "dynamis")).toBe(textosDeApp(SIN_CODE_MODE, "len"));
+    expect(nombresEn(SIN_CODE_MODE, "dynamis")).toEqual(nombresEn(SIN_CODE_MODE, "len"));
+    expect(buildAgentSystemPrompt(SIN_CODE_MODE, "dynamis")).toContain("Architectural Creation Posture");
+    expect(buildAgentSystemPrompt(SIN_CODE_MODE, "len")).not.toContain("Architectural Creation Posture");
   });
 
   // 🔴 LA LÁPIDA de la palanca vieja: el valor que antes quitaba Read, Edit y

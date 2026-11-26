@@ -15,19 +15,23 @@ describe("custom agent types", () => {
     expect(types.refused.every((x) => x.error.length > 0)).toBe(true);
   });
   it("names built-ins first, then custom types sorted by name", () => {
-    expect(resolveAgentTypes({ project: [stored("zebra"), stored("alpha")], personal: [] }).names()).toEqual(["general-purpose", "Explore", "Plan", "len-design", "len-office", "len-review", "alpha", "zebra"]);
+    expect(resolveAgentTypes({ project: [stored("zebra"), stored("alpha")], personal: [] }).names()).toEqual(["general-purpose", "Explore", "Plan", "len-design", "len-office", "len-review", "len-builder", "len-qa", "alpha", "zebra"]);
   });
   it("OpenLen's types come after Claude Code's and before the custom ones", () => {
     const types = resolveAgentTypes({ project: [stored("reviewer")], personal: [] });
-    expect(types.names()).toEqual(["general-purpose", "Explore", "Plan", "len-design", "len-office", "len-review", "reviewer"]);
+    expect(types.names()).toEqual(["general-purpose", "Explore", "Plan", "len-design", "len-office", "len-review", "len-builder", "len-qa", "reviewer"]);
     expect(types.get("len-office")?.scope).toBe("bundled");
+    expect(types.get("len-builder")?.scope).toBe("bundled");
+    expect(types.get("len-qa")?.scope).toBe("bundled");
     expect(types.custom.map((t) => t.agent.name)).toEqual(["reviewer"]);
   });
   it("a project or personal file with an OpenLen name does not load", () => {
     for (const scope of ["project", "personal"] as const) {
-      const types = resolveAgentTypes({ project: [], personal: [], [scope]: [stored("len-office", "Mine.")] });
-      expect(types.refused).toEqual([{ name: "len-office", scope, error: '"len-office" is one of OpenLen\'s subagent types.' }]);
-      expect(types.get("len-office")?.scope).toBe("bundled");
+      for (const reserved of ["len-office", "len-builder", "len-qa"] as const) {
+        const types = resolveAgentTypes({ project: [], personal: [], [scope]: [stored(reserved, "Mine.")] });
+        expect(types.refused).toEqual([{ name: reserved, scope, error: `"${reserved}" is one of OpenLen's subagent types.` }]);
+        expect(types.get(reserved)?.scope).toBe("bundled");
+      }
     }
   });
 });
