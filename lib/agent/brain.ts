@@ -21,6 +21,7 @@ import {
   DYNAMIS_MAX_OUTPUT_TOKENS,
   DYNAMIS_REASONING_EFFORT,
   DYNAMIS_TEMPERATURE,
+  DYNAMIS_TOP_P,
   type AgentMode,
 } from "./dynamis";
 
@@ -245,7 +246,8 @@ const CLOSEOUT_MAX_OUTPUT_TOKENS = 2_048;
 const TEMPERATURE = 1.0;
 
 // TOP_P 1,0, el otro valor de la ficha de la 1017 (2026-10-22), EXPLÍCITO y en
-// todos los modos. DeepInfra ya usa 1,0 si no se manda (su documentación);
+// todos los modos salvo Odyssey, que va a 0,95 (`DYNAMIS_TOP_P`: Fireworks no
+// admite otro para Kimi K3 pensando). DeepInfra ya usa 1,0 si no se manda (su documentación);
 // Fireworks, el respaldo, no documenta el suyo, y un turno que cae al respaldo
 // no debe muestrear distinto del que se midió.
 const TOP_P = 1.0;
@@ -297,6 +299,7 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
   // los mensajes: cambiarlo a mitad de turno invalidaría su caché KV). Dos capas siguen por
   // encima: el operador (`OPENLEN_AGENT_EFFORT`) y un papel que no piensa (`esfuerzo === null`).
   const temperature = isDynamis ? DYNAMIS_TEMPERATURE : TEMPERATURE;
+  const topP = isDynamis ? DYNAMIS_TOP_P : TOP_P;
   const loopCeiling = isDynamis ? DYNAMIS_MAX_OUTPUT_TOKENS : LOOP_MAX_OUTPUT_TOKENS;
   const closeOutCeiling = isDynamis ? DYNAMIS_MAX_OUTPUT_TOKENS : CLOSEOUT_MAX_OUTPUT_TOKENS;
   const effortWord =
@@ -538,7 +541,7 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
           ...(withTools ? { streamToolArgs: true } : {}),
           maxOutputTokens,
           temperature,
-          topP: TOP_P,
+          topP,
           requestId: options.requestId,
           operation,
           ...(esDelAgente

@@ -150,7 +150,8 @@ describe("Len Dynamis en el cable", () => {
     await drain(brain.openStream([USER]));
     expect(pedido().operation).toBe("odyssey_turn");
     expect(pedido().temperature).toBe(1);
-    expect(pedido().topP).toBe(1);
+    // 0,95, no el 1,0 de Len: Fireworks da 400 a Kimi K3 pensando con otro (`DYNAMIS_TOP_P`).
+    expect(pedido().topP).toBe(0.95);
     expect(pedido().reasoningEffortWord).toBe("max");
     expect(pedido().maxOutputTokens).toBe(65_536);
     expect(brain.modelId).toBe(modelIdForRole("odyssey"));
@@ -165,6 +166,7 @@ describe("Len Dynamis en el cable", () => {
     await drain(brain.closeOut([USER]));
     expect(pedido().operation).toBe("odyssey_turn");
     expect(pedido().temperature).toBe(1);
+    expect(pedido().topP).toBe(0.95);
     expect(pedido().reasoningEffortWord).toBe("max");
     expect(pedido().maxOutputTokens).toBe(65_536);
     expect(pedido().toolChoice).toBe("none");

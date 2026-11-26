@@ -11,7 +11,7 @@
 //     Write junto con `bash` y los subagentes — así el lienzo sigue pintando en vivo cada `Write`, los tipos y
 //     el lint revisan al guardar, y se puede alternar entre Len y Len Odyssey en la misma conversación sin
 //     cambiar ni un byte del prompt de sistema, el manual ni las herramientas.
-//   - TEMPERATURA 1,0, `top_p` 1,0, `reasoning_effort: "max"` fijo todo el turno (en Kimi cambiarlo a mitad de
+//   - TEMPERATURA 1,0, `top_p` 0,95 (`DYNAMIS_TOP_P`: Fireworks no admite otro), `reasoning_effort: "max"` fijo todo el turno (en Kimi cambiarlo a mitad de
 //     turno invalida la caché KV) y salida de 65.536 en todas sus llamadas, cierre incluido.
 //
 // 🔴 EL NOMBRE PÚBLICO ES «LEN ODYSSEY» (Jesús, 03/10/2026). «Dynamis» se queda como nombre INTERNO —el valor
@@ -79,3 +79,12 @@ export const DYNAMIS_REASONING_EFFORT = "max";
 
 /** El techo de salida de cada llamada de un turno Dynamis, cierre incluido. */
 export const DYNAMIS_MAX_OUTPUT_TOKENS = 65_536;
+
+/**
+ * TOP_P 0,95: el único que Fireworks admite para Kimi K3 pensando (medido el 2026-11-26). Con 1,0, el de Len,
+ * TODA primera llamada de un turno Odyssey daba 400 en Fireworks y el turno entero caía a DeepInfra. Fireworks lo
+ * dice («Parameter 'top_p' is immutable for kimi_k3 and must be 0.95 (thinking mode). Got 1.0.») sólo desde
+ * alguna réplica: según el `user` de afinidad, las demás contestan «Request failed with HTTP status 400.», y eso
+ * es lo que veía el servidor. Va igual a los dos proveedores, para que un turno que cae al respaldo muestree igual.
+ */
+export const DYNAMIS_TOP_P = 0.95;
