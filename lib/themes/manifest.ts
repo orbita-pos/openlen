@@ -373,9 +373,12 @@ export function readThemeManifest(files: Readonly<Record<string, string>>, o: { 
       else problems.push({ code: "font", file: PACKAGE, detail: `${id}: font is one of ${THEME_FONTS.join(", ")}` });
     }
 
-    // A theme is a scene, a ground or a palette: a font alone, or an empty palette, is nothing.
+    // A theme is any one of a scene, a ground, a palette or a font — Claude Code's `theme.set` takes any one of its
+    // attributes. An empty palette is nothing; a font that is present counts even if it is wrong (`font` reports that).
     const emptyColors = present(t.colors) && record(t.colors) !== null && Object.keys(record(t.colors)!).length === 0;
-    if (!hasScene && !hasGround && (!present(t.colors) || emptyColors)) problems.push({ code: "empty_theme", file: PACKAGE, detail: id });
+    if (!hasScene && !hasGround && !present(t.font) && (!present(t.colors) || emptyColors)) {
+      problems.push({ code: "empty_theme", file: PACKAGE, detail: id });
+    }
 
     if (present(t.twin)) twins.push({ id, twin: t.twin });
 

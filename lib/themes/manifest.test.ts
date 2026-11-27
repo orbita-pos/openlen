@@ -347,10 +347,20 @@ describe("readThemeManifest", () => {
       }
     });
 
-    it("refuses a theme with neither scene nor ground nor colors", () => {
+    it("refuses a theme with none of scene, ground, colors or font", () => {
       expect(codes(project([{ id: "vacio", window: "light" }]))).toEqual(["empty_theme"]);
       expect(codes(project([{ id: "vacio", window: "light", colors: {} }]))).toEqual(["empty_theme"]);
-      expect(codes(project([{ id: "vacio", window: "light", font: "serif" }]))).toEqual(["empty_theme"]);
+    });
+
+    it("accepts a theme that is only a font, as Claude Code's theme.set does", () => {
+      const alone = themesOf(project([{ id: "letra", window: "light", font: "serif" }]));
+      expect(alone[0]!.font).toBe("serif");
+      expect("glass" in alone[0]!).toBe(false);
+      expect("colors" in alone[0]!).toBe(false);
+      // An empty palette beside a font is still a font.
+      expect(themesOf(project([{ id: "letra", window: "light", colors: {}, font: "mono" }]))[0]!.font).toBe("mono");
+      // A wrong font alone is reported as the font, not as an empty theme as well.
+      expect(codes(project([{ id: "letra", window: "light", font: "Comic Sans" }]))).toEqual(["font"]);
     });
 
     it("accepts a theme that is only a palette", () => {
