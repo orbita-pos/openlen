@@ -336,12 +336,13 @@ describe("installDesktopApp: through the gates, then the row", () => {
       let files: Record<string, string> = { ...FILES, "/supabase/migrations/20261126000000_init.sql": "create table a (id int);", "/supabase/functions/hello/index.ts": "a" };
       const d = deps({ files: vi.fn(async () => files) });
       await install(d);
-      for (const change of [
+      const changes: Array<Record<string, string>> = [
         { "/supabase/migrations/20261126000000_init.sql": "create table a (id int, n int);" },
         { "/supabase/functions/hello/index.ts": "b" },
         { "/supabase/config.toml": "[functions.hello]\nverify_jwt = false" },
         { "/supabase/migrations/20261127000000_more.sql": "select 1;" },
-      ]) {
+      ];
+      for (const change of changes) {
         vi.clearAllMocks();
         files = { ...files, ...change };
         expect((await install(d)).status, JSON.stringify(change)).toBe(200);
