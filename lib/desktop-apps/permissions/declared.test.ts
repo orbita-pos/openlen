@@ -163,18 +163,59 @@ describe("readDeclaredPermissions", () => {
   });
 
   // The author controls the HTML and the server scans it in its own process: a crafted shell must cost time in proportion
-  // to its size, never to its square (an unterminated `<script` tag used to be re-scanned to the end from every later one).
-  it("scans in linear time whatever the unterminated tags", () => {
-    const millisecondsFor = (html: string) => {
-      const start = performance.now();
-      const out = readDeclaredPermissions(html);
-      expect(out).toEqual({ permissions: [], error: null });
-      return performance.now() - start;
-    };
+  // to its size, never to its square (an unterminated `<script` tag used to be re-scanned to the end from every later one,
+  // and so was every `</script ` without a `>` in the body of a script). The shell is cut at 1 MiB before it is scanned, so
+  // the cases that stress the regex itself are the ones just under that; the 5 MB ones also prove the cut.
+  const millisecondsFor = (html: string) => {
+    const start = performance.now();
+    const out = readDeclaredPermissions(html);
+    expect(out).toEqual({ permissions: [], error: null });
+    return performance.now() - start;
+  };
+
+  it("scans unterminated open tags in linear time", () => {
     expect(millisecondsFor("<script ".repeat(20_000))).toBeLessThan(200);
     expect(millisecondsFor('<script a="'.repeat(20_000))).toBeLessThan(200);
+    expect(millisecondsFor('<script id="' + "x".repeat(1_000_000))).toBeLessThan(500);
+    expect(millisecondsFor('<script a="'.repeat(Math.floor(1_000_000 / 11)))).toBeLessThan(500);
     expect(millisecondsFor('<script id="' + "x".repeat(5_000_000))).toBeLessThan(500);
     expect(millisecondsFor('<script a="'.repeat(Math.ceil(5_000_000 / 11)))).toBeLessThan(500);
+  });
+
+  it("scans close-tag lookalikes without a > in linear time", () => {
+    for (const lookalike of ["</script ", "</script/", "</script\n", "</script\t"]) {
+      expect(millisecondsFor("<script>" + lookalike.repeat(20_000))).toBeLessThan(200);
+      expect(millisecondsFor("<script>" + lookalike.repeat(Math.floor(1_000_000 / lookalike.length)))).toBeLessThan(500);
+      expect(millisecondsFor("<script>" + lookalike.repeat(Math.ceil(5_000_000 / lookalike.length)))).toBeLessThan(500);
+    }
+  });
+
+  it("still closes a script at a close tag with spaces or attributes", () => {
+    const json = '{"permissions":["notifications"]}';
+    for (const closer of ["</script >", "</script\n>", "</script/>", '</script foo="bar">', "</SCRIPT >"]) {
+      const html = `<script id="openlen-app-manifest" type="application/json">${json}${closer}<p>after</p>`;
+      expect(readDeclaredPermissions(html)).toEqual({ permissions: ["notifications"], error: null });
+    }
+  });
+
+  // Defense in depth: a shell is a page's first file, not a place to hide a megabyte of padding. Whatever lies beyond the
+  // first 1 MiB is not scanned, so a manifest there is not read; one cut in the middle by the limit reads as invalid JSON.
+  it("a manifest after the first MB is not read", () => {
+    const limit = 1_048_576;
+    const tag = '<script id="openlen-app-manifest" type="application/json">{"permissions":["notifications"]}</script>';
+    const justFits = " ".repeat(limit - tag.length) + tag;
+    expect(justFits).toHaveLength(limit);
+    expect(readDeclaredPermissions(justFits)).toEqual({ permissions: ["notifications"], error: null });
+    expect(readDeclaredPermissions(justFits + "<p>more</p>")).toEqual({ permissions: ["notifications"], error: null });
+
+    expect(readDeclaredPermissions(" ".repeat(limit) + tag)).toEqual({ permissions: [], error: null });
+    expect(readDeclaredPermissions(" ".repeat(limit + 50_000) + tag)).toEqual({ permissions: [], error: null });
+
+    const opening = tag.indexOf(">") + 1;
+    const cutInText = readDeclaredPermissions(" ".repeat(limit - opening - 10) + tag);
+    expect(cutInText.permissions).toEqual([]);
+    expect(cutInText.error).toMatch(/openlen-app-manifest/);
+    expect(readDeclaredPermissions(" ".repeat(limit - 20) + tag)).toEqual({ permissions: [], error: null });
   });
 
   it("uses the first tag that matches", () => {
