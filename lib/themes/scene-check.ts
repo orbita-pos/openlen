@@ -1,0 +1,517 @@
+// THE SCENE'S GATE. A theme's scene is an SVG the workspace paints in an <img> behind the glass panels (and the
+// route that serves it also hands it out as a file of its own). It is written by Len — or by anyone who sends a
+// project — so before it is kept this decides, from the text alone, whether it may be: no script, no event handler,
+// no <foreignObject>, nothing that points outside the document, no DTD, a root that covers the window.
+//
+// It works on text, not on a parser: that is what a browser does with an <img> too (it runs nothing and fetches
+// nothing), and what is looked for here are marks. The refusals that look for a mark ANYWHERE in the text (a script,
+// an href, a url(), an @import) are on purpose stricter than a parse: a hit inside a comment or a <text> is a false
+// positive that costs a clear message, never a hole. Only the event handlers look at real attributes, because a word
+// like `once =` in a caption must not read as one. Every pass is linear in the size of the scene (no regular
+// expression that backtracks on a long run), because the scene is up to a megabyte and it is somebody else's.
+//
+// It also counts what the scene costs to paint. Claude Code's own theme scenes were measured (spec §10.1) on
+// Jesús's laptop, an i5-11400H with an Intel UHD, behind the workspace: night-reef ran at 44–46 fps and honu-lagoon
+// at 56–58. The server cannot measure that — its Chromium paints by software — so the count is calibrated on those
+// two, and the protection that really works is the client's (a scene that cannot hold 50 fps is shown still).
+//
+// Client-safe: no server imports.
+
+export const SCENE_MAX_BYTES = 1_048_576;
+export const REDUCED_MOTION_RULE = "@media (prefers-reduced-motion: reduce){*{animation:none!important}}";
+
+/** The unconditional twin of the rule above: what `?still=1` serves. */
+const STILL_RULE = "*{animation:none!important}";
+
+/**
+ * The scene's cost, counted from its text. `elements` is the opening tags; `animated` is the elements that something
+ * animates: those a CSS rule with an `animation` reaches (or that carry one in their `style`), plus every `<animate*>`.
+ */
+export interface SceneCost {
+  elements: number;
+  animated: number;
+  heavy: boolean;
+}
+
+export interface SceneProblem {
+  code: string;
+  file: string;
+  detail?: string;
+}
+
+export type SceneCheck =
+  | { ok: true; svg: string; addedReducedMotion: boolean; cost: SceneCost }
+  | { ok: false; problem: SceneProblem };
+
+// ---------------------------------------------------------------------------------------------------------------
+// Tokenizing: one linear pass that finds the opening tags and their attributes.
+
+interface SceneAttr {
+  name: string;
+  value: string;
+}
+
+interface SceneTag {
+  /** As written, with its prefix if it has one. */
+  name: string;
+  attrs: SceneAttr[];
+  /** Index of the `<`. */
+  start: number;
+  /** Index just after the `>`. */
+  end: number;
+  selfClosing: boolean;
+}
+
+const isSpace = (c: number) => c === 32 || c === 9 || c === 10 || c === 13 || c === 12;
+const isNameStart = (c: number) => (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c === 95;
+
+/**
+ * The opening tags of the document, in order, skipping comments, CDATA, processing instructions and declarations.
+ * Quote-aware, so a `>` inside an attribute does not end a tag. A tag that never ends (which an XML parser would
+ * refuse as a whole) stops the pass.
+ */
+function scanTags(svg: string): SceneTag[] {
+  const tags: SceneTag[] = [];
+  const n = svg.length;
+  let i = 0;
+  while (i < n) {
+    const lt = svg.indexOf("<", i);
+    if (lt < 0) break;
+
+    if (svg.startsWith("<!--", lt)) {
+      const e = svg.indexOf("-->", lt + 4);
+      if (e < 0) break;
+      i = e + 3;
+      continue;
+    }
+    if (svg.startsWith("<![CDATA[", lt)) {
+      const e = svg.indexOf("]]>", lt + 9);
+      if (e < 0) break;
+      i = e + 3;
+      continue;
+    }
+    if (svg.startsWith("<?", lt)) {
+      const e = svg.indexOf("?>", lt + 2);
+      if (e < 0) break;
+      i = e + 2;
+      continue;
+    }
+    if (svg.startsWith("<!", lt)) {
+      const e = svg.indexOf(">", lt + 2);
+      if (e < 0) break;
+      i = e + 1;
+      continue;
+    }
+    if (!isNameStart(svg.charCodeAt(lt + 1))) {
+      // `</x>`, a lone `<`.
+      i = lt + 1;
+      continue;
+    }
+
+    let j = lt + 1;
+    while (j < n) {
+      const c = svg.charCodeAt(j);
+      if (isSpace(c) || c === 47 /* / */ || c === 62 /* > */) break;
+      j++;
+    }
+    const name = svg.slice(lt + 1, j);
+    const attrs: SceneAttr[] = [];
+    let end = -1;
+    let selfClosing = false;
+
+    while (j < n) {
+      while (j < n && isSpace(svg.charCodeAt(j))) j++;
+      if (j >= n) break;
+      const c = svg.charCodeAt(j);
+      if (c === 62) {
+        end = j + 1;
+        break;
+      }
+      if (c === 47) {
+        if (svg.charCodeAt(j + 1) === 62) {
+          selfClosing = true;
+          end = j + 2;
+          break;
+        }
+        j++;
+        continue;
+      }
+
+      const nameStart = j;
+      while (j < n) {
+        const d = svg.charCodeAt(j);
+        if (isSpace(d) || d === 61 /* = */ || d === 47 || d === 62) break;
+        j++;
+      }
+      const attrName = svg.slice(nameStart, j);
+      while (j < n && isSpace(svg.charCodeAt(j))) j++;
+      let value = "";
+      if (svg.charCodeAt(j) === 61) {
+        j++;
+        while (j < n && isSpace(svg.charCodeAt(j))) j++;
+        const q = svg[j];
+        if (q === '"' || q === "'") {
+          const e = svg.indexOf(q, j + 1);
+          if (e < 0) {
+            j = n;
+            break;
+          }
+          value = svg.slice(j + 1, e);
+          j = e + 1;
+        } else {
+          const valueStart = j;
+          while (j < n && !isSpace(svg.charCodeAt(j)) && svg.charCodeAt(j) !== 62) j++;
+          value = svg.slice(valueStart, j);
+        }
+      }
+      if (attrName !== "") attrs.push({ name: attrName, value });
+    }
+
+    if (end < 0) break;
+    tags.push({ name, attrs, start: lt, end, selfClosing });
+    i = end;
+  }
+  return tags;
+}
+
+const localName = (name: string) => name.slice(name.lastIndexOf(":") + 1);
+
+function attrOf(tag: SceneTag, name: string): string | undefined {
+  for (const a of tag.attrs) if (a.name === name) return a.value;
+  return undefined;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// CSS: which elements does an animation reach?
+
+/** CSS without its comments or the CDATA markers a `<style>` is often wrapped in. */
+function cleanCss(css: string): string {
+  let out = "";
+  let pos = 0;
+  for (;;) {
+    const open = css.indexOf("/*", pos);
+    if (open < 0) {
+      out += css.slice(pos);
+      break;
+    }
+    out += css.slice(pos, open);
+    const close = css.indexOf("*/", open + 2);
+    if (close < 0) break;
+    pos = close + 2;
+  }
+  return out.split("<![CDATA[").join("").split("]]>").join("");
+}
+
+/** The index of the `}` that closes the `{` at `open` (the end of the text if it never closes). Skips strings. */
+function closingBrace(css: string, open: number): number {
+  let depth = 0;
+  for (let i = open; i < css.length; i++) {
+    const ch = css[i];
+    if (ch === '"' || ch === "'") {
+      const e = css.indexOf(ch, i + 1);
+      if (e < 0) return css.length;
+      i = e;
+    } else if (ch === "{") depth++;
+    else if (ch === "}" && --depth === 0) return i;
+  }
+  return css.length;
+}
+
+/** True when a declaration list starts an animation: `animation` or `animation-name` with something other than `none`. */
+function declaresAnimation(body: string): boolean {
+  for (const declaration of body.split(";")) {
+    const colon = declaration.indexOf(":");
+    if (colon < 0) continue;
+    const property = declaration.slice(0, colon).trim().toLowerCase().replace(/^-(webkit|moz|ms|o)-/, "");
+    if (property !== "animation" && property !== "animation-name") continue;
+    const value = declaration.slice(colon + 1).replace(/!\s*important/i, "").trim().toLowerCase();
+    if (value !== "" && value !== "none") return true;
+  }
+  return false;
+}
+
+const MAX_AT_RULE_DEPTH = 4;
+
+/** The selectors of every rule that starts an animation (`@keyframes` and the reduced-motion media are left out). */
+function animatingSelectors(css: string, depth = 0): string[] {
+  const out: string[] = [];
+  let i = 0;
+  while (i < css.length) {
+    const open = css.indexOf("{", i);
+    if (open < 0) break;
+    const prelude = css.slice(i, open).trim();
+    const close = closingBrace(css, open);
+    const body = css.slice(open + 1, close);
+    if (prelude.startsWith("@")) {
+      if (/^@(media|supports|layer|container)\b/i.test(prelude)) {
+        // A rule that only applies to someone who asked for less motion is not the scene's own animation. (The
+        // `no-preference` half, and a `not`, are.)
+        const stopsMotion =
+          /prefers-reduced-motion(?!\s*:\s*no-preference)/i.test(prelude) && !/^@media\s+not\b/i.test(prelude);
+        if (!stopsMotion && depth < MAX_AT_RULE_DEPTH) out.push(...animatingSelectors(body, depth + 1));
+      }
+    } else if (declaresAnimation(body)) {
+      for (const selector of prelude.split(",")) if (selector.trim() !== "") out.push(selector.trim());
+    }
+    i = close + 1;
+  }
+  return out;
+}
+
+interface Compound {
+  tag?: string;
+  classes: string[];
+  id?: string;
+}
+
+const isIdentChar = (c: number) =>
+  (c >= 48 && c <= 57) || (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c === 45 || c === 95 || c > 127;
+
+/**
+ * The last compound selector of a selector (`.a .b g:first-child` → `g`): what the element at the end of the path
+ * has to be. A combinator's ancestors are not checked (so a descendant rule reaches every element that fits its end,
+ * which can only over-count), nor are attribute selectors or pseudo-classes.
+ */
+function lastCompound(selector: string): Compound {
+  let depth = 0;
+  let start = 0;
+  for (let k = 0; k < selector.length; k++) {
+    const ch = selector[k];
+    if (ch === "[" || ch === "(") depth++;
+    else if (ch === "]" || ch === ")") depth--;
+    else if (depth === 0 && (isSpace(selector.charCodeAt(k)) || ch === ">" || ch === "+" || ch === "~")) start = k + 1;
+  }
+  const s = selector.slice(start);
+  const compound: Compound = { classes: [] };
+  const readIdent = (from: number) => {
+    let to = from;
+    while (to < s.length && isIdentChar(s.charCodeAt(to))) to++;
+    return to;
+  };
+
+  let k = 0;
+  if (s[0] === "*") k = 1;
+  else if (isIdentChar(s.charCodeAt(0))) {
+    const to = readIdent(0);
+    compound.tag = localName(s.slice(0, to));
+    k = to;
+  }
+  while (k < s.length) {
+    const ch = s[k];
+    if (ch === ".") {
+      const to = readIdent(k + 1);
+      compound.classes.push(s.slice(k + 1, to));
+      k = to;
+    } else if (ch === "#") {
+      const to = readIdent(k + 1);
+      compound.id = s.slice(k + 1, to);
+      k = to;
+    } else if (ch === "[") {
+      const to = s.indexOf("]", k);
+      k = to < 0 ? s.length : to + 1;
+    } else if (ch === ":") {
+      while (s[k] === ":") k++;
+      k = readIdent(k);
+      if (s[k] === "(") {
+        let d = 0;
+        for (; k < s.length; k++) {
+          if (s[k] === "(") d++;
+          else if (s[k] === ")" && --d === 0) {
+            k++;
+            break;
+          }
+        }
+      }
+    } else k++;
+  }
+  return compound;
+}
+
+/** The most pairs of (element, selector) looked at. Past it the scene is counted as animated throughout. */
+const MATCH_WORK_CAP = 20_000_000;
+
+/** The CSS of every `<style>`, comments gone, read from after its tag to the next closing one. */
+function styleText(tags: SceneTag[], svg: string): string {
+  let css = "";
+  let readTo = 0;
+  for (const tag of tags) {
+    // A "<style" that sits inside the text of the one before is text, not a style: the cursor only moves forward.
+    if (localName(tag.name) !== "style" || tag.selfClosing || tag.start < readTo) continue;
+    const close = svg.indexOf("</", tag.end);
+    readTo = close < 0 ? svg.length : close;
+    css += cleanCss(svg.slice(tag.end, readTo)) + "\n";
+  }
+  return css;
+}
+
+function countAnimated(tags: SceneTag[], css: string): number {
+  const seen = new Set<string>();
+  const compounds: Compound[] = [];
+  for (const selector of animatingSelectors(css)) {
+    if (seen.has(selector)) continue;
+    seen.add(selector);
+    compounds.push(lastCompound(selector));
+  }
+
+  if (tags.length * compounds.length > MATCH_WORK_CAP) return tags.length;
+
+  let animated = 0;
+  for (const tag of tags) {
+    const local = localName(tag.name);
+    let hit = local.startsWith("animate");
+    if (!hit) {
+      const style = attrOf(tag, "style");
+      hit = style !== undefined && declaresAnimation(style);
+    }
+    if (!hit && compounds.length > 0) {
+      const classes = (attrOf(tag, "class") ?? "").split(/\s+/).filter(Boolean);
+      const id = attrOf(tag, "id");
+      hit = compounds.some(
+        (c) =>
+          (c.tag === undefined || c.tag === local) &&
+          (c.id === undefined || c.id === id) &&
+          c.classes.every((cls) => classes.includes(cls)),
+      );
+    }
+    if (hit) animated++;
+  }
+  return animated;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// The cost.
+
+/**
+ * `heavy` is where the scene stops being light, drawn between the two scenes that were measured (spec §10.1):
+ *
+ *   honu-lagoon  508 elements, 42 animated · 56–58 fps on the laptop → light
+ *   night-reef   797 elements, 90 animated · 44–46 fps on the laptop → heavy
+ *
+ * An <img> SVG is repainted whole on every frame something in it moves, so what costs is how much there is to repaint
+ * while something moves: a scene with nothing animated is painted once and is never heavy, however big. Two measured
+ * scenes fix a line, not a model: it is drawn on the elements (both counts grow together in the two) and sits at the
+ * midpoint between them, rounded.
+ */
+const HEAVY_MIN_ELEMENTS = 650;
+
+function costOf(tags: SceneTag[], css: string): SceneCost {
+  const elements = tags.length;
+  const animated = countAnimated(tags, css);
+  return { elements, animated, heavy: animated > 0 && elements >= HEAVY_MIN_ELEMENTS };
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// The checks.
+
+const DETAIL_MAX = 80;
+const clip = (s: string) => (s.length > DETAIL_MAX ? `${s.slice(0, DETAIL_MAX - 1)}…` : s);
+
+const DECLARATION = /<!(DOCTYPE|ENTITY|ELEMENT|ATTLIST|NOTATION)/i;
+const SCRIPT = /<(?:[\w.-]+:)?script(?![\w:.-])/i;
+const FOREIGN_OBJECT = /<(?:[\w.-]+:)?foreignObject(?![\w:.-])/i;
+const HREF = /href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]*))/gi;
+const URL_CALL = /url\(\s*["']?\s*([^\s)])?/gi;
+const IMPORT = /@import/i;
+// The rule, written with any spacing: what Claude Code's scenes have, and what a person would write.
+const REDUCED_MOTION_PRESENT =
+  /@media\s*\(\s*prefers-reduced-motion\s*:\s*reduce\s*\)\s*\{\s*\*\s*\{\s*animation\s*:\s*none\s*!important\s*;?\s*\}\s*\}/i;
+
+function problem(code: string, file: string, detail?: string): { ok: false; problem: SceneProblem } {
+  return { ok: false, problem: detail === undefined ? { code, file } : { code, file, detail } };
+}
+
+/** The first thing in the text that reaches outside the document, or null. */
+function externalRef(svg: string): string | null {
+  for (const m of svg.matchAll(HREF)) {
+    const value = m[1] ?? m[2] ?? m[3] ?? "";
+    if (!value.startsWith("#")) return clip(m[0]);
+  }
+  for (const m of svg.matchAll(URL_CALL)) {
+    if (m[1] !== "#") {
+      const close = svg.indexOf(")", m.index);
+      return clip(svg.slice(m.index, close < 0 ? m.index + DETAIL_MAX : close + 1));
+    }
+  }
+  if (IMPORT.test(svg)) return "@import";
+  return null;
+}
+
+// `\d+(\.\d*)?` and not `\d+\.?\d*`: the second can split a long run of digits in as many ways as it is long.
+const NUMBER = /^[+-]?(\d+(\.\d*)?|\.\d+)(e[+-]?\d+)?$/i;
+const NUMBER_MAX_LENGTH = 40;
+
+function validViewBox(value: string | undefined): boolean {
+  if (value === undefined) return false;
+  const parts = value.trim().split(/[\s,]+/);
+  if (parts.length !== 4 || !parts.every((p) => p.length <= NUMBER_MAX_LENGTH && NUMBER.test(p))) return false;
+  return Number(parts[2]) > 0 && Number(parts[3]) > 0;
+}
+
+/**
+ * Adds `rule` as a `<style>` of its own, first thing inside the root. Not appended to the scene's own: that one is
+ * somebody's CSS, and a brace left open or a comment never closed in it would swallow a rule written after it — and
+ * this rule is the guarantee, so it stands where nothing of theirs can reach it.
+ */
+function withRule(svg: string, root: SceneTag | undefined, rule: string): string {
+  if (!root) return svg;
+  const style = `<style>${rule}</style>`;
+  if (root.selfClosing) {
+    const opened = svg.slice(root.start, root.end - 2).trimEnd() + ">";
+    return svg.slice(0, root.start) + opened + style + "</svg>" + svg.slice(root.end);
+  }
+  return svg.slice(0, root.end) + style + svg.slice(root.end);
+}
+
+export function checkScene(svg: string, file: string): SceneCheck {
+  // A string has at least as many bytes as it has UTF-16 units: one that is longer than the limit is over it, and a
+  // huge one is not copied just to be counted.
+  const tooBig = svg.length > SCENE_MAX_BYTES || new TextEncoder().encode(svg).length > SCENE_MAX_BYTES;
+  if (tooBig) return problem("too_big", file, `more than ${SCENE_MAX_BYTES} bytes`);
+
+  const declaration = DECLARATION.exec(svg);
+  if (declaration) return problem("doctype", file, declaration[0]);
+  if (SCRIPT.test(svg)) return problem("script", file);
+  if (FOREIGN_OBJECT.test(svg)) return problem("foreign_object", file);
+
+  const tags = scanTags(svg);
+  for (const tag of tags) {
+    for (const attr of tag.attrs) {
+      if (/^on[a-z]/i.test(attr.name)) return problem("event_handler", file, clip(attr.name));
+    }
+  }
+
+  const external = externalRef(svg);
+  if (external !== null) return problem("external_ref", file, external);
+
+  const root = tags[0];
+  if (!root || root.name !== "svg") return problem("not_svg", file, root ? root.name : "no root element");
+  if (attrOf(root, "xmlns") !== "http://www.w3.org/2000/svg") return problem("not_svg", file, "xmlns");
+  const viewBox = attrOf(root, "viewBox");
+  if (!validViewBox(viewBox)) return problem("no_viewbox", file, viewBox === undefined ? "missing" : clip(viewBox));
+  const aspect = attrOf(root, "preserveAspectRatio");
+  if (aspect === undefined || !/\bslice\b/.test(aspect)) {
+    return problem("not_slice", file, aspect === undefined ? "missing" : clip(aspect));
+  }
+
+  // Looked for in the CSS the scene really has: a rule inside a comment is not one.
+  const css = styleText(tags, svg);
+  const addedReducedMotion = !REDUCED_MOTION_PRESENT.test(css);
+  return {
+    ok: true,
+    svg: addedReducedMotion ? withRule(svg, root, REDUCED_MOTION_RULE) : svg,
+    addedReducedMotion,
+    cost: costOf(tags, css),
+  };
+}
+
+const STILL_STYLE = `<style>${STILL_RULE}</style>`;
+
+/**
+ * The same scene, standing still: what `?still=1` serves to someone who asked for less motion or whose machine
+ * cannot hold the frames. The rule is unconditional here (no `@media`), so it stops CSS animation whatever the
+ * browser says. Meant for a scene that already passed `checkScene`; asked twice, it answers the same.
+ */
+export function stillScene(svg: string): string {
+  if (svg.includes(STILL_STYLE)) return svg;
+  return withRule(svg, scanTags(svg)[0], STILL_RULE);
+}
