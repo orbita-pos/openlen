@@ -866,5 +866,33 @@
     "emptyTitle": "어떤 에이전트가 필요하세요?",
     "emptySubtitle": "어디에 쓰고 싶은지 Len에게 알려 주세요. Len이 준비해서 만들 수 있는 카드를 남겨 드려요.",
     "preparing": "메시지를 준비하는 중…"
+  },
+  "desktop": {
+    "install": {
+      "title": "{name} 설치",
+      "body": "바탕 화면이나 시작 메뉴에서 전용 창으로 열 수 있어요.",
+      "button": "설치",
+      "later": "나중에",
+      "manual": "이 브라우저는 여기서 설치를 제안하지 않았어요. Chrome이나 Edge에서는 주소 표시줄의 설치 아이콘을 쓰거나 브라우저 메뉴에서 ‘설치’를 선택하세요. Firefox와 Safari는 컴퓨터에 앱을 설치할 수 없으니 이 주소를 Chrome이나 Edge에서 열어 주세요."
+    },
+    "about": {
+      "button": "정보",
+      "title": "이 앱 정보",
+      "madeBy": "OpenLen에서 직접 만들었어요",
+      "installedOn": "{date}에 설치됨",
+      "open": "OpenLen에서 열기",
+      "close": "닫기"
+    },
+    "gone": {
+      "title": "{name}은(는) 더 이상 사용할 수 없어요",
+      "titleUnnamed": "이 앱은 더 이상 사용할 수 없어요",
+      "body": "OpenLen은 이 컴퓨터의 바로 가기를 대신 지울 수 없어요. 삭제하려면 이 창의 메뉴(점 세 개)를 열어 ‘제거’를 선택하거나, chrome://apps 또는 edge://apps를 열어 앱을 마우스 오른쪽 버튼으로 클릭하고 삭제를 선택하세요.",
+      "home": "OpenLen으로 이동"
+    },
+    "planRequired": {
+      "title": "{name}은(는) 유료 요금제가 필요해요",
+      "body": "데스크톱 앱은 유료 요금제에 포함돼요. 지워진 것은 없고, 다시 유료 요금제를 쓰면 앱이 그대로 돌아와요.",
+      "plans": "요금제 보기"
+    }
   }
 }

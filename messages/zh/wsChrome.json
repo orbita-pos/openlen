@@ -866,5 +866,33 @@
     "emptyTitle": "你需要什么样的智能体？",
     "emptySubtitle": "告诉 Len 你想用它做什么。他会准备好，并留下一张卡片让你创建它。",
     "preparing": "正在准备你的消息…"
+  },
+  "desktop": {
+    "install": {
+      "title": "安装 {name}",
+      "body": "从桌面或开始菜单打开，它会在自己的窗口中运行。",
+      "button": "安装",
+      "later": "暂不",
+      "manual": "浏览器没有在这里提供安装。在 Chrome 或 Edge 中，请使用地址栏里的安装图标，或打开浏览器菜单并选择“安装”。Firefox 和 Safari 无法在电脑上安装应用：请在 Chrome 或 Edge 中打开此地址。"
+    },
+    "about": {
+      "button": "关于",
+      "title": "关于此应用",
+      "madeBy": "由你在 OpenLen 中创建",
+      "installedOn": "安装于 {date}",
+      "open": "在 OpenLen 中打开",
+      "close": "关闭"
+    },
+    "gone": {
+      "title": "{name} 已不可用",
+      "titleUnnamed": "此应用已不可用",
+      "body": "OpenLen 无法替你删除这台电脑上的快捷方式。卸载方法：打开此窗口的菜单（三个点）并选择“卸载”，或打开 chrome://apps 或 edge://apps，右键点击该应用并选择“移除”。",
+      "home": "前往 OpenLen"
+    },
+    "planRequired": {
+      "title": "{name} 需要付费套餐",
+      "body": "桌面应用包含在付费套餐中。没有删除任何内容：重新使用付费套餐后，应用会恢复原样。",
+      "plans": "查看套餐"
+    }
   }
 }

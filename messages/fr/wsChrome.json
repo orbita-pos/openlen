@@ -866,5 +866,33 @@
     "emptyTitle": "De quel agent avez-vous besoin ?",
     "emptySubtitle": "Dites à Len à quoi il doit servir. Il le prépare et vous laisse une carte pour le créer.",
     "preparing": "Préparation de votre message…"
+  },
+  "desktop": {
+    "install": {
+      "title": "Installer {name}",
+      "body": "Ouvrez-la depuis votre bureau ou le menu Démarrer, dans sa propre fenêtre.",
+      "button": "Installer",
+      "later": "Pas maintenant",
+      "manual": "Votre navigateur n’a pas proposé de l’installer d’ici. Dans Chrome ou Edge, utilisez l’icône d’installation de la barre d’adresse, ou ouvrez le menu du navigateur et choisissez « Installer ». Firefox et Safari n’installent pas d’applications sur un ordinateur : ouvrez cette adresse dans Chrome ou Edge."
+    },
+    "about": {
+      "button": "À propos",
+      "title": "À propos de cette application",
+      "madeBy": "Créée par vous, dans OpenLen",
+      "installedOn": "Installée le {date}",
+      "open": "Ouvrir dans OpenLen",
+      "close": "Fermer"
+    },
+    "gone": {
+      "title": "{name} n’est plus disponible",
+      "titleUnnamed": "Cette application n’est plus disponible",
+      "body": "OpenLen ne peut pas supprimer à votre place le raccourci de cet ordinateur. Pour la désinstaller : ouvrez le menu (les trois points) de cette fenêtre et choisissez « Désinstaller », ou ouvrez chrome://apps ou edge://apps, faites un clic droit sur l’application et choisissez Supprimer.",
+      "home": "Aller à OpenLen"
+    },
+    "planRequired": {
+      "title": "{name} nécessite une offre payante",
+      "body": "Les applications sur le bureau font partie des offres payantes. Rien n’a été supprimé : dès que vous aurez de nouveau une offre payante, l’application revient comme vous l’avez laissée.",
+      "plans": "Voir les offres"
+    }
   }
 }

@@ -866,5 +866,33 @@
     "emptyTitle": "¿Qué agente te hace falta?",
     "emptySubtitle": "Cuéntale a Len para qué lo quieres. Él lo prepara y te deja una tarjeta para crearlo.",
     "preparing": "Preparando tu mensaje…"
+  },
+  "desktop": {
+    "install": {
+      "title": "Instalar {name}",
+      "body": "Ábrela desde tu escritorio o el menú de inicio, en su propia ventana.",
+      "button": "Instalar",
+      "later": "Ahora no",
+      "manual": "Tu navegador no ofreció instalarla desde aquí. En Chrome o Edge, usa el icono de instalar de la barra de direcciones, o abre el menú del navegador y elige «Instalar». Firefox y Safari no instalan apps en el ordenador: abre esta dirección en Chrome o Edge."
+    },
+    "about": {
+      "button": "Acerca de",
+      "title": "Acerca de esta app",
+      "madeBy": "Hecha por ti, en OpenLen",
+      "installedOn": "Instalada el {date}",
+      "open": "Abrir en OpenLen",
+      "close": "Cerrar"
+    },
+    "gone": {
+      "title": "{name} ya no está disponible",
+      "titleUnnamed": "Esta app ya no está disponible",
+      "body": "OpenLen no puede quitar por ti el acceso directo de este ordenador. Para desinstalarla: abre el menú (los tres puntos) de esta ventana y elige «Desinstalar», o abre chrome://apps o edge://apps, haz clic derecho en la app y elige Quitar.",
+      "home": "Ir a OpenLen"
+    },
+    "planRequired": {
+      "title": "{name} necesita un plan de pago",
+      "body": "Las apps en el escritorio van con los planes de pago. No se borró nada: cuando vuelvas a tener un plan de pago, la app vuelve como la dejaste.",
+      "plans": "Ver planes"
+    }
   }
 }

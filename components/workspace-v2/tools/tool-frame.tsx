@@ -21,6 +21,7 @@ export function ToolFrame({
   onPrompt,
   title,
   projectTitle,
+  theme,
 }: {
   src: string;
   frameOrigin: string;
@@ -30,6 +31,8 @@ export function ToolFrame({
   title: string;
   /** The title the confirmation names for the project a change targets; its id when unknown. */
   projectTitle?: (projectId: string) => string;
+  /** The colours the tool is given; the workspace's own tokens when absent (an app on the desktop gives its own). */
+  theme?: () => ToolContext["theme"];
 }) {
   const iframe = useRef<HTMLIFrameElement>(null);
   const [asking, setAsking] = useState<{ change: ToolDataChange; resolve: (ok: boolean) => void } | null>(null);
@@ -60,6 +63,7 @@ export function ToolFrame({
     onConfirmJob: tools.onConfirmJob,
     onPickFiles: tools.onPickFiles,
     onJobStarted: tools.onJobStarted,
+    theme,
   });
 
   const nameOf = (change: ToolDataChange) => change.projectTitle ?? projectTitle?.(change.projectId) ?? change.projectId;

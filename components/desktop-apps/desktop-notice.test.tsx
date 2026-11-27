@@ -1,0 +1,69 @@
+// @vitest-environment jsdom
+//
+// WHAT THE WINDOW SAYS WHEN THERE IS NO APP TO FRAME (spec local 2026-11-26-apps-en-el-escritorio, §4.6, §6): its own
+// page with the workspace's tokens. Real texts.
+import { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { NextIntlClientProvider } from "next-intl";
+import { afterEach, describe, expect, it } from "vitest";
+
+import enWsChrome from "@/messages/en/wsChrome.json";
+import esWsChrome from "@/messages/es/wsChrome.json";
+import { DesktopNotice } from "./desktop-notice";
+
+(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+let root: Root | null = null;
+afterEach(() => {
+  if (root) act(() => root!.unmount());
+  root = null;
+  document.body.innerHTML = "";
+});
+
+async function render(props: Parameters<typeof DesktopNotice>[0], locale: "en" | "es" = "en") {
+  const host = document.body.appendChild(document.createElement("div"));
+  root = createRoot(host);
+  await act(async () => {
+    root!.render(
+      <NextIntlClientProvider locale={locale} messages={{ wsChrome: locale === "es" ? esWsChrome : enWsChrome }}>
+        <DesktopNotice {...props} />
+      </NextIntlClientProvider>,
+    );
+  });
+  return host;
+}
+
+describe("DesktopNotice — gone", () => {
+  it("«{app} is no longer available», and how to uninstall it from the browser", async () => {
+    const host = await render({ kind: "gone", name: "Bookings", locale: "en" });
+    expect(host.textContent).toContain("Bookings is no longer available");
+    expect(host.textContent).toContain("Uninstall");
+    expect(host.textContent).toContain("chrome://apps");
+    expect(host.querySelector("[data-desktop-notice]")?.getAttribute("data-desktop-notice")).toBe("gone");
+    expect(host.querySelector("iframe")).toBeNull();
+    expect(host.querySelector("a")?.getAttribute("href")).toBe("/en");
+  });
+
+  it("🔴 with no name (an id that is not the person's) it says nothing about whose app it was", async () => {
+    const host = await render({ kind: "gone", locale: "en" });
+    expect(host.textContent).toContain("This app is no longer available");
+    expect(host.textContent).not.toContain("{name}");
+  });
+
+  it("speaks the person's language", async () => {
+    const host = await render({ kind: "gone", name: "Reservas", locale: "es" }, "es");
+    expect(host.textContent).toContain("Reservas ya no está disponible");
+    expect(host.querySelector("a")?.getAttribute("href")).toBe("/es");
+  });
+});
+
+describe("DesktopNotice — plan_required", () => {
+  it("says a paid plan is needed, that nothing was deleted, and where the plans are", async () => {
+    const host = await render({ kind: "plan_required", name: "Bookings", locale: "es" }, "es");
+    expect(host.textContent).toContain("Bookings necesita un plan de pago");
+    expect(host.textContent).toContain("No se borró nada");
+    expect(host.querySelector("[data-desktop-notice]")?.getAttribute("data-desktop-notice")).toBe("plan_required");
+    expect(host.querySelector("a")?.getAttribute("href")).toBe("/es/pricing");
+    expect(host.querySelector("iframe")).toBeNull();
+  });
+});

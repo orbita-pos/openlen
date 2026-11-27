@@ -39,6 +39,9 @@ export function useToolBridgeHost(o: {
   onConfirmJob(job: ToolJobAsk): Promise<boolean>;
   onPickFiles(o: { accept?: string; multiple: boolean }): Promise<File[] | null>;
   onJobStarted?(job: ToolJobView): void;
+  /** The colours the frame is given. The workspace reads them off its own tokens (`readToolTheme`, the default); a window
+   *  outside the workspace's own page — an app on the desktop — gives its own. */
+  theme?: () => ToolContext["theme"];
 }): void {
   const latest = useRef(o);
   latest.current = o;
@@ -49,7 +52,7 @@ export function useToolBridgeHost(o: {
         frameOrigin: o.frameOrigin,
         caller: o.caller,
         context: () => latest.current.context,
-        theme: readToolTheme,
+        theme: () => (latest.current.theme ?? readToolTheme)(),
         onPrompt: o.onPrompt ? (text) => latest.current.onPrompt?.(text) : null,
         onConfirmChange: (change) => latest.current.onConfirmChange(change),
         onConfirmJob: (job) => latest.current.onConfirmJob(job),

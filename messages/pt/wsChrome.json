@@ -866,5 +866,33 @@
     "emptyTitle": "De que agente você precisa?",
     "emptySubtitle": "Conte ao Len para que você o quer. Ele o prepara e deixa um cartão para você criá-lo.",
     "preparing": "Preparando sua mensagem…"
+  },
+  "desktop": {
+    "install": {
+      "title": "Instalar {name}",
+      "body": "Abra pela área de trabalho ou pelo menu iniciar, em uma janela própria.",
+      "button": "Instalar",
+      "later": "Agora não",
+      "manual": "Seu navegador não ofereceu a instalação por aqui. No Chrome ou no Edge, use o ícone de instalar na barra de endereços, ou abra o menu do navegador e escolha “Instalar”. O Firefox e o Safari não instalam apps no computador: abra este endereço no Chrome ou no Edge."
+    },
+    "about": {
+      "button": "Sobre",
+      "title": "Sobre este app",
+      "madeBy": "Feito por você, no OpenLen",
+      "installedOn": "Instalado em {date}",
+      "open": "Abrir no OpenLen",
+      "close": "Fechar"
+    },
+    "gone": {
+      "title": "{name} não está mais disponível",
+      "titleUnnamed": "Este app não está mais disponível",
+      "body": "O OpenLen não consegue remover por você o atalho deste computador. Para desinstalar: abra o menu (os três pontos) desta janela e escolha “Desinstalar”, ou abra chrome://apps ou edge://apps, clique com o botão direito no app e escolha Remover.",
+      "home": "Ir para o OpenLen"
+    },
+    "planRequired": {
+      "title": "{name} precisa de um plano pago",
+      "body": "Os apps na área de trabalho vêm com os planos pagos. Nada foi apagado: quando você voltar a ter um plano pago, o app volta como você o deixou.",
+      "plans": "Ver planos"
+    }
   }
 }

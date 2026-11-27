@@ -172,6 +172,16 @@ export default function middleware(req: NextRequest): ReturnType<typeof intlMidd
   }
   const bare = pathWithoutLocale(pathname);
 
+  // APPS ON THE DESKTOP (spec local 2026-11-26-apps-en-el-escritorio, §4.3): the window lives OUTSIDE the locale segment —
+  // the matcher below leaves `/desktop/<id>` alone — but the login brings a person back through the locale-aware router,
+  // which puts a language in front of the path it was given (`/es/desktop/<id>`). That lands here, and goes to the window's
+  // own address, with its query.
+  if (bare !== pathname && bare.startsWith("/desktop/")) {
+    const url = new URL(bare, req.nextUrl.origin);
+    if (search) url.search = search;
+    return fixRedirectHost(NextResponse.redirect(url), req);
+  }
+
   // The workspace lives at /new. Old /new-v2 links + bookmarks → /new,
   // preserving any query.
   if (bare === "/new-v2" || bare.startsWith("/new-v2/")) {
@@ -251,7 +261,9 @@ export const config = {
   // Y `functions/v1/`: las Edge Functions (lib/functions), igual.
   // Y `ai/v1/`: la IA de las apps (lib/app-ai), igual.
   // And `email/v1/`: project email (lib/project-email), the same.
+  // And `desktop/` (with its slash, like `p/`): the window of an app on the desktop, whose `scope` and `start_url` can't
+  // carry a language (the installed app would break when it changed); `/<locale>/desktop/…` is sent there above.
   matcher: [
-    "/((?!api|_next|_vercel|served|c|p/|rest/v1/|auth/v1/|storage/v1/|realtime/v1/|functions/v1/|ai/v1/|email/v1/|u/|.*\\..*).*)",
+    "/((?!api|_next|_vercel|served|c|p/|rest/v1/|auth/v1/|storage/v1/|realtime/v1/|functions/v1/|ai/v1/|email/v1/|u/|desktop/|.*\\..*).*)",
   ],
 };

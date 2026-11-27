@@ -866,5 +866,33 @@
     "emptyTitle": "Di quale agente hai bisogno?",
     "emptySubtitle": "Di’ a Len a cosa ti serve. Lui lo prepara e ti lascia una scheda per crearlo.",
     "preparing": "Preparazione del tuo messaggio…"
+  },
+  "desktop": {
+    "install": {
+      "title": "Installa {name}",
+      "body": "Aprila dal desktop o dal menu Start, in una finestra tutta sua.",
+      "button": "Installa",
+      "later": "Non ora",
+      "manual": "Il browser non ha offerto di installarla da qui. In Chrome o Edge, usa l’icona di installazione nella barra degli indirizzi, oppure apri il menu del browser e scegli “Installa”. Firefox e Safari non installano app sul computer: apri questo indirizzo in Chrome o Edge."
+    },
+    "about": {
+      "button": "Informazioni",
+      "title": "Informazioni su questa app",
+      "madeBy": "Creata da te, in OpenLen",
+      "installedOn": "Installata il {date}",
+      "open": "Apri in OpenLen",
+      "close": "Chiudi"
+    },
+    "gone": {
+      "title": "{name} non è più disponibile",
+      "titleUnnamed": "Questa app non è più disponibile",
+      "body": "OpenLen non può rimuovere al posto tuo il collegamento da questo computer. Per disinstallarla: apri il menu (i tre puntini) di questa finestra e scegli “Disinstalla”, oppure apri chrome://apps o edge://apps, fai clic con il tasto destro sull’app e scegli Rimuovi.",
+      "home": "Vai a OpenLen"
+    },
+    "planRequired": {
+      "title": "{name} richiede un piano a pagamento",
+      "body": "Le app sul desktop sono incluse nei piani a pagamento. Non è stato eliminato nulla: quando avrai di nuovo un piano a pagamento, l’app tornerà com’era.",
+      "plans": "Vedi i piani"
+    }
   }
 }

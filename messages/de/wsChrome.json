@@ -866,5 +866,33 @@
     "emptyTitle": "Welchen Agenten brauchst du?",
     "emptySubtitle": "Sag Len, wofür du ihn brauchst. Er bereitet ihn vor und lässt dir eine Karte da, um ihn zu erstellen.",
     "preparing": "Deine Nachricht wird vorbereitet…"
+  },
+  "desktop": {
+    "install": {
+      "title": "{name} installieren",
+      "body": "Öffne sie über deinen Desktop oder das Startmenü, in einem eigenen Fenster.",
+      "button": "Installieren",
+      "later": "Jetzt nicht",
+      "manual": "Dein Browser hat die Installation hier nicht angeboten. Nutze in Chrome oder Edge das Installationssymbol in der Adressleiste oder öffne das Browsermenü und wähle „Installieren“. Firefox und Safari installieren keine Apps auf dem Computer: Öffne diese Adresse in Chrome oder Edge."
+    },
+    "about": {
+      "button": "Info",
+      "title": "Über diese App",
+      "madeBy": "Von dir erstellt, in OpenLen",
+      "installedOn": "Installiert am {date}",
+      "open": "In OpenLen öffnen",
+      "close": "Schließen"
+    },
+    "gone": {
+      "title": "{name} ist nicht mehr verfügbar",
+      "titleUnnamed": "Diese App ist nicht mehr verfügbar",
+      "body": "OpenLen kann die Verknüpfung auf diesem Computer nicht für dich entfernen. So deinstallierst du die App: Öffne das Menü (die drei Punkte) in diesem Fenster und wähle „Deinstallieren“, oder öffne chrome://apps oder edge://apps, klicke mit der rechten Maustaste auf die App und wähle Entfernen.",
+      "home": "Zu OpenLen"
+    },
+    "planRequired": {
+      "title": "{name} braucht einen kostenpflichtigen Tarif",
+      "body": "Apps auf dem Desktop gehören zu den kostenpflichtigen Tarifen. Nichts wurde gelöscht: Sobald du wieder einen kostenpflichtigen Tarif hast, ist die App so da, wie du sie verlassen hast.",
+      "plans": "Tarife ansehen"
+    }
   }
 }

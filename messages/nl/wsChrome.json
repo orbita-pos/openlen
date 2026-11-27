@@ -866,5 +866,33 @@
     "emptyTitle": "Welke agent heb je nodig?",
     "emptySubtitle": "Vertel Len waarvoor je hem wilt. Hij bereidt hem voor en laat je een kaart achter om hem te maken.",
     "preparing": "Je bericht wordt voorbereid…"
+  },
+  "desktop": {
+    "install": {
+      "title": "{name} installeren",
+      "body": "Open de app via je bureaublad of het startmenu, in een eigen venster.",
+      "button": "Installeren",
+      "later": "Niet nu",
+      "manual": "Je browser bood hier geen installatie aan. Gebruik in Chrome of Edge het installatiepictogram in de adresbalk, of open het browsermenu en kies ‘Installeren’. Firefox en Safari installeren geen apps op een computer: open dit adres in Chrome of Edge."
+    },
+    "about": {
+      "button": "Info",
+      "title": "Over deze app",
+      "madeBy": "Door jou gemaakt, in OpenLen",
+      "installedOn": "Geïnstalleerd op {date}",
+      "open": "Openen in OpenLen",
+      "close": "Sluiten"
+    },
+    "gone": {
+      "title": "{name} is niet meer beschikbaar",
+      "titleUnnamed": "Deze app is niet meer beschikbaar",
+      "body": "OpenLen kan de snelkoppeling op deze computer niet voor je verwijderen. Zo verwijder je de app: open het menu (de drie puntjes) in dit venster en kies ‘Verwijderen’, of open chrome://apps of edge://apps, klik met de rechtermuisknop op de app en kies Verwijderen.",
+      "home": "Naar OpenLen"
+    },
+    "planRequired": {
+      "title": "{name} heeft een betaald abonnement nodig",
+      "body": "Apps op je bureaublad horen bij de betaalde abonnementen. Er is niets verwijderd: zodra je weer een betaald abonnement hebt, is de app terug zoals je hem achterliet.",
+      "plans": "Abonnementen bekijken"
+    }
   }
 }

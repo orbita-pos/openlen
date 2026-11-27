@@ -866,5 +866,33 @@
     "emptyTitle": "What agent do you need?",
     "emptySubtitle": "Tell Len what you want it for. He prepares it and leaves you a card to create it.",
     "preparing": "Getting your message ready…"
+  },
+  "desktop": {
+    "install": {
+      "title": "Install {name}",
+      "body": "Open it from your desktop or start menu, in a window of its own.",
+      "button": "Install",
+      "later": "Not now",
+      "manual": "Your browser didn’t offer to install it from here. In Chrome or Edge, use the install icon in the address bar, or open the browser’s menu and choose “Install”. Firefox and Safari can’t install apps on a computer: open this address in Chrome or Edge."
+    },
+    "about": {
+      "button": "About",
+      "title": "About this app",
+      "madeBy": "Made by you, in OpenLen",
+      "installedOn": "Installed on {date}",
+      "open": "Open in OpenLen",
+      "close": "Close"
+    },
+    "gone": {
+      "title": "{name} is no longer available",
+      "titleUnnamed": "This app is no longer available",
+      "body": "OpenLen can’t remove the shortcut from this computer for you. To uninstall it: open the menu (the three dots) in this window and choose “Uninstall”, or open chrome://apps or edge://apps, right-click the app and choose Remove.",
+      "home": "Go to OpenLen"
+    },
+    "planRequired": {
+      "title": "{name} needs a paid plan",
+      "body": "Apps on your desktop come with the paid plans. Nothing was deleted: when you are on a paid plan again, the app comes back as you left it.",
+      "plans": "See plans"
+    }
   }
 }

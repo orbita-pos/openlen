@@ -20,11 +20,14 @@ vi.mock("next-intl/middleware", async () => {
 vi.mock("@/i18n/routing", () => ({ routing: { locales: ["en", "es"], defaultLocale: "en" } }));
 
 let middleware: (req: NextRequest) => unknown;
+let matcher: string;
 beforeAll(async () => {
   // `IS_PROD` se lee al cargar el módulo.
   vi.stubEnv("NODE_ENV", "production");
   vi.resetModules();
-  middleware = (await import("@/middleware")).default as unknown as (req: NextRequest) => unknown;
+  const mod = await import("@/middleware");
+  middleware = mod.default as unknown as (req: NextRequest) => unknown;
+  matcher = mod.config.matcher[0]!;
 });
 afterAll(() => vi.unstubAllEnvs());
 
@@ -50,5 +53,34 @@ describe("🔴 fixRedirectHost: producción en la caja, producción en local", (
   it("BRAZO DE CONTROL: el puerto interno filtrado en openlen.com se sigue quitando", async () => {
     const res = await pide("http://openlen.com:3000/es/new?brief=hola", { host: "openlen.com:3000" });
     expect(res.headers.get("location")).toBe("https://openlen.com/es/new?brief=hola&mode=ai");
+  });
+});
+
+// APPS EN EL ESCRITORIO (spec local 2026-11-26-apps-en-el-escritorio, §4.3): la ventana vive FUERA del segmento de idioma —su
+// `scope` no puede cambiar con el idioma—, y el login devuelve a quien venía por el router con idioma, que le pone uno delante.
+describe("apps en el escritorio: /desktop/<id> fuera del idioma", () => {
+  const runs = (path: string) => new RegExp(`^${matcher}$`).test(path);
+
+  it("el matcher deja en paz la ventana, su manifiesto y su icono", () => {
+    expect(runs("/desktop/0b6f1c1e-8f4d-4a52-9b0e-2f7f6a1d3c55")).toBe(false);
+    expect(runs("/desktop/0b6f1c1e-8f4d-4a52-9b0e-2f7f6a1d3c55/manifest.webmanifest")).toBe(false);
+    expect(runs("/desktop/0b6f1c1e-8f4d-4a52-9b0e-2f7f6a1d3c55/icon")).toBe(false);
+  });
+
+  it("y sólo eso: el resto del sitio sigue pasando por el middleware (con barra, como `p/`)", () => {
+    for (const path of ["/", "/es", "/es/desktop/abc", "/projects", "/pricing", "/desktops", "/desktop-apps-guide", "/es/new"]) expect(runs(path)).toBe(true);
+    // Lo que ya estaba excluido sigue estándolo.
+    for (const path of ["/p/abc", "/u/abc", "/api/x", "/icon.svg"]) expect(runs(path)).toBe(false);
+  });
+
+  it("/<idioma>/desktop/<id> —adonde el login devuelve a la persona— va a la ventana, con su query", async () => {
+    const res = await pide("https://openlen.com/es/desktop/abc?x=1", { host: "openlen.com" });
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe("https://openlen.com/desktop/abc?x=1");
+  });
+
+  it("no toca otras rutas con idioma", async () => {
+    const res = await pide("https://openlen.com/es/pricing", { host: "openlen.com" });
+    expect(res.headers.get("location")).toBeNull();
   });
 });
