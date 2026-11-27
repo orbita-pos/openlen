@@ -17,9 +17,17 @@ import type { ToolReleaseFile } from "./types";
 
 export type CoreDeps = Pick<InstallDeps, "securityGate" | "entorno" | "build" | "prepareFunctions" | "dataChanges" | "saveRelease" | "markPublished">;
 
-export type CoreResult =
-  | { ok: true; releaseSha: string; files: Record<string, ToolReleaseFile> }
+/** `row` is what the caller's `save` answered (`undefined` when it gave none). */
+export type CoreResult<Row = undefined> =
+  | { ok: true; releaseSha: string; files: Record<string, ToolReleaseFile>; row: Row }
   | { ok: false; status: number; body: Record<string, unknown> };
+
+/** The release the build produced, as the caller's `save` is handed it. */
+export interface BuiltRelease {
+  readonly sha: string;
+  readonly files: Record<string, ToolReleaseFile>;
+  readonly jobFiles?: Record<string, string>;
+}
 
 /** The answer for a failure that came out of the gates' try: the same translation everywhere an install can throw.
  *  `logTag` names who installs in the log line (a tool's `[tools]`, a desktop app's `[desktop-apps]`). */
@@ -33,7 +41,7 @@ export function installErrorResult(err: unknown, logTag = "[tools]"): { status: 
   return { status: 500, body: { error: "install_failed" } };
 }
 
-export async function installThroughGates(
+export async function installThroughGates<Row = undefined>(
   i: {
     readonly projectId: string;
     readonly actorId: string;
@@ -50,11 +58,15 @@ export async function installThroughGates(
     readonly waitWhenPending?: boolean;
     /** After the functions are deployed and before the release is saved: the tool's MCP discovery. `deployed` is whether there were functions to deploy. */
     readonly afterDeploy?: (deployed: boolean) => Promise<ReleaseMcp | null>;
+    /** After the release is saved and BEFORE the security review's base moves: the caller's own row (a tool's installation, a
+     *  desktop app's), as Claude saves its install list and undoes what came before when that fails. Whatever it throws is the
+     *  install's failure and the base stays where it was — a version nobody has installed never becomes the base. */
+    readonly save?: (release: BuiltRelease) => Promise<Row>;
     /** Who installs, for the log lines: `[tools]` unless the caller says otherwise. */
     readonly logTag?: string;
   },
   d: CoreDeps,
-): Promise<CoreResult> {
+): Promise<CoreResult<Row>> {
   const logTag = i.logTag ?? "[tools]";
   const gate = await d.securityGate({
     projectId: i.projectId,
@@ -76,10 +88,11 @@ export async function installThroughGates(
     await functions?.deploy();
     const mcp = i.afterDeploy ? await i.afterDeploy(functions !== null) : null;
     await d.saveRelease(release.sha, i.projectId, release.files, release.jobFiles ?? {}, mcp);
+    const row = (i.save ? await i.save(release) : undefined) as Row;
     if (gate.fingerprint) {
       await d.markPublished(i.projectId, gate.fingerprint).catch((err: unknown) => console.warn(`${logTag} could not keep the installed version as the security review's base`, err));
     }
-    return { ok: true, releaseSha: release.sha, files: release.files };
+    return { ok: true, releaseSha: release.sha, files: release.files, row };
   } catch (err) {
     return { ok: false, ...installErrorResult(err, logTag) };
   }

@@ -10,7 +10,7 @@ import type { AccesoAlProyecto } from "@/lib/projects/acceso";
 import type { GatedPublishResult } from "@/lib/projects/publish-through-gates";
 import type { ProjectData } from "@/lib/projects/types";
 
-import { installErrorResult, installThroughGates } from "./install-core";
+import { installThroughGates } from "./install-core";
 import { readToolManifest, type ToolMcpDeclaration } from "./manifest";
 import type { ReleaseMcp } from "./mcp/discover";
 import { PLACEHOLDER_ICON_SHA } from "./skeleton";
@@ -162,25 +162,24 @@ export async function installTool(
       ...(i.skipMissingSecrets !== undefined ? { skipMissingSecrets: i.skipMissingSecrets } : {}),
       ...(i.waitWhenPending ? { waitWhenPending: true } : {}),
       afterDeploy: discoverOperations,
+      // The person's installation is saved BEFORE the security review's base moves (Claude's order: save the list, undo on
+      // failure): a failure here leaves the base on what was there, not on a version nobody has installed.
+      save: (release) =>
+        d.upsertInstallation({
+          personId: i.actorId,
+          projectId: i.projectId,
+          releaseSha: release.sha,
+          placement: manifest.manifest.placement,
+          titles: manifest.manifest.titles,
+          descriptions: manifest.manifest.descriptions,
+          iconPath: manifest.manifest.iconPath,
+          hostLabelFor: d.hostLabelFor ?? ((id) => id),
+        }),
     },
     d,
   );
   if (!core.ok) return { status: core.status, body: core.body };
 
-  try {
-    const row = await d.upsertInstallation({
-      personId: i.actorId,
-      projectId: i.projectId,
-      releaseSha: core.releaseSha,
-      placement: manifest.manifest.placement,
-      titles: manifest.manifest.titles,
-      descriptions: manifest.manifest.descriptions,
-      iconPath: manifest.manifest.iconPath,
-      hostLabelFor: d.hostLabelFor ?? ((id) => id),
-    });
-    const installation = toInstalledToolView(row, { locale: i.locale, requestHost: i.requestHost, plan: "pro", releaseExists: true });
-    return { status: 200, body: { installation, ...(operationsLeftOut.length > 0 ? { operationsLeftOut } : {}) } };
-  } catch (err) {
-    return installErrorResult(err);
-  }
+  const installation = toInstalledToolView(core.row, { locale: i.locale, requestHost: i.requestHost, plan: "pro", releaseExists: true });
+  return { status: 200, body: { installation, ...(operationsLeftOut.length > 0 ? { operationsLeftOut } : {}) } };
 }

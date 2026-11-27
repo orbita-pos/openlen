@@ -324,6 +324,33 @@ describe("installDesktopApp: through the gates, then the row", () => {
     }
   });
 
+  // Claude saves its install list and undoes what came before when that fails: the row is saved BEFORE the security review's
+  // base moves, so a row that is not saved leaves the base on what it was.
+  it("the row is saved before the security review's base moves, and a row that fails to save never moves it", async () => {
+    const order: string[] = [];
+    const ok = deps({
+      saveRelease: vi.fn(async () => void order.push("release")),
+      markPublished: vi.fn(async () => void order.push("markPublished")),
+    });
+    const upsert = ok.upsertDesktopApp;
+    ok.upsertDesktopApp = vi.fn(async (...a: Parameters<typeof upsert>) => (order.push("row"), upsert(...a)));
+    expect((await install(ok)).status).toBe(200);
+    expect(order).toEqual(["release", "row", "markPublished"]);
+
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const failing = deps({
+        upsertDesktopApp: vi.fn(async () => {
+          throw new Error("db down");
+        }),
+      });
+      expect(await install(failing)).toEqual({ status: 500, body: { error: "install_failed" } });
+      expect(failing.markPublished).not.toHaveBeenCalled();
+    } finally {
+      error.mockRestore();
+    }
+  });
+
   it("the gates log under the desktop tag too", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
     try {

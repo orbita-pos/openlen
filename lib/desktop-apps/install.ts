@@ -9,7 +9,7 @@ import "server-only";
 import type { Plan } from "@/lib/plan";
 import type { AccesoAlProyecto } from "@/lib/projects/acceso";
 import type { ProjectData } from "@/lib/projects/types";
-import { installErrorResult, installThroughGates, type CoreDeps } from "@/lib/tools/install-core";
+import { installThroughGates, type CoreDeps } from "@/lib/tools/install-core";
 
 import { filesFingerprint } from "./fingerprint";
 import type { DesktopAppRow, upsertDesktopApp } from "./store";
@@ -97,27 +97,25 @@ export async function installDesktopApp(
       ...(i.copyDraftData !== undefined ? { copyDraftData: i.copyDraftData } : {}),
       ...(i.skipMissingSecrets !== undefined ? { skipMissingSecrets: i.skipMissingSecrets } : {}),
       logTag: LOG_TAG,
+      // The row is saved BEFORE the security review's base moves (Claude's order: save the list, undo on failure): a row that
+      // fails to save leaves the base on what was there, not on a version nobody has installed.
+      save: (release) =>
+        d.upsertDesktopApp({
+          personId: i.actorId,
+          projectId: i.projectId,
+          releaseSha: release.sha,
+          name: project.title,
+          iconPath: tool?.iconPath ?? null,
+          toolInstallationId: tool?.id ?? null,
+          // Of what was BUILT, not of what is there now: a file saved during the build is an update waiting.
+          filesFingerprint: filesFingerprint(project.data.html, files),
+          hostLabelFor: d.hostLabelFor,
+        }),
     },
     d,
   );
   if (!core.ok) return { status: core.status, body: core.body };
-
-  try {
-    const row = await d.upsertDesktopApp({
-      personId: i.actorId,
-      projectId: i.projectId,
-      releaseSha: core.releaseSha,
-      name: project.title,
-      iconPath: tool?.iconPath ?? null,
-      toolInstallationId: tool?.id ?? null,
-      // Of what was BUILT, not of what is there now: a file saved during the build is an update waiting.
-      filesFingerprint: filesFingerprint(project.data.html, files),
-      hostLabelFor: d.hostLabelFor,
-    });
-    return { status: 200, body: { desktopApp: toDesktopAppView(row), published: project.subdomain !== null } };
-  } catch (err) {
-    return installErrorResult(err, LOG_TAG);
-  }
+  return { status: 200, body: { desktopApp: toDesktopAppView(core.row), published: project.subdomain !== null } };
 }
 
 /** The GET (spec §4.4): what is installed for the person, and whether the project's files moved on since. Only the

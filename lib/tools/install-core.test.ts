@@ -138,6 +138,37 @@ describe("installThroughGates", () => {
     }
   });
 
+  // Claude's order of writes: save the install list, and if that fails undo what came before (`try{save}catch{undo}`).
+  // The security review's base moves only once the installation row is safe: a row that is not saved never moves it.
+  it("save: runs after the release is saved and before the review's base moves, and its row comes back", async () => {
+    const { d, order } = setup();
+    const row = { id: "row1" };
+    const save = vi.fn(async (_release: { sha: string }) => (order.push("saveRow"), row));
+
+    const r = await installThroughGates({ ...INPUT, save }, d);
+
+    expect(r).toEqual({ ok: true, releaseSha: "sha1", files: RELEASE_FILES, row });
+    expect(order).toEqual(["gate", "entorno", "build", "functions", "data", "deploy", "save", "saveRow", "markPublished"]);
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ sha: "sha1", files: RELEASE_FILES }));
+  });
+
+  it("save throwing: a 500 install_failed, logged with the tag, and the review's base never moves", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const { d } = setup();
+      const save = vi.fn(async () => {
+        throw new Error("db down");
+      });
+      const r = await installThroughGates({ ...INPUT, save, logTag: "[desktop-apps]" }, d);
+      expect(r).toEqual({ ok: false, status: 500, body: { error: "install_failed" } });
+      expect(d.saveRelease).toHaveBeenCalled();
+      expect(d.markPublished).not.toHaveBeenCalled();
+      expect(error).toHaveBeenCalledWith("[desktop-apps] install failed:", expect.any(Error));
+    } finally {
+      error.mockRestore();
+    }
+  });
+
   it("security stop returns its status and builds nothing", async () => {
     const stop = { status: 428, body: { error: "security_findings", fingerprint: "fp" } };
     const { d } = setup({ securityGate: vi.fn(async () => ({ stop })) });
