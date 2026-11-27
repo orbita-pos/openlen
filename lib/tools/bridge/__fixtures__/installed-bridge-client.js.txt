@@ -9,6 +9,16 @@
   var WAITS = ["update","jobs.run","files.pick"];
   var FOLLOW_EVERY = 2000;
   var SETTLED = ["completed", "killed", "failed"];
+  var learned = null;
+  function targetOrigin() {
+    if (learned) return learned;
+    if (PARENTS.length === 1) return PARENTS[0];
+    var seen = [];
+    try { var ancestors = window.location.ancestorOrigins; if (ancestors && ancestors.length) seen.push(ancestors[0]); } catch (_) {}
+    try { if (window.document.referrer) seen.push(new URL(window.document.referrer).origin); } catch (_) {}
+    for (var i = 0; i < seen.length; i++) if (PARENTS.indexOf(seen[i]) >= 0) return seen[i];
+    return PARENTS[0];
+  }
   var framed = window.parent && window.parent !== window;
   var next = 1;
   var pending = new Map();
@@ -25,6 +35,7 @@
       if (e.source !== window.parent || PARENTS.indexOf(e.origin) < 0) return;
       var m = e.data;
       if (!m || m.jsonrpc !== "2.0" || m.channel !== CHANNEL) return;
+      learned = e.origin;
       if (typeof m.id === "number") {
         var p = pending.get(m.id);
         if (!p) return;
@@ -45,7 +56,7 @@
       if (framed) {
         var timer = setTimeout(function () { pending.delete(id); reject(new Error("bridge_timeout")); }, WAITS.indexOf(method) >= 0 ? PERSON_TIMEOUT : TIMEOUT);
         pending.set(id, { resolve: resolve, reject: reject, timer: timer });
-        window.parent.postMessage(req, "*");
+        window.parent.postMessage(req, targetOrigin());
       } else if (typeof window.__openlenBridge === "function") {
         Promise.resolve(window.__openlenBridge(JSON.stringify(req))).then(function (raw) {
           var m = JSON.parse(raw);

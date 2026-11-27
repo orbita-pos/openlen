@@ -17,13 +17,15 @@ interface FakeWindow {
   addEventListener: (type: string, fn: (e: unknown) => void) => void;
 }
 
-function framed() {
+function framed(parents: readonly string[] = [APP], where: { ancestorOrigins?: string[]; referrer?: string } = {}) {
   const handlers: Array<(e: unknown) => void> = [];
   const parent = { postMessage: vi.fn() };
-  const win: FakeWindow = { parent, addEventListener: (_t, fn) => handlers.push(fn) };
-  new Function("window", toolBridgeClientSource([APP]))(win);
+  const win: FakeWindow & { location?: unknown; document?: unknown } = { parent, addEventListener: (_t, fn) => handlers.push(fn) };
+  if (where.ancestorOrigins) win.location = { ancestorOrigins: where.ancestorOrigins };
+  if (where.referrer) win.document = { referrer: where.referrer };
+  new Function("window", toolBridgeClientSource(parents))(win);
   const deliver = (data: unknown, o: { source?: unknown; origin?: string } = {}) =>
-    handlers.forEach((h) => h({ source: o.source ?? parent, origin: o.origin ?? APP, data }));
+    handlers.forEach((h) => h({ source: o.source ?? parent, origin: o.origin ?? parents[0], data }));
   const lastRequest = () => parent.postMessage.mock.calls.at(-1)?.[0] as { id: number; method: string; params?: unknown };
   return { win, parent, deliver, lastRequest };
 }
@@ -37,9 +39,30 @@ describe("window.openlen in a frame", () => {
     const p = f.win.openlen!.context!();
     const r = f.lastRequest();
     expect(r).toEqual({ jsonrpc: "2.0", id: r.id, method: "context", channel: "openlen-tool" });
-    expect(f.parent.postMessage).toHaveBeenCalledWith(r, "*");
+    expect(f.parent.postMessage).toHaveBeenCalledWith(r, APP);
     f.deliver({ jsonrpc: "2.0", id: r.id, result: { environment: "draft" }, channel: "openlen-tool" });
     await expect(p).resolves.toEqual({ environment: "draft" });
+  });
+
+  it("never posts to any origin: with several parents, to the one that framed it, then to the one that answered", () => {
+    const PHONE = ["https://localhost", "capacitor://localhost"];
+    const told = framed(PHONE, { ancestorOrigins: ["capacitor://localhost"] });
+    void told.win.openlen!.projects!();
+    expect(told.parent.postMessage.mock.calls.at(-1)![1]).toBe("capacitor://localhost");
+
+    // (a referrer only helps for http(s): the origin of a capacitor:// URL is "null")
+    const byReferrer = framed(["capacitor://localhost", "https://localhost"], { referrer: "https://localhost/tools" });
+    void byReferrer.win.openlen!.projects!();
+    expect(byReferrer.parent.postMessage.mock.calls.at(-1)![1]).toBe("https://localhost");
+
+    // a framer that is not a parent is not believed; with nothing to go by, the first parent
+    const unknown = framed(PHONE, { ancestorOrigins: ["https://evil.example"] });
+    void unknown.win.openlen!.projects!();
+    expect(unknown.parent.postMessage.mock.calls.at(-1)![1]).toBe("https://localhost");
+    unknown.deliver({ jsonrpc: "2.0", method: "context", params: {}, channel: "openlen-tool" }, { origin: "capacitor://localhost" });
+    void unknown.win.openlen!.query!("p1", "select 1");
+    expect(unknown.parent.postMessage.mock.calls.at(-1)![1]).toBe("capacitor://localhost");
+    for (const call of [...told.parent.postMessage.mock.calls, ...unknown.parent.postMessage.mock.calls]) expect(call[1]).not.toBe("*");
   });
 
   it("an answer from another origin is ignored, and the call times out", async () => {

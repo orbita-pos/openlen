@@ -1,6 +1,6 @@
 // window.openlen: THE SCRIPT OPENLEN INJECTS INTO A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.4),
 // served at `/openlen/tool-bridge.js` on the tool's private host. In a frame it asks its parent by `postMessage`
-// with targetOrigin "*" — a request carries nothing secret, as the visuals' frame does — and takes an answer only
+// to an explicit origin, never "*" (`TARGET_CONSTANTS` below: requests carry the person's data), and takes an answer only
 // from `window.parent`, from one of the app's origins, on the tool channel. Without a parent (Len's eyes run the
 // tool top-level), it calls `window.__openlenBridge`, which Puppeteer exposes. Plain ES5 on purpose: it runs
 // before the tool's bundle, in any browser. Keep the methods in step with `OPENLEN_TYPES` (lib/tools/skeleton.ts).
@@ -9,8 +9,8 @@
 //
 // Two variants of ONE script: an installed tool's (everything), and an AGENT's tool's (`{ lenArtifact: true }`, spec local
 // 2026-11-22-artifacts-de-len, §3–§4), which exposes only `context`, `onContext`, `sendPrompt` and `data`.
-// They share the channel, the origin checks, the timeouts and `call`; asking for no variant gives the installed tool's
-// script exactly as it was (a test pins it).
+// They share the channel, the origin checks, where requests go, the timeouts and `call`; asking for no variant gives the
+// installed tool's script exactly as the test's fixture keeps it (a test pins it).
 import { BRIDGE_CHANNEL } from "./protocol";
 
 export const BRIDGE_TIMEOUT_MS = 30_000;
@@ -99,13 +99,23 @@ const AGENT_DATA_BRANCH = ` else if (m.method === "data.changed") {
 // An agent tool's database, from the tool's side. The parent holds the stream: on `data.subscribe` it tells a baseline (the
 // whole set, again on every reconnect) and then each change. This keeps the documents it is told, and after EACH
 // notification gives every subscriber the whole set (its own array) with the change that caused it (null for a baseline).
-// Where an agent's tool posts its requests, which carry the person's data (data.set…): to the one parent it may have
-// when there is only one, and once a parent has answered from one of its origins, to that origin — "*" only before then,
-// and only where frame-ancestors already lets nothing else frame it. The installed tools' script stays as it was.
-const AGENT_CONSTANTS = `  var target = PARENTS.length === 1 ? PARENTS[0] : "*";
+// Where a tool posts its requests, which carry the person's data (query, update, files.deliver, data.set…): ALWAYS to an
+// explicit origin, never "*" (since 2026-11-28; the installed tools' script posted to "*" until then). Once a parent has
+// answered from one of its origins, to that origin; before, to the one parent when there is only one; with several (the
+// phone's, or localhost variants in development), to the one the browser says framed it (`location.ancestorOrigins[0]`,
+// else the referrer's) when that is one of them, else the first. A wrong guess is a request nobody answers (its timeout),
+// never one delivered to someone else.
+const TARGET_CONSTANTS = `  var learned = null;
+  function targetOrigin() {
+    if (learned) return learned;
+    if (PARENTS.length === 1) return PARENTS[0];
+    var seen = [];
+    try { var ancestors = window.location.ancestorOrigins; if (ancestors && ancestors.length) seen.push(ancestors[0]); } catch (_) {}
+    try { if (window.document.referrer) seen.push(new URL(window.document.referrer).origin); } catch (_) {}
+    for (var i = 0; i < seen.length; i++) if (PARENTS.indexOf(seen[i]) >= 0) return seen[i];
+    return PARENTS[0];
+  }
 `;
-const AGENT_LEARNS_THE_PARENT = `
-      target = e.origin;`;
 
 const AGENT_TAIL = `  var docs = new Map();
   var subscribers = [];
@@ -225,7 +235,7 @@ export function toolBridgeClientSource(parentOrigins: readonly string[], options
   var TIMEOUT = ${BRIDGE_TIMEOUT_MS};
   var PERSON_TIMEOUT = ${BRIDGE_PERSON_TIMEOUT_MS};
   var WAITS = ${JSON.stringify(lenArtifact ? [] : WAITS_ON_THE_PERSON)};
-${lenArtifact ? AGENT_CONSTANTS : INSTALLED_CONSTANTS}  var framed = window.parent && window.parent !== window;
+${lenArtifact ? "" : INSTALLED_CONSTANTS}${TARGET_CONSTANTS}  var framed = window.parent && window.parent !== window;
   var next = 1;
   var pending = new Map();
   var listeners = new Set();
@@ -240,7 +250,8 @@ ${lenArtifact ? AGENT_CONSTANTS : INSTALLED_CONSTANTS}  var framed = window.pare
     window.addEventListener("message", function (e) {
       if (e.source !== window.parent || PARENTS.indexOf(e.origin) < 0) return;
       var m = e.data;
-      if (!m || m.jsonrpc !== "2.0" || m.channel !== CHANNEL) return;${lenArtifact ? AGENT_LEARNS_THE_PARENT : ""}
+      if (!m || m.jsonrpc !== "2.0" || m.channel !== CHANNEL) return;
+      learned = e.origin;
       if (typeof m.id === "number") {
         var p = pending.get(m.id);
         if (!p) return;
@@ -261,7 +272,7 @@ ${lenArtifact ? AGENT_CONSTANTS : INSTALLED_CONSTANTS}  var framed = window.pare
       if (framed) {
         var timer = setTimeout(function () { pending.delete(id); reject(new Error("bridge_timeout")); }, WAITS.indexOf(method) >= 0 ? PERSON_TIMEOUT : TIMEOUT);
         pending.set(id, { resolve: resolve, reject: reject, timer: timer });
-        window.parent.postMessage(req, ${lenArtifact ? "target" : '"*"'});
+        window.parent.postMessage(req, targetOrigin());
       } else if (typeof window.__openlenBridge === "function") {
         Promise.resolve(window.__openlenBridge(JSON.stringify(req))).then(function (raw) {
           var m = JSON.parse(raw);

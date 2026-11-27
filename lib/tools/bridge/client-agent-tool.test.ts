@@ -58,7 +58,7 @@ describe("the agent tool's script: the same default, byte for byte, when no vari
   // The installed tools' script is pinned: asking for no variant must give exactly what it gave before this variant existed.
   // The script is kept as text beside this test, so a difference shows as a diff; its hash pins the text itself. Change
   // the script on purpose and both with it (the fixture, then this hash).
-  const INSTALLED_SHA256 = "c12fc4ff15feaa17e9b2f18b6c17b689413d9a280728b678b22b52b06ccab91b";
+  const INSTALLED_SHA256 = "408fba7a20a39bf075b90cb7213d5683f1e009851d5a98ef0bc2e6cee94cc0b6";
   const sha = (s: string) => createHash("sha256").update(s).digest("hex");
   // Line endings as git may have checked them out on Windows: the script itself only has \n.
   const INSTALLED = readFileSync(join(__dirname, "__fixtures__", "installed-bridge-client.js.txt"), "utf8").replace(/\r\n/g, "\n");
@@ -107,7 +107,7 @@ describe("window.openlen of an agent's tool", () => {
     const ctx = (f.win.openlen!.context as Fn)() as Promise<unknown>;
     const r = f.lastRequest();
     expect(r).toEqual({ jsonrpc: "2.0", id: r.id, method: "context", channel: "openlen-tool" });
-    // one parent: posted to it, not to any (the installed tools' script still posts to "*")
+    // one parent: posted to it, not to any (as the installed tools' script, since 2026-11-28)
     expect(f.parent.postMessage).toHaveBeenCalledWith(r, APP);
     f.deliver({ jsonrpc: "2.0", id: r.id, result: { environment: "installed" }, channel: "openlen-tool" });
     await expect(ctx).resolves.toEqual({ environment: "installed" });
@@ -169,11 +169,11 @@ describe("window.openlen.data: the requests", () => {
     expect(f.parent.postMessage.mock.calls.at(-1)![1]).toBe(APP);
   });
 
-  it("with several parents, a request goes to any only until a parent answers; then to the origin that answered", () => {
+  it("with several parents, a request goes to the first until a parent answers (never to any); then to the origin that answered", () => {
     const parents = ["https://localhost", "capacitor://localhost"];
     const f = framed(parents);
     void f.data.list!("tareas");
-    expect(f.parent.postMessage.mock.calls.at(-1)![1]).toBe("*");
+    expect(f.parent.postMessage.mock.calls.at(-1)![1]).toBe("https://localhost");
     f.deliver({ jsonrpc: "2.0", id: f.lastRequest().id, result: [], channel: "openlen-tool" }, { origin: "capacitor://localhost" });
     void f.data.set!("tareas", "t1", { titulo: "Pagar" });
     expect(f.parent.postMessage.mock.calls.at(-1)![1]).toBe("capacitor://localhost");
