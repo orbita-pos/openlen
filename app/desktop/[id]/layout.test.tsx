@@ -12,6 +12,7 @@ vi.mock("@/app/globals.css", () => ({}));
 vi.mock("@/app/[locale]/new/tokens.css", () => ({}));
 
 const { default: DesktopLayout, viewport } = await import("./layout");
+const { DESKTOP_COLORS } = await import("@/lib/desktop-apps/colors");
 
 const ID = "0b6f1c1e-8f4d-4a52-9b0e-2f7f6a1d3c55";
 const html = async () => renderToStaticMarkup(await DesktopLayout({ children: <main id="child" />, params: Promise.resolve({ id: ID }) }));
@@ -37,7 +38,11 @@ describe("the window's layout", () => {
     expect(out.indexOf("beforeinstallprompt")).toBeLessThan(out.indexOf("<main"));
   });
 
-  it("the tab's colour is the strip's", () => {
-    expect(viewport.themeColor).toBe("#fefcfc");
+  it("the tab's colour is the strip's, light and dark as the system is (Claude's window follows the OS theme)", () => {
+    expect(viewport.themeColor).toEqual([
+      { media: "(prefers-color-scheme: light)", color: DESKTOP_COLORS.light.theme },
+      { media: "(prefers-color-scheme: dark)", color: DESKTOP_COLORS.dark.theme },
+    ]);
+    expect(DESKTOP_COLORS.light.theme).toBe("#fefcfc");
   });
 });

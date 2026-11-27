@@ -80,6 +80,16 @@ describe("DesktopNotice — gone", () => {
   });
 });
 
+describe("DesktopNotice — the workspace's tokens, light and dark", () => {
+  it("both notices sit in `.workspace-v2`, whose dark values hang on `.dark` (set on <html> before the first paint by the layout)", async () => {
+    for (const props of [{ kind: "gone", locale: "en" }, { kind: "plan_required", name: "Bookings", locale: "en" }] as const) {
+      const host = await render(props);
+      expect(host.firstElementChild?.classList.contains("workspace-v2")).toBe(true);
+      act(() => root!.unmount());
+    }
+  });
+});
+
 describe("DesktopNotice — plan_required", () => {
   it("says a paid plan is needed, that nothing was deleted, and where the plans are", async () => {
     const host = await render({ kind: "plan_required", name: "Bookings", locale: "es" }, "es");

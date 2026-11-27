@@ -5,12 +5,19 @@
 import type { Viewport } from "next";
 
 import { EARLY_INSTALL_PROMPT_SCRIPT } from "@/lib/desktop-apps/early-install-prompt";
-import { DESKTOP_THEME_COLOR } from "@/lib/desktop-apps/manifest";
+import { DESKTOP_COLORS } from "@/lib/desktop-apps/colors";
 import { requestLocale } from "@/lib/desktop-apps/page-request";
 import "@/app/globals.css";
 import "@/app/[locale]/new/tokens.css";
 
-export const viewport: Viewport = { themeColor: DESKTOP_THEME_COLOR };
+// The title bar of the installed window is the strip's colour, light or dark as the system is — as Claude's window follows
+// the OS theme (its background `#fcfcfb` / `#151515` by `nativeTheme`). The manifest can carry only one pair (the light one).
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: DESKTOP_COLORS.light.theme },
+    { media: "(prefers-color-scheme: dark)", color: DESKTOP_COLORS.dark.theme },
+  ],
+};
 
 // The saved theme (or the system's) before the first paint, as `app/[locale]/layout.tsx` does: the tokens' dark values hang
 // on `.dark`, and the window must not flash the other mode. Same storage key as `useDarkMode`.
