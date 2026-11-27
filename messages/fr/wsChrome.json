@@ -893,14 +893,29 @@
         "securityPending": "La revue de sécurité est encore en cours. Réessayez dans une minute.",
         "confirm": "La mise à jour a besoin de votre accord dans OpenLen.",
         "problem": "La nouvelle version a un problème et ne peut pas encore être installée.",
-        "failed": "La mise à jour a échoué. Réessayez dans un instant."
+        "failed": "Réessayez dans un instant.",
+        "plan_required": "Les applications sur le bureau font partie des offres payantes.",
+        "owner_only": "Seul le propriétaire peut la mettre à jour sur le bureau.",
+        "not_an_app": "Seules les applications peuvent être sur le bureau.",
+        "uses_stripe": "Une application qui encaisse avec Stripe ne peut pas encore être sur le bureau.",
+        "tool_not_installed": "Installez d’abord cet outil dans Outils, puis mettez-le à jour ici.",
+        "desktop_apps_off": "OpenLen a désactivé les applications sur le bureau pour le moment.",
+        "removed": "Elle a été retirée de votre bureau dans OpenLen. Pour la désinstaller du navigateur, ouvrez le menu (les trois points) de cette fenêtre et choisissez « Désinstaller »."
+      },
+      "failedTitle": "Mise à jour impossible",
+      "action": {
+        "tools": "Ouvrir les outils"
       }
     },
     "gone": {
       "title": "{name} n’est plus disponible",
       "titleUnnamed": "Cette application n’est plus disponible",
       "body": "OpenLen ne peut pas supprimer à votre place le raccourci de cet ordinateur. Pour la désinstaller : ouvrez le menu (les trois points) de cette fenêtre et choisissez « Désinstaller », ou ouvrez chrome://apps ou edge://apps, faites un clic droit sur l’application et choisissez Supprimer.",
-      "home": "Aller à OpenLen"
+      "home": "Aller à OpenLen",
+      "reason": {
+        "removed": "Elle n’est plus sur votre bureau dans OpenLen : elle a été retirée, ou l’outil dont elle provient l’a été.",
+        "tool_off": "Cet outil est désactivé pour le moment. Une fois réactivé, l’application s’ouvrira de nouveau."
+      }
     },
     "planRequired": {
       "title": "{name} nécessite une offre payante",

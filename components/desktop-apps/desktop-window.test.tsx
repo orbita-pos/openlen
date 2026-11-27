@@ -404,7 +404,7 @@ describe("the new-version notice (spec §4.4)", () => {
     // The button runs the same install and the frame lands on that release; asked again, it has nothing more to say.
     await act(async () => void (slot().querySelector("button") as HTMLButtonElement).click());
     await settle();
-    expect(posts(calls)).toEqual([{ method: "POST", body: JSON.stringify({ locale: "en" }) }]);
+    expect(posts(calls)).toEqual([{ method: "POST", body: JSON.stringify({ locale: "en", fromWindow: true }) }]);
     expect(frame().getAttribute("src")).toBe("https://lienzo-0123456789abcdef0123456789abcdef.openlen.app/?v=sha9");
     expect(slot().textContent).toBe("");
     await aMinuteLater();
@@ -427,8 +427,9 @@ describe("the new-version notice (spec §4.4)", () => {
     const before = frame();
     await act(async () => void (slot().querySelector("button") as HTMLButtonElement).click());
     await settle();
-    // The POST is the locale and nothing else: the gates' dialogs live in the workspace.
-    expect(posts(calls)).toEqual([{ method: "POST", body: JSON.stringify({ locale: "en" }) }]);
+    // The POST is the locale and who is asking: the gates' dialogs live in the workspace, and «from the window» is how the
+    // route knows not to bring back an app that was removed elsewhere.
+    expect(posts(calls)).toEqual([{ method: "POST", body: JSON.stringify({ locale: "en", fromWindow: true }) }]);
     expect(frame().getAttribute("src")).toBe(FRAME_SHA2);
     expect(frame()).not.toBe(before);
     expect(host.querySelectorAll("iframe")).toHaveLength(1);
@@ -539,6 +540,148 @@ describe("the new-version notice (spec §4.4)", () => {
     expect(slot().textContent).toContain("Couldn’t update");
     expect((slot().querySelector("button") as HTMLButtonElement).disabled).toBe(false);
     expect(frame()).toBe(before);
+  });
+
+  // THE WORDS OF A REFUSAL (as Claude's «Couldn't install {app}.»): the headline and the reason are two lines, never
+  // «Couldn’t update (reason)»; a cause that is known has its own reason and, when something fixes it, the one link that does.
+  const headline = () => slot().querySelector("[data-desktop-failure-title]")!;
+  const reasonLine = () => slot().querySelector("[data-desktop-failure-reason]")!;
+  async function pressUpdate() {
+    await act(async () => void (slot().querySelector("button") as HTMLButtonElement).click());
+    await settle();
+  }
+
+  it("🔴 a refusal is two lines: «Couldn’t update» and the reason — never the reason inside the headline", async () => {
+    stubApi({ get: () => state(true), post: () => json({ error: "uses_stripe" }, 409) });
+    await render();
+    await settle();
+    await pressUpdate();
+    expect(headline().textContent).toBe("Couldn’t update");
+    expect(reasonLine().textContent).toBe("An app that takes payments with Stripe can’t be on the desktop yet.");
+    expect(headline()).not.toBe(reasonLine());
+    expect(slot().textContent).not.toMatch(/\(|\)/);
+  });
+
+  it.each([
+    ["a plan that lapsed", 402, "plan_required", "Apps on your desktop come with the paid plans.", ["See plans", "/es/pricing"]],
+    ["an editor", 403, "owner_only", "Only the owner can update it on the desktop.", null],
+    ["a project that is not an app", 409, "not_an_app", "Only apps can be on the desktop.", null],
+    ["a Stripe app", 409, "uses_stripe", "An app that takes payments with Stripe can’t be on the desktop yet.", null],
+    ["a tool that is not installed", 409, "tool_not_installed", "Install this tool first in Tools, then update it here.", ["Open Tools", "/es/new?view=tools"]],
+    ["the switch being off", 404, "desktop_apps_off", "OpenLen has turned apps on the desktop off for now.", null],
+  ] as const)("a known cause — %s — has its own reason, and the one action that fixes it", async (_name, status, error, reason, link) => {
+    stubApi({ get: () => state(true), post: () => json({ error }, status) });
+    await render({ locale: "es" });
+    await settle();
+    await pressUpdate();
+    expect(reasonLine().textContent).toBe(reason);
+    expect(reasonLine().textContent).not.toContain("Try again");
+    const anchor = slot().querySelector("a");
+    if (link) {
+      expect(anchor?.textContent).toBe(link[0]);
+      expect(anchor?.getAttribute("href")).toBe(link[1]);
+      expect(anchor?.getAttribute("target")).toBe("_blank");
+      expect(anchor?.getAttribute("rel")).toContain("noopener");
+    } else {
+      expect(anchor).toBeNull();
+    }
+    // Nothing here changes by pressing it again, but it is the person's to try: the button stays.
+    expect((slot().querySelector("button") as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("«Try again» is only for what is unknown: a server error and a network failure", async () => {
+    let answer: () => Response | Promise<Response> = () => json({ error: "install_failed" }, 500);
+    stubApi({ get: () => state(true), post: () => answer() });
+    await render();
+    await settle();
+    await pressUpdate();
+    expect(reasonLine().textContent).toBe("Try again in a moment.");
+    answer = () => Promise.reject(new TypeError("offline"));
+    await pressUpdate();
+    expect(reasonLine().textContent).toBe("Try again in a moment.");
+  });
+
+  // M15: Claude reconciles before it acts, and closes the window of an app that was uninstalled. A window left open after
+  // the app was removed elsewhere must not bring it back: it says so and stops offering the button.
+  it("🔴 «Actualizar» on an app that was removed elsewhere says so, brings nothing back and turns the button off", async () => {
+    const calls = stubApi({ get: () => state(true), post: () => json({ error: "desktop_app_removed" }, 409) });
+    await render();
+    await settle();
+    const before = frame();
+    await pressUpdate();
+    expect(headline().textContent).toBe("Couldn’t update");
+    expect(reasonLine().textContent).toContain("It was removed from your desktop in OpenLen.");
+    expect(reasonLine().textContent).toContain("Uninstall");
+    const button = slot().querySelector("button") as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    // No link to try anything: there is nothing to fix.
+    expect(slot().querySelector("a")).toBeNull();
+    expect(frame()).toBe(before);
+
+    // It stays that way: pressing the disabled button sends nothing, and a later question does not clear it.
+    await act(async () => void button.click());
+    expect(posts(calls)).toHaveLength(1);
+    await aMinuteLater();
+    await act(async () => void setVisibility("visible"));
+    await settle();
+    expect(gets(calls)).toBe(1);
+    expect(reasonLine().textContent).toContain("It was removed from your desktop in OpenLen.");
+    expect((slot().querySelector("button") as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  // M13: the window's title follows the app (Claude's follows its page), and the installed shortcut's name stays.
+  describe("the window's name follows the app", () => {
+    const named = (name: string, over: Record<string, unknown> = {}) =>
+      json({ desktopApp: { id: "d1", url: "/desktop/d1", name, releaseSha: "sha1", installedAt: "2026-11-20T12:00:00.000Z" }, updateAvailable: false, published: false, ...over });
+    const strip = () => host.querySelector("[data-desktop-strip]")!;
+
+    afterEach(() => void (document.title = ""));
+
+    it("a new name in what the route reports is the strip's, the About's, the frame's title and the tab's", async () => {
+      document.title = "Bookings";
+      stubApi({ get: () => named("Reservas") });
+      await render();
+      await settle();
+      expect(strip().querySelector("span")!.textContent).toBe("Reservas");
+      expect(frame().getAttribute("title")).toBe("Reservas");
+      expect(document.title).toBe("Reservas");
+      await act(async () => button("About")!.click());
+      expect(host.querySelector("[data-desktop-about]")!.textContent).toContain("Reservas");
+    });
+
+    it("an update that lands with another name brings it too", async () => {
+      document.title = "Bookings";
+      stubApi({ get: () => state(true), post: () => json({ desktopApp: { id: "d1", url: "/desktop/d1", name: "Bookings Pro", releaseSha: "sha2", installedAt: "2026-11-20T12:00:00.000Z" } }) });
+      await render();
+      await settle();
+      expect(document.title).toBe("Bookings");
+      await act(async () => void (slot().querySelector("button") as HTMLButtonElement).click());
+      await settle();
+      expect(strip().querySelector("span")!.textContent).toBe("Bookings Pro");
+      expect(frame().getAttribute("title")).toBe("Bookings Pro");
+      expect(document.title).toBe("Bookings Pro");
+    });
+
+    it("the same name, no name or an empty one leave everything as it was", async () => {
+      document.title = "Bookings";
+      stubApi({ get: () => named("Bookings") });
+      await render();
+      await settle();
+      expect(strip().querySelector("span")!.textContent).toBe("Bookings");
+      expect(document.title).toBe("Bookings");
+
+      stubApi({ get: () => state(false) });
+      await aMinuteLater();
+      await act(async () => void setVisibility("visible"));
+      await settle();
+      expect(strip().querySelector("span")!.textContent).toBe("Bookings");
+      stubApi({ get: () => named("") });
+      await aMinuteLater();
+      await act(async () => void setVisibility("visible"));
+      await settle();
+      expect(strip().querySelector("span")!.textContent).toBe("Bookings");
+      expect(document.title).toBe("Bookings");
+    });
   });
 });
 

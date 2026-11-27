@@ -893,14 +893,29 @@
         "securityPending": "The security review is still running. Try again in a minute.",
         "confirm": "Updating needs your OK in OpenLen first.",
         "problem": "The new version has a problem and can’t be installed yet.",
-        "failed": "Couldn’t update. Try again in a moment."
+        "failed": "Try again in a moment.",
+        "plan_required": "Apps on your desktop come with the paid plans.",
+        "owner_only": "Only the owner can update it on the desktop.",
+        "not_an_app": "Only apps can be on the desktop.",
+        "uses_stripe": "An app that takes payments with Stripe can’t be on the desktop yet.",
+        "tool_not_installed": "Install this tool first in Tools, then update it here.",
+        "desktop_apps_off": "OpenLen has turned apps on the desktop off for now.",
+        "removed": "It was removed from your desktop in OpenLen. To uninstall it from your browser, open the menu (the three dots) in this window and choose “Uninstall”."
+      },
+      "failedTitle": "Couldn’t update",
+      "action": {
+        "tools": "Open Tools"
       }
     },
     "gone": {
       "title": "{name} is no longer available",
       "titleUnnamed": "This app is no longer available",
       "body": "OpenLen can’t remove the shortcut from this computer for you. To uninstall it: open the menu (the three dots) in this window and choose “Uninstall”, or open chrome://apps or edge://apps, right-click the app and choose Remove.",
-      "home": "Go to OpenLen"
+      "home": "Go to OpenLen",
+      "reason": {
+        "removed": "It’s no longer on your desktop in OpenLen: it was removed, or the tool it comes from was.",
+        "tool_off": "This tool is switched off right now. When it’s switched on again, the app opens again."
+      }
     },
     "planRequired": {
       "title": "{name} needs a paid plan",

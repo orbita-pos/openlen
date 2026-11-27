@@ -893,14 +893,29 @@
         "securityPending": "De beveiligingscontrole loopt nog. Probeer het over een minuut opnieuw.",
         "confirm": "Voor het bijwerken heb je eerst jouw akkoord in OpenLen nodig.",
         "problem": "De nieuwe versie heeft een probleem en kan nog niet worden geïnstalleerd.",
-        "failed": "Bijwerken is niet gelukt. Probeer het zo meteen opnieuw."
+        "failed": "Probeer het zo meteen opnieuw.",
+        "plan_required": "Apps op je bureaublad horen bij de betaalde abonnementen.",
+        "owner_only": "Alleen de eigenaar kan hem op het bureaublad bijwerken.",
+        "not_an_app": "Alleen apps kunnen op het bureaublad staan.",
+        "uses_stripe": "Een app die betalingen via Stripe int, kan nog niet op het bureaublad staan.",
+        "tool_not_installed": "Installeer dit hulpmiddel eerst via Tools en werk het daarna hier bij.",
+        "desktop_apps_off": "OpenLen heeft apps op het bureaublad voorlopig uitgezet.",
+        "removed": "Hij is in OpenLen van het bureaublad verwijderd. Om hem uit je browser te verwijderen, open je het menu (de drie puntjes) in dit venster en kies je ‘Verwijderen’."
+      },
+      "failedTitle": "Bijwerken is niet gelukt",
+      "action": {
+        "tools": "Tools openen"
       }
     },
     "gone": {
       "title": "{name} is niet meer beschikbaar",
       "titleUnnamed": "Deze app is niet meer beschikbaar",
       "body": "OpenLen kan de snelkoppeling op deze computer niet voor je verwijderen. Zo verwijder je de app: open het menu (de drie puntjes) in dit venster en kies ‘Verwijderen’, of open chrome://apps of edge://apps, klik met de rechtermuisknop op de app en kies Verwijderen.",
-      "home": "Naar OpenLen"
+      "home": "Naar OpenLen",
+      "reason": {
+        "removed": "Hij staat in OpenLen niet meer op je bureaublad: hij is verwijderd, of het hulpmiddel waar hij van komt is verwijderd.",
+        "tool_off": "Dit hulpmiddel staat nu uit. Zodra het weer aan staat, opent de app weer."
+      }
     },
     "planRequired": {
       "title": "{name} heeft een betaald abonnement nodig",

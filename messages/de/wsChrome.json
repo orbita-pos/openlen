@@ -893,14 +893,29 @@
         "securityPending": "Die Sicherheitsprüfung läuft noch. Versuche es in einer Minute erneut.",
         "confirm": "Für das Update brauchst du zuerst dein OK in OpenLen.",
         "problem": "Die neue Version hat ein Problem und kann noch nicht installiert werden.",
-        "failed": "Das Update hat nicht geklappt. Versuche es gleich noch einmal."
+        "failed": "Versuche es gleich noch einmal.",
+        "plan_required": "Apps auf dem Desktop gehören zu den kostenpflichtigen Tarifen.",
+        "owner_only": "Nur der Eigentümer kann sie auf dem Desktop aktualisieren.",
+        "not_an_app": "Nur Apps können auf dem Desktop sein.",
+        "uses_stripe": "Eine App, die mit Stripe kassiert, kann noch nicht auf dem Desktop sein.",
+        "tool_not_installed": "Installiere dieses Tool zuerst unter „Tools“ und aktualisiere es dann hier.",
+        "desktop_apps_off": "OpenLen hat Apps auf dem Desktop vorerst ausgeschaltet.",
+        "removed": "Sie wurde in OpenLen vom Desktop entfernt. Um sie aus deinem Browser zu deinstallieren, öffne das Menü (die drei Punkte) in diesem Fenster und wähle „Deinstallieren“."
+      },
+      "failedTitle": "Aktualisierung fehlgeschlagen",
+      "action": {
+        "tools": "Tools öffnen"
       }
     },
     "gone": {
       "title": "{name} ist nicht mehr verfügbar",
       "titleUnnamed": "Diese App ist nicht mehr verfügbar",
       "body": "OpenLen kann die Verknüpfung auf diesem Computer nicht für dich entfernen. So deinstallierst du die App: Öffne das Menü (die drei Punkte) in diesem Fenster und wähle „Deinstallieren“, oder öffne chrome://apps oder edge://apps, klicke mit der rechten Maustaste auf die App und wähle Entfernen.",
-      "home": "Zu OpenLen"
+      "home": "Zu OpenLen",
+      "reason": {
+        "removed": "Sie ist in OpenLen nicht mehr auf deinem Desktop: Entweder wurde sie entfernt oder das Tool, von dem sie stammt.",
+        "tool_off": "Dieses Tool ist gerade ausgeschaltet. Sobald es wieder eingeschaltet ist, öffnet sich die App wieder."
+      }
     },
     "planRequired": {
       "title": "{name} braucht einen kostenpflichtigen Tarif",

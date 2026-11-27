@@ -14,6 +14,7 @@ import { useDesktopUpdate, type DesktopUpdate, type UpdateSource } from "./use-d
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const SOURCE: UpdateSource = {
+  name: "Bookings",
   frameUrl: "https://lienzo-0123456789abcdef0123456789abcdef.openlen.app/?v=sha1",
   projectId: "p1",
   releaseSha: "sha1",
@@ -177,6 +178,29 @@ describe("the update", () => {
     expect(posts(calls)).toBe(2);
     await act(async () => done(installed("sha3")));
     await settle();
+  });
+
+  it("🔴 an app that was removed elsewhere is never brought back: the handler itself refuses a second try, and nothing more is asked", async () => {
+    const calls = stubApi({ get: behind, post: () => json({ error: "desktop_app_removed" }, 409) });
+    await mount();
+    await settle();
+    await act(async () => void current.update());
+    expect(current.phase).toEqual({ kind: "stopped", reason: "removed" });
+    expect(JSON.parse(String((vi.mocked(fetch).mock.calls.find((c) => (c[1] as RequestInit | undefined)?.method === "POST")![1] as RequestInit).body))).toEqual({
+      locale: "en",
+      fromWindow: true,
+    });
+
+    // Called directly, not through the disabled button: no second POST.
+    await act(async () => void current.update());
+    expect(posts(calls)).toBe(1);
+    // And a window looked at again a minute later asks nothing and clears nothing.
+    await tick(FOCUS_PROBE_GAP_MS);
+    await act(async () => void look());
+    await settle();
+    expect(gets(calls)).toBe(1);
+    expect(current.phase).toEqual({ kind: "stopped", reason: "removed" });
+    expect(current.available).toBe(true);
   });
 
   it("while it updates, the check of the question says nothing (an answer to an older question is not the news)", async () => {

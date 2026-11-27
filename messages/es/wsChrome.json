@@ -893,14 +893,29 @@
         "securityPending": "La revisión de seguridad aún está en marcha. Prueba de nuevo en un minuto.",
         "confirm": "Para actualizar hace falta tu visto bueno en OpenLen.",
         "problem": "La versión nueva tiene un problema y aún no se puede instalar.",
-        "failed": "No se pudo actualizar. Prueba de nuevo en un momento."
+        "failed": "Inténtalo de nuevo en un momento.",
+        "plan_required": "Las apps en el escritorio van con los planes de pago.",
+        "owner_only": "Sólo el dueño puede actualizarla en el escritorio.",
+        "not_an_app": "Sólo las apps pueden estar en el escritorio.",
+        "uses_stripe": "Una app que cobra con Stripe todavía no puede estar en el escritorio.",
+        "tool_not_installed": "Instala primero esta herramienta en Herramientas y luego actualízala aquí.",
+        "desktop_apps_off": "OpenLen ha apagado las apps en el escritorio por ahora.",
+        "removed": "Se quitó del escritorio en OpenLen. Para desinstalarla del navegador, abre el menú (los tres puntos) de esta ventana y elige «Desinstalar»."
+      },
+      "failedTitle": "No se pudo actualizar",
+      "action": {
+        "tools": "Abrir Herramientas"
       }
     },
     "gone": {
       "title": "{name} ya no está disponible",
       "titleUnnamed": "Esta app ya no está disponible",
       "body": "OpenLen no puede quitar por ti el acceso directo de este ordenador. Para desinstalarla: abre el menú (los tres puntos) de esta ventana y elige «Desinstalar», o abre chrome://apps o edge://apps, haz clic derecho en la app y elige Quitar.",
-      "home": "Ir a OpenLen"
+      "home": "Ir a OpenLen",
+      "reason": {
+        "removed": "Ya no está en tu escritorio de OpenLen: se quitó, o se quitó la herramienta de la que viene.",
+        "tool_off": "Esta herramienta está apagada ahora mismo. Cuando se vuelva a encender, la app se abre otra vez."
+      }
     },
     "planRequired": {
       "title": "{name} necesita un plan de pago",

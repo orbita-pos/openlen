@@ -162,14 +162,21 @@ export function DesktopWindow(p: DesktopWindowProps) {
   const [aboutOpen, setAboutOpen] = useState(false);
   const closeAbout = useCallback(() => setAboutOpen(false), []);
   const version = useDesktopUpdate(p);
+  const name = version.name;
+  // The window's name follows the app, as Claude's title follows its page (the installed shortcut's name is the browser's).
+  useEffect(() => {
+    if (name !== p.name) document.title = name;
+  }, [name, p.name]);
+  const links = { project: openInOpenLenHref(p), pricing: `/${p.locale}/pricing`, tools: `/${p.locale}/new?view=tools` };
   return (
     <div className="workspace-v2 flex h-dvh w-full flex-col overflow-hidden" data-desktop-window>
-      <header className="bg-elev bd relative flex h-7 shrink-0 items-center gap-3 border-b px-3" data-desktop-strip>
-        <span className="fg max-w-[40%] truncate text-[12px] font-medium">{p.name}</span>
+      {/* At least thin: a refusal says two lines (the headline and why), and the strip grows to hold them. */}
+      <header className="bg-elev bd relative flex min-h-7 shrink-0 items-center gap-3 border-b px-3 py-0.5" data-desktop-strip>
+        <span className="fg max-w-[40%] truncate text-[12px] font-medium">{name}</span>
         {/* The new-version notice takes the strip's free space between the name and «Acerca de», and renders nothing when
             there is nothing to say. The place is always there, so a screen reader announces what comes into it. */}
         <div className="flex min-w-0 flex-1 items-center gap-2" data-desktop-notice-slot role="status">
-          {version.available ? <UpdateNotice phase={version.phase} shared={version.published} onUpdate={() => void version.update()} openHref={openInOpenLenHref(p)} /> : null}
+          {version.available ? <UpdateNotice phase={version.phase} shared={version.published} onUpdate={() => void version.update()} links={links} /> : null}
         </div>
         <button
           type="button"
@@ -179,7 +186,7 @@ export function DesktopWindow(p: DesktopWindowProps) {
         >
           {t("about.button")}
         </button>
-        {aboutOpen ? <About p={p} onClose={closeAbout} /> : null}
+        {aboutOpen ? <About p={{ ...p, name }} onClose={closeAbout} /> : null}
       </header>
       <div className="relative min-h-0 flex-1">
         {p.toolInstallationId ? (
@@ -195,21 +202,21 @@ export function DesktopWindow(p: DesktopWindowProps) {
               environment: "installed",
             }}
             onPrompt={null}
-            title={p.name}
+            title={name}
             theme={desktopToolTheme}
           />
         ) : (
           <iframe
             key={version.frameUrl}
             src={version.frameUrl}
-            title={p.name}
+            title={name}
             sandbox={SANDBOX_REMOTO}
             allow={ALLOW_REMOTO}
             className="h-full w-full border-0 bg-[var(--bg)]"
             data-desktop-frame
           />
         )}
-        <InstallCard name={p.name} />
+        <InstallCard name={name} />
       </div>
     </div>
   );

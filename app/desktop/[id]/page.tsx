@@ -54,7 +54,7 @@ export default async function DesktopPage({ params }: { params: Promise<{ id: st
       ) : state.kind === "plan_required" ? (
         <DesktopNotice kind="plan_required" name={state.name} locale={locale} />
       ) : (
-        <DesktopNotice kind="gone" name={state.name} locale={locale} />
+        <DesktopNotice kind="gone" name={state.name} reason={state.reason} locale={locale} />
       )}
     </NextIntlClientProvider>
   );

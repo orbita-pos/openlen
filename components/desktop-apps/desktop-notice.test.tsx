@@ -50,6 +50,29 @@ describe("DesktopNotice — gone", () => {
     expect(host.textContent).not.toContain("{name}");
   });
 
+  // Claude's «Can't open the app» says why. The reason is the person's own row's: with none, the page says nothing of it.
+  it("says why when it is the person's own app: removed, or its tool switched off", async () => {
+    let host = await render({ kind: "gone", name: "Bookings", reason: "removed", locale: "en" });
+    expect(host.textContent).toContain("Bookings is no longer available");
+    expect(host.textContent).toContain("It’s no longer on your desktop in OpenLen");
+    expect(host.textContent).not.toContain("switched off");
+    // …and still how to uninstall it from the browser: OpenLen can't remove a shortcut it didn't make.
+    expect(host.textContent).toContain("chrome://apps");
+    act(() => root!.unmount());
+
+    host = await render({ kind: "gone", name: "Bookings", reason: "tool_off", locale: "en" });
+    expect(host.textContent).toContain("This tool is switched off right now");
+    expect(host.textContent).not.toContain("no longer on your desktop");
+    expect(host.textContent).toContain("chrome://apps");
+  });
+
+  it("🔴 with no reason (an id that is not the person's, or nothing to say) it says nothing about why", async () => {
+    const host = await render({ kind: "gone", locale: "en" });
+    expect(host.textContent).not.toContain("no longer on your desktop");
+    expect(host.textContent).not.toContain("switched off");
+    expect(host.querySelectorAll("p")).toHaveLength(1);
+  });
+
   it("speaks the person's language", async () => {
     const host = await render({ kind: "gone", name: "Reservas", locale: "es" }, "es");
     expect(host.textContent).toContain("Reservas ya no está disponible");

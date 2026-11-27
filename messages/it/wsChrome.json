@@ -893,14 +893,29 @@
         "securityPending": "La revisione di sicurezza è ancora in corso. Riprova tra un minuto.",
         "confirm": "Per aggiornare serve prima il tuo OK in OpenLen.",
         "problem": "La nuova versione ha un problema e non si può ancora installare.",
-        "failed": "Aggiornamento non riuscito. Riprova tra un attimo."
+        "failed": "Riprova tra un attimo.",
+        "plan_required": "Le app sul desktop sono incluse nei piani a pagamento.",
+        "owner_only": "Solo il proprietario può aggiornarla sul desktop.",
+        "not_an_app": "Sul desktop possono stare solo le app.",
+        "uses_stripe": "Un’app che incassa con Stripe non può ancora stare sul desktop.",
+        "tool_not_installed": "Installa prima questo strumento in Strumenti, poi aggiornalo qui.",
+        "desktop_apps_off": "OpenLen ha disattivato per ora le app sul desktop.",
+        "removed": "È stata rimossa dal desktop in OpenLen. Per disinstallarla dal browser, apri il menu (i tre puntini) di questa finestra e scegli “Disinstalla”."
+      },
+      "failedTitle": "Aggiornamento non riuscito",
+      "action": {
+        "tools": "Apri Strumenti"
       }
     },
     "gone": {
       "title": "{name} non è più disponibile",
       "titleUnnamed": "Questa app non è più disponibile",
       "body": "OpenLen non può rimuovere al posto tuo il collegamento da questo computer. Per disinstallarla: apri il menu (i tre puntini) di questa finestra e scegli “Disinstalla”, oppure apri chrome://apps o edge://apps, fai clic con il tasto destro sull’app e scegli Rimuovi.",
-      "home": "Vai a OpenLen"
+      "home": "Vai a OpenLen",
+      "reason": {
+        "removed": "Non è più sul tuo desktop in OpenLen: è stata rimossa, oppure è stato rimosso lo strumento da cui proviene.",
+        "tool_off": "Questo strumento è disattivato al momento. Quando sarà riattivato, l’app si aprirà di nuovo."
+      }
     },
     "planRequired": {
       "title": "{name} richiede un piano a pagamento",

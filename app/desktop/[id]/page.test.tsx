@@ -114,6 +114,20 @@ describe("the page", () => {
     win = inner(await open());
     expect(win.props).toEqual({ kind: "plan_required", name: "Bookings", locale: "es" });
   });
+
+  it("a gone app of the person's own carries why (removed, or its tool switched off), for the notice to say it", async () => {
+    asked({ kind: "gone", name: "Bookings", reason: "tool_off" });
+    expect(inner(await open()).props).toEqual({ kind: "gone", name: "Bookings", reason: "tool_off", locale: "es" });
+    asked({ kind: "gone", name: "Bookings", reason: "removed" });
+    expect(inner(await open()).props).toMatchObject({ reason: "removed" });
+  });
+
+  it("🔴 an id that is not the person's has no name and no reason to carry", async () => {
+    asked({ kind: "gone" });
+    const props = inner(await open()).props as Record<string, unknown>;
+    expect(props.name).toBeUndefined();
+    expect(props.reason).toBeUndefined();
+  });
 });
 
 describe("the page's metadata", () => {

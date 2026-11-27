@@ -893,14 +893,29 @@
         "securityPending": "A revisão de segurança ainda está em andamento. Tente de novo em um minuto.",
         "confirm": "Para atualizar, é preciso da sua confirmação no OpenLen.",
         "problem": "A versão nova tem um problema e ainda não pode ser instalada.",
-        "failed": "Não foi possível atualizar. Tente de novo em instantes."
+        "failed": "Tente de novo em instantes.",
+        "plan_required": "Os apps na área de trabalho vêm com os planos pagos.",
+        "owner_only": "Só o dono pode atualizá-lo na área de trabalho.",
+        "not_an_app": "Só apps podem ficar na área de trabalho.",
+        "uses_stripe": "Um app que cobra com o Stripe ainda não pode ficar na área de trabalho.",
+        "tool_not_installed": "Instale primeiro esta ferramenta em Ferramentas e depois atualize aqui.",
+        "desktop_apps_off": "O OpenLen desligou os apps na área de trabalho por enquanto.",
+        "removed": "Foi removido da sua área de trabalho no OpenLen. Para desinstalar do navegador, abra o menu (os três pontos) desta janela e escolha “Desinstalar”."
+      },
+      "failedTitle": "Não foi possível atualizar",
+      "action": {
+        "tools": "Abrir Ferramentas"
       }
     },
     "gone": {
       "title": "{name} não está mais disponível",
       "titleUnnamed": "Este app não está mais disponível",
       "body": "O OpenLen não consegue remover por você o atalho deste computador. Para desinstalar: abra o menu (os três pontos) desta janela e escolha “Desinstalar”, ou abra chrome://apps ou edge://apps, clique com o botão direito no app e escolha Remover.",
-      "home": "Ir para o OpenLen"
+      "home": "Ir para o OpenLen",
+      "reason": {
+        "removed": "Ele não está mais na sua área de trabalho do OpenLen: foi removido, ou a ferramenta de onde vem foi removida.",
+        "tool_off": "Esta ferramenta está desligada no momento. Quando for ligada de novo, o app volta a abrir."
+      }
     },
     "planRequired": {
       "title": "{name} precisa de um plano pago",

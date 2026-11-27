@@ -893,14 +893,29 @@
         "securityPending": "安全审查仍在进行中，请一分钟后再试。",
         "confirm": "更新前需要你先在 OpenLen 中确认。",
         "problem": "新版本有问题，暂时无法安装。",
-        "failed": "更新失败，请稍后再试。"
+        "failed": "请稍后再试。",
+        "plan_required": "桌面应用包含在付费套餐中。",
+        "owner_only": "只有所有者可以在桌面上更新它。",
+        "not_an_app": "桌面上只能放应用。",
+        "uses_stripe": "使用 Stripe 收款的应用暂时不能放在桌面上。",
+        "tool_not_installed": "请先在“工具”中安装这个工具，再回到这里更新。",
+        "desktop_apps_off": "OpenLen 暂时关闭了桌面应用。",
+        "removed": "它已在 OpenLen 中从桌面移除。要从浏览器中卸载，请打开此窗口的菜单（三个点）并选择“卸载”。"
+      },
+      "failedTitle": "更新失败",
+      "action": {
+        "tools": "打开工具"
       }
     },
     "gone": {
       "title": "{name} 已不可用",
       "titleUnnamed": "此应用已不可用",
       "body": "OpenLen 无法替你删除这台电脑上的快捷方式。卸载方法：打开此窗口的菜单（三个点）并选择“卸载”，或打开 chrome://apps 或 edge://apps，右键点击该应用并选择“移除”。",
-      "home": "前往 OpenLen"
+      "home": "前往 OpenLen",
+      "reason": {
+        "removed": "它已不在你 OpenLen 的桌面上：它被移除了，或者它所属的工具被移除了。",
+        "tool_off": "这个工具目前已关闭。重新打开后，应用就能再次打开。"
+      }
     },
     "planRequired": {
       "title": "{name} 需要付费套餐",
