@@ -26,9 +26,11 @@ export interface GrantStore {
 export const GRANTS_STORAGE_KEY = "openlen:desktop-permissions";
 
 // A «yes» for another version or another installation than the window's: it no longer counts, and the dialog that asks
-// again says why. A «no» and no answer at all are not a re-ask.
+// again says why. A «no» and no answer at all are not a re-ask. An EMPTY mark is no mark: a window that has no
+// `releaseSha` or `installedAt` cannot vouch for any yes (two empty strings would be «equal»), so every yes is a re-ask.
 export function isReask(row: GrantRow | null, releaseSha: string, installedAt: string): boolean {
-  return row?.answer === "granted" && (row.releaseSha !== releaseSha || row.installedAt !== installedAt);
+  if (row?.answer !== "granted") return false;
+  return releaseSha === "" || installedAt === "" || row.releaseSha !== releaseSha || row.installedAt !== installedAt;
 }
 
 export function grantKey(personId: string, installationId: string, permission: DesktopPermission): string {
@@ -58,12 +60,18 @@ export function permissionState(i: {
 
 type Table = Record<string, unknown>;
 
-// What is read back is checked: whatever else sits in the storage is not a row.
+// What is read back is checked: whatever else sits in the storage is not a row. A yes with an empty mark is not one either.
 function toRow(value: unknown): GrantRow | null {
   if (typeof value !== "object" || value === null) return null;
   const v = value as Record<string, unknown>;
   if (v.answer === "denied") return { answer: "denied" };
-  if (v.answer === "granted" && typeof v.releaseSha === "string" && typeof v.installedAt === "string") {
+  if (
+    v.answer === "granted" &&
+    typeof v.releaseSha === "string" &&
+    v.releaseSha !== "" &&
+    typeof v.installedAt === "string" &&
+    v.installedAt !== ""
+  ) {
     return { answer: "granted", releaseSha: v.releaseSha, installedAt: v.installedAt };
   }
   return null;

@@ -11,7 +11,10 @@
 //   · only `notifications` can be granted (`GRANTABLE`); the other four names exist so an app can declare them, and they
 //     are always «unavailable» (a PWA has no shortcuts, overlay, menu bar or full access).
 // The scan is tolerant, not a parser: it walks the `<script>` elements and the comments in order, so a manifest inside a
-// comment or inside another script's text is not one. The first tag that matches id AND type wins.
+// comment or inside another script's text is not one. The first tag that matches id AND type wins. It does not track the
+// other raw-text elements (`<style>`, `<textarea>`…), `<template>` or the empty comments `<!-->`: every mis-read there
+// fails closed (a manifest swallowed is a manifest not read) except a manifest inside `<template>`, which is read — and the
+// person's answer is still what grants anything.
 
 export const DESKTOP_PERMISSIONS = ["notifications", "shortcuts", "overlay", "menu-bar", "full-access"] as const;
 export type DesktopPermission = (typeof DESKTOP_PERMISSIONS)[number];
@@ -23,10 +26,14 @@ export const MANIFEST_MAX_CHARS = 16_000;
 export const MANIFEST_MAX_NAMES = 32;
 export const PERMISSION_NAME_MAX_CHARS = 64;
 
-// An HTML comment (to the first `-->`, or the end) or a `<script …>…</script>` (to the first `</script`, or the end). The
-// attribute group reads quoted values whole, so a `>` inside one does not end the tag.
+// An HTML comment (to the first `-->`, or the end), a `<script …>…</script>` (to the first `</script`, or the end) or, last,
+// a `<script` open tag that never reaches its `>` outside quotes, which swallows the rest of the text as a browser does at
+// the end of the input inside a tag. 🔴 That last alternative is what keeps the scan LINEAR: the author controls this HTML
+// and the server scans it in its own process, and without it every unterminated `<script` ran the attribute group to the
+// end and backtracked, then the engine tried the next one — quadratic (128 KB took 2 s). The attribute group reads quoted
+// values whole, so a `>` inside one does not end the tag; the swallowing match has no groups, so `manifestText` skips it.
 const SCAN =
-  /<!--[\s\S]*?(?:-->|$)|<script(?=[\s/>])((?:"[^"]*"|'[^']*'|[^>"'])*)>([\s\S]*?)(?:<\/script(?=[\s/>])[^>]*>|$)/gi;
+  /<!--[\s\S]*?(?:-->|$)|<script(?=[\s/>])((?:"[^"]*"|'[^']*'|[^>"'])*)>([\s\S]*?)(?:<\/script(?=[\s/>])[^>]*>|$)|<script(?=[\s/>])[\s\S]*$/gi;
 const ATTRIBUTE = /([^\s"'<>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
 
 function attributesOf(source: string): Map<string, string> {

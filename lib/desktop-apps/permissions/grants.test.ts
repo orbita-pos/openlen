@@ -84,6 +84,33 @@ describe("permissionState", () => {
   });
 });
 
+describe("empty marks", () => {
+  it("an empty releaseSha or installedAt never grants", () => {
+    // Two empty marks would be «equal»: a yes written with one, or a window that has none, must never count.
+    for (const [row, releaseSha, installedAt] of [
+      [granted("", INSTALLED), "", INSTALLED],
+      [granted(RELEASE, ""), RELEASE, ""],
+      [granted("", ""), "", ""],
+      [granted(RELEASE, INSTALLED), "", INSTALLED],
+      [granted(RELEASE, INSTALLED), RELEASE, ""],
+      [granted(RELEASE, INSTALLED), "", ""],
+      [granted("", INSTALLED), RELEASE, INSTALLED],
+      [granted(RELEASE, ""), RELEASE, INSTALLED],
+    ] as [GrantRow, string, string][]) {
+      for (const browser of ["default", "granted", "denied"] as NotificationPermission[]) {
+        expect(permissionState(input({ row, releaseSha, installedAt, browser }))).toBe("prompt");
+      }
+      expect(isReask(row, releaseSha, installedAt)).toBe(true);
+    }
+  });
+
+  it("a no still counts whatever the window's marks", () => {
+    expect(permissionState(input({ row: denied, releaseSha: "", installedAt: "" }))).toBe("denied");
+    expect(isReask(denied, "", "")).toBe(false);
+    expect(isReask(null, "", "")).toBe(false);
+  });
+});
+
 describe("isReask", () => {
   it("is true only for a yes that is not this version and installation", () => {
     expect(isReask(null, RELEASE, INSTALLED)).toBe(false);
@@ -166,6 +193,8 @@ describe("localGrantStore", () => {
         noSha: { answer: "granted", installedAt: "i" },
         noInstalled: { answer: "granted", releaseSha: "s" },
         wrongType: { answer: "granted", releaseSha: 1, installedAt: "i" },
+        emptySha: { answer: "granted", releaseSha: "", installedAt: "i" },
+        emptyInstalled: { answer: "granted", releaseSha: "s", installedAt: "" },
         other: { answer: "maybe" },
         nothing: null,
         text: "granted",
@@ -174,9 +203,19 @@ describe("localGrantStore", () => {
     const store = localGrantStore(storage);
     expect(store.get("ok")).toEqual({ answer: "granted", releaseSha: "s", installedAt: "i" });
     expect(store.get("no")).toEqual({ answer: "denied" });
-    for (const key of ["noSha", "noInstalled", "wrongType", "other", "nothing", "text", "constructor", "__proto__", "toString"]) {
+    for (const key of ["noSha", "noInstalled", "wrongType", "emptySha", "emptyInstalled", "other", "nothing", "text", "constructor", "__proto__", "toString"]) {
       expect(store.get(key)).toBeNull();
     }
+  });
+
+  it("does not store a yes with an empty mark", () => {
+    const storage = fakeStorage();
+    const store = localGrantStore(storage);
+    store.set("k1", granted("", INSTALLED));
+    store.set("k2", granted(RELEASE, ""));
+    expect(store.get("k1")).toBeNull();
+    expect(store.get("k2")).toBeNull();
+    expect(storage.data.size).toBe(0);
   });
 
   it("treats a corrupt value as empty and still writes", () => {

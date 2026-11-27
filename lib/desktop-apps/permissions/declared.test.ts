@@ -154,6 +154,29 @@ describe("readDeclaredPermissions", () => {
     expect(readDeclaredPermissions(html)).toEqual({ permissions: ["notifications"], error: null });
   });
 
+  it("reads a script open tag that never closes to the end of the text, as a browser does, and fails closed", () => {
+    const tag = '<script id="openlen-app-manifest" type="application/json">{"permissions":["notifications"]}</script>';
+    expect(readDeclaredPermissions(`${tag}<script data-x="never closed`)).toEqual({ permissions: ["notifications"], error: null });
+    expect(readDeclaredPermissions(`<script data-x="never closed ${tag}`)).toEqual({ permissions: [], error: null });
+    expect(readDeclaredPermissions(`<script data-x='never closed ${tag}`)).toEqual({ permissions: [], error: null });
+    expect(readDeclaredPermissions("<script")).toEqual({ permissions: [], error: null });
+  });
+
+  // The author controls the HTML and the server scans it in its own process: a crafted shell must cost time in proportion
+  // to its size, never to its square (an unterminated `<script` tag used to be re-scanned to the end from every later one).
+  it("scans in linear time whatever the unterminated tags", () => {
+    const millisecondsFor = (html: string) => {
+      const start = performance.now();
+      const out = readDeclaredPermissions(html);
+      expect(out).toEqual({ permissions: [], error: null });
+      return performance.now() - start;
+    };
+    expect(millisecondsFor("<script ".repeat(20_000))).toBeLessThan(200);
+    expect(millisecondsFor('<script a="'.repeat(20_000))).toBeLessThan(200);
+    expect(millisecondsFor('<script id="' + "x".repeat(5_000_000))).toBeLessThan(500);
+    expect(millisecondsFor('<script a="'.repeat(Math.ceil(5_000_000 / 11)))).toBeLessThan(500);
+  });
+
   it("uses the first tag that matches", () => {
     const html =
       '<script id="openlen-app-manifest" type="application/json">{"permissions":["notifications"]}</script>' +
