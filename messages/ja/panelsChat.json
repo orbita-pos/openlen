@@ -689,6 +689,35 @@
     "failed": "インストールできませんでした（{reason}）。",
     "installed": "インストールしました。"
   },
+  "desktopInstall": {
+    "title": "「{title}」をデスクトップにインストール",
+    "updateTitle": "「{title}」をデスクトップで更新",
+    "install": "インストール",
+    "update": "更新",
+    "installed": "インストールしました。専用のウィンドウで開きます。",
+    "updated": "更新しました。専用のウィンドウで開きます。",
+    "open": "アプリのウィンドウを開く",
+    "sharedWithSite": "公開したサイトも同じデータを使います。",
+    "publishNotice": "デスクトップのアプリも同じデータを使います。",
+    "menu": {
+      "install": "デスクトップにインストール",
+      "installSubtitle": "このパソコンの専用ウィンドウで",
+      "update": "デスクトップで更新",
+      "updateAvailable": "新しいバージョンがあります",
+      "upToDate": "最新です",
+      "remove": "デスクトップから削除",
+      "removeSubtitle": "ウィンドウからは開かなくなります",
+      "removeFailed": "削除できませんでした。もう一度お試しください。"
+    },
+    "reasons": {
+      "plan_required": "デスクトップのアプリは有料プランに含まれます。",
+      "uses_stripe": "Stripeで決済を受けるアプリは、まだデスクトップにインストールできません。",
+      "tool_not_installed": "先にこのツールをOpenLenにインストールしてから、デスクトップに置いてください。",
+      "owner_only": "デスクトップにインストールできるのはオーナーだけです。",
+      "not_an_app": "デスクトップにインストールできるのはアプリだけです。",
+      "desktop_apps_off": "デスクトップのアプリは現在オフになっています。"
+    }
+  },
   "toolCard": {
     "dismissed": "見送り:«{title}»",
     "more": "もっと見る",

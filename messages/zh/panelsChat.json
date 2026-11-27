@@ -689,6 +689,35 @@
     "failed": "无法安装（{reason}）。",
     "installed": "已安装。"
   },
+  "desktopInstall": {
+    "title": "将「{title}」安装到桌面",
+    "updateTitle": "在桌面上更新「{title}」",
+    "install": "安装",
+    "update": "更新",
+    "installed": "已安装。它会在自己的窗口中打开。",
+    "updated": "已更新。它会在自己的窗口中打开。",
+    "open": "打开应用窗口",
+    "sharedWithSite": "你已发布的网站使用同样的数据。",
+    "publishNotice": "桌面上的应用使用同样的数据。",
+    "menu": {
+      "install": "安装到桌面",
+      "installSubtitle": "在你的电脑上，用自己的窗口运行",
+      "update": "在桌面上更新",
+      "updateAvailable": "有新版本",
+      "upToDate": "已是最新",
+      "remove": "从桌面移除",
+      "removeSubtitle": "它的窗口将不再打开它",
+      "removeFailed": "无法移除，请重试。"
+    },
+    "reasons": {
+      "plan_required": "桌面应用包含在付费套餐中。",
+      "uses_stripe": "使用 Stripe 收款的应用暂时不能安装到桌面。",
+      "tool_not_installed": "请先在 OpenLen 中安装这个工具，再把它放到桌面上。",
+      "owner_only": "只有所有者可以把它安装到桌面。",
+      "not_an_app": "只有应用可以安装到桌面。",
+      "desktop_apps_off": "桌面应用目前已关闭。"
+    }
+  },
   "toolCard": {
     "dismissed": "已搁置:«{title}»",
     "more": "展开",

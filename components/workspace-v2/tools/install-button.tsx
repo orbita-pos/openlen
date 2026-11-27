@@ -7,9 +7,10 @@ import { ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
+import { DesktopMenuItems } from "../desktop-apps/desktop-menu-items";
 import { InstallConfirmCard } from "./install-confirm-card";
 
-export function ToolInstallButton({ projectId, title }: { projectId: string; title: string }) {
+export function ToolInstallButton({ projectId, title, desktop = false }: { projectId: string; title: string; desktop?: boolean }) {
   const t = useTranslations("panelsChat");
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
@@ -39,6 +40,9 @@ export function ToolInstallButton({ projectId, title }: { projectId: string; tit
       {open ? (
         <div className="absolute right-0 mt-2 w-80 rounded-xl bg-elev border bd shadow-elev p-1.5 z-50 slide-down">
           <InstallConfirmCard projectId={projectId} install={{ title }} onInstalled={() => {}} onCancelled={() => setOpen(false)} />
+          {/* Also on the desktop, in a window of its own (spec local 2026-11-26-apps-en-el-escritorio, §4.3): the owner's, and
+              only once the tool is installed for them — the route says it otherwise. */}
+          {desktop ? <DesktopMenuItems projectId={projectId} title={title} className="mt-1.5 border-t bd pt-1" /> : null}
         </div>
       ) : null}
     </div>

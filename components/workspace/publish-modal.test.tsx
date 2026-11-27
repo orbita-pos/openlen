@@ -84,3 +84,54 @@ describe("el diálogo de publicar", () => {
     expect(texto).not.toMatch(/currentPageApp|measuringApp/);
   });
 });
+
+// APPS EN EL ESCRITORIO (spec local 2026-11-26-apps-en-el-escritorio, §5): hay UNA producción, la del sitio publicado y
+// la de la app instalada. Publicar lo dice si la persona tiene la app en su escritorio.
+describe("el diálogo de publicar, con la app en el escritorio", () => {
+  const ESCRITORIO = { id: "d1", url: "/desktop/d1", name: "Caja", releaseSha: "abc123", installedAt: "2026-11-26T10:00:00.000Z" };
+
+  async function abrir(esApp: boolean, escritorio: Record<string, unknown> | null) {
+    const llamadas: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        llamadas.push(String(url));
+        if (String(url).endsWith("/desktop")) {
+          return new Response(JSON.stringify({ desktopApp: escritorio, updateAvailable: false, published: true }), { status: 200 });
+        }
+        return new Response(JSON.stringify({ available: true }), { status: 200 });
+      }),
+    );
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    root = createRoot(host);
+    await act(async () =>
+      root!.render(
+        <PublishModal
+          open
+          onClose={() => {}}
+          onSuccess={() => {}}
+          project={{ id: "p1", subdomain: "caja", publishedAt: null, hasUnpublishedChanges: true, languages: [], esApp }}
+        />,
+      ),
+    );
+    return { texto: host.textContent ?? "", llamadas };
+  }
+
+  it("shows the desktop notice when a desktop app exists", async () => {
+    const { texto, llamadas } = await abrir(true, ESCRITORIO);
+    expect(llamadas).toContain("/api/projects/p1/desktop");
+    expect(texto).toContain("desktopInstall.publishNotice");
+  });
+
+  it("sin la app en el escritorio, no dice nada", async () => {
+    const { texto } = await abrir(true, null);
+    expect(texto).not.toContain("desktopInstall.publishNotice");
+  });
+
+  it("una página no pregunta por el escritorio: sólo las apps se instalan", async () => {
+    const { texto, llamadas } = await abrir(false, ESCRITORIO);
+    expect(llamadas.some((u) => u.endsWith("/desktop"))).toBe(false);
+    expect(texto).not.toContain("desktopInstall.publishNotice");
+  });
+});

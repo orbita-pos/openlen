@@ -689,6 +689,35 @@
     "failed": "Non è stato possibile installarlo ({reason}).",
     "installed": "Installato."
   },
+  "desktopInstall": {
+    "title": "Installa «{title}» sul desktop",
+    "updateTitle": "Aggiorna «{title}» sul desktop",
+    "install": "Installa",
+    "update": "Aggiorna",
+    "installed": "Installata. Si apre in una finestra tutta sua.",
+    "updated": "Aggiornata. Si apre in una finestra tutta sua.",
+    "open": "Apri la finestra dell'app",
+    "sharedWithSite": "Il tuo sito pubblicato usa gli stessi dati.",
+    "publishNotice": "L'app sul tuo desktop usa gli stessi dati.",
+    "menu": {
+      "install": "Installa sul desktop",
+      "installSubtitle": "In una finestra tutta sua, dal tuo computer",
+      "update": "Aggiorna sul desktop",
+      "updateAvailable": "C'è una nuova versione",
+      "upToDate": "È aggiornata",
+      "remove": "Rimuovi dal desktop",
+      "removeSubtitle": "La sua finestra smette di aprirla",
+      "removeFailed": "Non è stato possibile rimuoverla. Riprova."
+    },
+    "reasons": {
+      "plan_required": "Le app sul desktop sono incluse nei piani a pagamento.",
+      "uses_stripe": "Un'app che incassa con Stripe non si può ancora installare sul desktop.",
+      "tool_not_installed": "Installa prima questo strumento in OpenLen, poi mettilo sul desktop.",
+      "owner_only": "Solo il proprietario può installarla sul desktop.",
+      "not_an_app": "Sul desktop si possono installare solo le app.",
+      "desktop_apps_off": "Le app sul desktop sono disattivate al momento."
+    }
+  },
   "toolCard": {
     "dismissed": "Scartata: «{title}»",
     "more": "Mostra di più",

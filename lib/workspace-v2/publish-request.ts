@@ -99,9 +99,11 @@ export function postPublish(projectId: string, body: Record<string, unknown>): P
   return postGated(`/api/projects/${projectId}/publish`, body);
 }
 
-/** «Instalar» a tool (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): the same gates as publishing. */
-export function postInstall(projectId: string, body: Record<string, unknown>, send?: Send): Promise<PublishOutcome> {
-  return postGated(`/api/projects/${projectId}/install`, body, send);
+/** «Instalar» a tool (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): the same gates as publishing.
+ *  `endpoint` is where it posts: the tool's route by default; an app's install on the desktop (spec local
+ *  2026-11-26-apps-en-el-escritorio, §4.1) answers the same codes from its own. */
+export function postInstall(projectId: string, body: Record<string, unknown>, send?: Send, endpoint?: string): Promise<PublishOutcome> {
+  return postGated(endpoint ?? `/api/projects/${projectId}/install`, body, send);
 }
 
 export async function postInstallAfterSecurity(
@@ -111,8 +113,10 @@ export async function postInstallAfterSecurity(
   wait: (projectId: string, fingerprint: string) => Promise<ReviewView | null> = waitForSecurityReview,
   /** The phone app's own client (its key, openlen.com's address; phase 5, §4.14); the browser's fetch otherwise. */
   send?: Send,
+  /** Another route with the install's gates (the desktop's); the tool's by default. */
+  endpoint?: string,
 ): Promise<PublishOutcome> {
-  return throughSecurity((b) => postInstall(projectId, b, send), projectId, body, onView, wait);
+  return throughSecurity((b) => postInstall(projectId, b, send, endpoint), projectId, body, onView, wait);
 }
 
 async function throughSecurity(

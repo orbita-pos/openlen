@@ -689,6 +689,35 @@
     "failed": "It couldn't be installed ({reason}).",
     "installed": "Installed."
   },
+  "desktopInstall": {
+    "title": "Install «{title}» on your desktop",
+    "updateTitle": "Update «{title}» on your desktop",
+    "install": "Install",
+    "update": "Update",
+    "installed": "Installed. It opens in a window of its own.",
+    "updated": "Updated. It opens in a window of its own.",
+    "open": "Open the app's window",
+    "sharedWithSite": "Your published site uses this same data.",
+    "publishNotice": "The app on your desktop uses this same data.",
+    "menu": {
+      "install": "Install on desktop",
+      "installSubtitle": "In a window of its own, from your computer",
+      "update": "Update on desktop",
+      "updateAvailable": "There's a new version",
+      "upToDate": "It's up to date",
+      "remove": "Remove from desktop",
+      "removeSubtitle": "Its window stops opening it",
+      "removeFailed": "Couldn't remove it. Try again."
+    },
+    "reasons": {
+      "plan_required": "Apps on your desktop come with the paid plans.",
+      "uses_stripe": "An app that takes payments with Stripe can't be installed on the desktop yet.",
+      "tool_not_installed": "Install this tool in OpenLen first, then put it on your desktop.",
+      "owner_only": "Only the owner can install it on the desktop.",
+      "not_an_app": "Only apps can be installed on the desktop.",
+      "desktop_apps_off": "Apps on the desktop are turned off right now."
+    }
+  },
   "toolCard": {
     "dismissed": "Dismissed: «{title}»",
     "more": "Show more",

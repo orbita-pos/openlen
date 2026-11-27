@@ -34,4 +34,28 @@ describe("ToolInstallButton", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
+
+  // The tool also goes on the desktop (spec local 2026-11-26-apps-en-el-escritorio, §4.3): the owner's menu carries the entry.
+  it("with `desktop`, the open menu offers the tool on the desktop beside its own install", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ desktopApp: null, updateAvailable: false, published: false })));
+    vi.stubGlobal("fetch", fetchMock);
+    root = createRoot(document.body.appendChild(document.createElement("div")));
+    await act(async () => root!.render(<ToolInstallButton projectId="p1" title="Reservas" desktop />));
+    expect(fetchMock).not.toHaveBeenCalled();
+    await act(async () => document.querySelector<HTMLButtonElement>("button[data-tool-install]")!.click());
+    expect(fetchMock.mock.calls.map((c) => (c as unknown[])[0])).toEqual(["/api/projects/p1/desktop"]);
+    expect(document.querySelector("[data-install-card]")).not.toBeNull();
+    expect(document.body.textContent).toContain("desktopInstall.menu.install");
+    vi.unstubAllGlobals();
+  });
+
+  it("with `desktop` but nothing from the route (not the owner, or the switch is off), the menu is the tool's alone", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: "not_found" }), { status: 404 })));
+    root = createRoot(document.body.appendChild(document.createElement("div")));
+    await act(async () => root!.render(<ToolInstallButton projectId="p1" title="Reservas" desktop />));
+    await act(async () => document.querySelector<HTMLButtonElement>("button[data-tool-install]")!.click());
+    expect(document.body.textContent).not.toContain("desktopInstall.menu");
+    expect(document.querySelector("[data-desktop-menu]")).toBeNull();
+    vi.unstubAllGlobals();
+  });
 });

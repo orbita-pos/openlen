@@ -689,6 +689,35 @@
     "failed": "Es konnte nicht installiert werden ({reason}).",
     "installed": "Installiert."
   },
+  "desktopInstall": {
+    "title": "„{title}“ auf deinem Desktop installieren",
+    "updateTitle": "„{title}“ auf deinem Desktop aktualisieren",
+    "install": "Installieren",
+    "update": "Aktualisieren",
+    "installed": "Installiert. Sie öffnet sich in einem eigenen Fenster.",
+    "updated": "Aktualisiert. Sie öffnet sich in einem eigenen Fenster.",
+    "open": "Fenster der App öffnen",
+    "sharedWithSite": "Deine veröffentlichte Seite nutzt dieselben Daten.",
+    "publishNotice": "Die App auf deinem Desktop nutzt dieselben Daten.",
+    "menu": {
+      "install": "Auf dem Desktop installieren",
+      "installSubtitle": "In einem eigenen Fenster, auf deinem Computer",
+      "update": "Auf dem Desktop aktualisieren",
+      "updateAvailable": "Es gibt eine neue Version",
+      "upToDate": "Sie ist auf dem neuesten Stand",
+      "remove": "Vom Desktop entfernen",
+      "removeSubtitle": "Ihr Fenster öffnet sie nicht mehr",
+      "removeFailed": "Entfernen hat nicht geklappt. Versuch es noch einmal."
+    },
+    "reasons": {
+      "plan_required": "Apps auf dem Desktop gehören zu den kostenpflichtigen Tarifen.",
+      "uses_stripe": "Eine App, die mit Stripe kassiert, lässt sich noch nicht auf dem Desktop installieren.",
+      "tool_not_installed": "Installiere dieses Werkzeug zuerst in OpenLen und leg es dann auf deinen Desktop.",
+      "owner_only": "Nur der Eigentümer kann sie auf dem Desktop installieren.",
+      "not_an_app": "Nur Apps lassen sich auf dem Desktop installieren.",
+      "desktop_apps_off": "Apps auf dem Desktop sind gerade ausgeschaltet."
+    }
+  },
   "toolCard": {
     "dismissed": "Verworfen: «{title}»",
     "more": "Mehr anzeigen",

@@ -16,6 +16,7 @@
 import { useEffect, useRef, useState, type ComponentProps } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ToolInstallButton } from "./tools/install-button";
+import { DesktopMenuItems } from "./desktop-apps/desktop-menu-items";
 import { Link, useRouter } from "@/i18n/navigation";
 import { PUBLISHED_BASE_HOST, publishedUrl } from "@/lib/publish/base-host";
 import {
@@ -87,6 +88,9 @@ function toPreviewState(d: PreviewApiState): PreviewState {
 interface TopBarProps {
   /** El proyecto es una app: el menú de publicar habla de la app, no de «esta página». */
   esApp?: boolean;
+  /** Una app de la que la persona es DUEÑA (spec local 2026-11-26-apps-en-el-escritorio, §4.1): el menú ofrece ponerla en su
+   *  escritorio. Con el interruptor apagado la ruta contesta 404 y las entradas no salen, aunque esto sea true. */
+  desktopApps?: boolean;
   projectName: string;
   /** Abre los miembros del proyecto (compartir el proyecto). Ausente = sin botón. */
   onMiembros?: () => void;
@@ -146,6 +150,7 @@ interface TopBarProps {
 
 export function TopBar({
   esApp = false,
+  desktopApps = false,
   projectName,
   onRename,
   projectLogoUrl,
@@ -739,7 +744,7 @@ export function TopBar({
             (onPublish is undefined) — nothing to publish yet. */}
         {onPublish && isTool && projectId ? (
           <>
-            <ToolInstallButton projectId={projectId} title={projectName} />
+            <ToolInstallButton projectId={projectId} title={projectName} desktop={desktopApps} />
             <span className="hidden md:inline-block h-5 w-px bg-[color:var(--border)] mx-1.5" />
           </>
         ) : null}
@@ -1067,6 +1072,9 @@ export function TopBar({
 
               {deployTab === "exportar" && (
               <>
+              {/* La app en el escritorio (spec local 2026-11-26-apps-en-el-escritorio, §4.1): instalar, actualizar, quitar.
+                  Las puertas son las de publicar; sus diálogos salen aquí mismo. */}
+              {desktopApps && projectId && <DesktopMenuItems projectId={projectId} title={projectName} />}
               {(
                 [
                   {

@@ -689,6 +689,35 @@
     "failed": "Installeren lukte niet ({reason}).",
     "installed": "Geïnstalleerd."
   },
+  "desktopInstall": {
+    "title": "«{title}» op je bureaublad installeren",
+    "updateTitle": "«{title}» op je bureaublad bijwerken",
+    "install": "Installeren",
+    "update": "Bijwerken",
+    "installed": "Geïnstalleerd. Hij opent in een eigen venster.",
+    "updated": "Bijgewerkt. Hij opent in een eigen venster.",
+    "open": "Open het venster van de app",
+    "sharedWithSite": "Je gepubliceerde site gebruikt dezelfde gegevens.",
+    "publishNotice": "De app op je bureaublad gebruikt dezelfde gegevens.",
+    "menu": {
+      "install": "Op het bureaublad installeren",
+      "installSubtitle": "In een eigen venster, op je computer",
+      "update": "Op het bureaublad bijwerken",
+      "updateAvailable": "Er is een nieuwe versie",
+      "upToDate": "Hij is up-to-date",
+      "remove": "Van het bureaublad verwijderen",
+      "removeSubtitle": "Het venster opent hem niet meer",
+      "removeFailed": "Verwijderen is niet gelukt. Probeer het opnieuw."
+    },
+    "reasons": {
+      "plan_required": "Apps op je bureaublad horen bij de betaalde abonnementen.",
+      "uses_stripe": "Een app die betalingen via Stripe int, kun je nog niet op het bureaublad installeren.",
+      "tool_not_installed": "Installeer dit hulpmiddel eerst in OpenLen en zet het daarna op je bureaublad.",
+      "owner_only": "Alleen de eigenaar kan hem op het bureaublad installeren.",
+      "not_an_app": "Alleen apps kun je op het bureaublad installeren.",
+      "desktop_apps_off": "Apps op het bureaublad staan op dit moment uit."
+    }
+  },
   "toolCard": {
     "dismissed": "Afgewezen: «{title}»",
     "more": "Meer tonen",

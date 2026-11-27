@@ -3658,6 +3658,9 @@ function NewV2Inner() {
       {!pantallaDeInicio && (
       <TopBar
         esApp={esApp}
+        // Poner la app en el escritorio: de su dueño (spec local 2026-11-26-apps-en-el-escritorio, §6). Con el interruptor
+        // apagado la ruta contesta 404 y el menú no ofrece nada.
+        desktopApps={esApp && loadedProject?.rol === "dueno"}
         projectName={shownProjectName}
         onRename={persistRename}
         projectLogoUrl={loadedProject?.logoUrl ?? null}

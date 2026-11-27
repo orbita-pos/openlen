@@ -689,6 +689,35 @@
     "failed": "Não foi possível instalar ({reason}).",
     "installed": "Instalada."
   },
+  "desktopInstall": {
+    "title": "Instalar «{title}» na sua área de trabalho",
+    "updateTitle": "Atualizar «{title}» na sua área de trabalho",
+    "install": "Instalar",
+    "update": "Atualizar",
+    "installed": "Instalado. Abre em uma janela própria.",
+    "updated": "Atualizado. Abre em uma janela própria.",
+    "open": "Abrir a janela do app",
+    "sharedWithSite": "O seu site publicado usa estes mesmos dados.",
+    "publishNotice": "O app da sua área de trabalho usa estes mesmos dados.",
+    "menu": {
+      "install": "Instalar na área de trabalho",
+      "installSubtitle": "Em uma janela própria, no seu computador",
+      "update": "Atualizar na área de trabalho",
+      "updateAvailable": "Há uma versão nova",
+      "upToDate": "Está em dia",
+      "remove": "Remover da área de trabalho",
+      "removeSubtitle": "A janela do app deixa de abri-lo",
+      "removeFailed": "Não foi possível remover. Tente de novo."
+    },
+    "reasons": {
+      "plan_required": "Os apps na área de trabalho vêm com os planos pagos.",
+      "uses_stripe": "Um app que cobra com o Stripe ainda não pode ser instalado na área de trabalho.",
+      "tool_not_installed": "Instale primeiro esta ferramenta no OpenLen e depois coloque-a na sua área de trabalho.",
+      "owner_only": "Só o dono pode instalá-lo na área de trabalho.",
+      "not_an_app": "Só apps podem ser instalados na área de trabalho.",
+      "desktop_apps_off": "Os apps na área de trabalho estão desligados no momento."
+    }
+  },
   "toolCard": {
     "dismissed": "Descartada: «{title}»",
     "more": "Ver mais",

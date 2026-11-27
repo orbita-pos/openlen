@@ -689,6 +689,35 @@
     "failed": "Impossible d'installer ({reason}).",
     "installed": "Installé."
   },
+  "desktopInstall": {
+    "title": "Installer « {title} » sur votre bureau",
+    "updateTitle": "Mettre à jour « {title} » sur votre bureau",
+    "install": "Installer",
+    "update": "Mettre à jour",
+    "installed": "Installée. Elle s'ouvre dans sa propre fenêtre.",
+    "updated": "Mise à jour faite. Elle s'ouvre dans sa propre fenêtre.",
+    "open": "Ouvrir la fenêtre de l'application",
+    "sharedWithSite": "Votre site publié utilise ces mêmes données.",
+    "publishNotice": "L'application de votre bureau utilise ces mêmes données.",
+    "menu": {
+      "install": "Installer sur le bureau",
+      "installSubtitle": "Dans sa propre fenêtre, depuis votre ordinateur",
+      "update": "Mettre à jour sur le bureau",
+      "updateAvailable": "Une nouvelle version est disponible",
+      "upToDate": "Elle est à jour",
+      "remove": "Retirer du bureau",
+      "removeSubtitle": "Sa fenêtre cesse de l'ouvrir",
+      "removeFailed": "Impossible de la retirer. Réessayez."
+    },
+    "reasons": {
+      "plan_required": "Les applications sur le bureau font partie des offres payantes.",
+      "uses_stripe": "Une application qui encaisse avec Stripe ne peut pas encore être installée sur le bureau.",
+      "tool_not_installed": "Installez d'abord cet outil dans OpenLen, puis mettez-le sur votre bureau.",
+      "owner_only": "Seul le propriétaire peut l'installer sur le bureau.",
+      "not_an_app": "Seules les applications peuvent être installées sur le bureau.",
+      "desktop_apps_off": "Les applications sur le bureau sont désactivées pour le moment."
+    }
+  },
   "toolCard": {
     "dismissed": "Écartée : «{title}»",
     "more": "Voir plus",

@@ -689,6 +689,35 @@
     "failed": "설치하지 못했어요({reason}).",
     "installed": "설치했어요."
   },
+  "desktopInstall": {
+    "title": "「{title}」을(를) 바탕 화면에 설치",
+    "updateTitle": "「{title}」을(를) 바탕 화면에서 업데이트",
+    "install": "설치",
+    "update": "업데이트",
+    "installed": "설치했어요. 전용 창으로 열려요.",
+    "updated": "업데이트했어요. 전용 창으로 열려요.",
+    "open": "앱 창 열기",
+    "sharedWithSite": "게시한 사이트도 같은 데이터를 써요.",
+    "publishNotice": "바탕 화면의 앱도 같은 데이터를 써요.",
+    "menu": {
+      "install": "바탕 화면에 설치",
+      "installSubtitle": "이 컴퓨터에서 전용 창으로",
+      "update": "바탕 화면에서 업데이트",
+      "updateAvailable": "새 버전이 있어요",
+      "upToDate": "최신 버전이에요",
+      "remove": "바탕 화면에서 제거",
+      "removeSubtitle": "앱 창이 더 이상 열지 않아요",
+      "removeFailed": "제거하지 못했어요. 다시 시도해 주세요."
+    },
+    "reasons": {
+      "plan_required": "데스크톱 앱은 유료 요금제에 포함돼요.",
+      "uses_stripe": "Stripe로 결제를 받는 앱은 아직 바탕 화면에 설치할 수 없어요.",
+      "tool_not_installed": "먼저 OpenLen에 이 도구를 설치한 다음 바탕 화면에 놓아 주세요.",
+      "owner_only": "바탕 화면에 설치할 수 있는 사람은 소유자뿐이에요.",
+      "not_an_app": "바탕 화면에는 앱만 설치할 수 있어요.",
+      "desktop_apps_off": "바탕 화면 앱은 지금 꺼져 있어요."
+    }
+  },
   "toolCard": {
     "dismissed": "보류함: «{title}»",
     "more": "더 보기",

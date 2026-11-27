@@ -26,12 +26,28 @@ export function InstallConfirmCard({
   install,
   onInstalled,
   onCancelled,
+  endpoint,
+  notice,
+  labels,
+  reasons,
+  onResult,
 }: {
   projectId: string;
   /** What Len's `publish` left (`ToolInstallConfirm`), or the top bar's title alone — it doesn't read the manifest. */
   install: Pick<ToolInstallConfirm, "title"> & Partial<Pick<ToolInstallConfirm, "placement">>;
   onInstalled: (title: string) => void;
   onCancelled?: () => void;
+  /** Where it posts. Absent = the tool's own route. An app on the desktop (spec local 2026-11-26-apps-en-el-escritorio,
+   *  §4.1) runs the same gates behind its own route and answers the same codes, so the dialogs here serve both. */
+  endpoint?: string;
+  /** One line above the buttons (the desktop's «the published site uses these same data»). */
+  notice?: string;
+  /** The texts that are about the tool's install itself, when the card serves another install. */
+  labels?: { title?: string; install?: string; installed?: string };
+  /** A readable text for the error codes of that other route: the code itself means nothing to the person. */
+  reasons?: Readonly<Record<string, string>>;
+  /** What the route answered when it went through (the desktop opens the window it names). */
+  onResult?: (data: Record<string, unknown>) => void;
 }) {
   const t = useTranslations("panelsChat");
   const locale = useLocale();
@@ -41,13 +57,15 @@ export function InstallConfirmCard({
   async function run(extra: { acceptSecurityFingerprint?: string; confirmFingerprint?: string } = {}) {
     accepted.current = { ...accepted.current, ...extra };
     setState({ kind: "installing" });
-    const outcome: PublishOutcome = await postInstallAfterSecurity(projectId, { locale, ...accepted.current }, () => {}).catch(
+    const outcome: PublishOutcome = await postInstallAfterSecurity(projectId, { locale, ...accepted.current }, () => {}, undefined, undefined, endpoint).catch(
       () => ({ kind: "error", status: 0, error: "network" }) as PublishOutcome,
     );
     if (outcome.kind === "published") {
       setState({ kind: "installed" });
-      announceToolsChanged();
+      // The tools list is the rail's; an app put on the desktop changes nothing in it.
+      if (!endpoint) announceToolsChanged();
       onInstalled(install.title);
+      onResult?.(outcome.data);
     } else if (outcome.kind === "security_findings") {
       setState({ kind: "security_findings", fingerprint: outcome.view.fingerprint, titles: outcome.view.blocking.map((f) => f.description || f.category) });
     } else if (outcome.kind === "needs_confirmation") {
@@ -60,7 +78,7 @@ export function InstallConfirmCard({
   const inert = state.kind === "installed" || state.kind === "cancelled";
   return (
     <div className="mt-2 rounded-xl border bd bg-elev px-3 py-2.5" data-install-card={state.kind}>
-      <p className="text-[13px] font-semibold fg">{t("installCard.title", { title: install.title })}</p>
+      <p className="text-[13px] font-semibold fg">{labels?.title ?? t("installCard.title", { title: install.title })}</p>
       {install.placement ? (
         <p className="mt-0.5 text-[12px] fg-muted">{install.placement === "rail" ? t("installCard.inRail") : t("installCard.inProject")}</p>
       ) : null}
@@ -75,8 +93,9 @@ export function InstallConfirmCard({
         </div>
       ) : null}
       {state.kind === "needs_confirmation" ? <p className="mt-2 text-[12px] text-[var(--nc-warn)]">{t("installCard.destructive")}</p> : null}
-      {state.kind === "error" ? <p className="mt-2 text-[12px] text-[var(--nc-warn)]">{t("installCard.failed", { reason: state.text })}</p> : null}
-      {state.kind === "installed" ? <p className="mt-2 text-[12px] text-[var(--nc-ok)]">{t("installCard.installed")}</p> : null}
+      {state.kind === "error" ? <p className="mt-2 text-[12px] text-[var(--nc-warn)]">{t("installCard.failed", { reason: reasons?.[state.text] ?? state.text })}</p> : null}
+      {state.kind === "installed" ? <p className="mt-2 text-[12px] text-[var(--nc-ok)]">{labels?.installed ?? t("installCard.installed")}</p> : null}
+      {notice && !inert ? <p className="mt-2 text-[12px] fg-muted">{notice}</p> : null}
       {!inert ? (
         <div className="mt-2.5 flex gap-2">
           {state.kind === "security_findings" ? (
@@ -89,7 +108,7 @@ export function InstallConfirmCard({
             </button>
           ) : (
             <button type="button" disabled={state.kind === "installing"} onClick={() => void run()} className="rounded-md bg-[var(--accent)] px-3 py-1.5 text-[12.5px] font-medium text-white disabled:opacity-60">
-              {t("installCard.install")}
+              {labels?.install ?? t("installCard.install")}
             </button>
           )}
           <button
