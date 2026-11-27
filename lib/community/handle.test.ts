@@ -27,6 +27,13 @@ describe("validateHandle", () => {
     expect(validateHandle("space")).toEqual({ ok: false, reason: "reserved" });
   });
 
+  // An app on the desktop opens at /desktop/<id> (spec local 2026-11-26-apps-en-el-escritorio): a profile with that name
+  // would sit behind it.
+  it("reserves «desktop»: an app on the desktop opens at /desktop/<id>", () => {
+    expect(validateHandle("desktop")).toEqual({ ok: false, reason: "reserved" });
+    expect(validateHandle("@Desktop")).toEqual({ ok: false, reason: "reserved" });
+  });
+
   it("rejects reserved words", () => {
     expect(validateHandle("explore").ok).toBe(false);
     expect(validateHandle("admin").ok).toBe(false);

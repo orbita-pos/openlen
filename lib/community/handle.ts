@@ -15,6 +15,8 @@ export const RESERVED_HANDLES = new Set([
   "assistant",
   // The person's space, where their agents live: /<locale>/space (spec local 2026-11-19-agentes-para-todos, §6.2).
   "space",
+  // An app on the desktop opens at /desktop/<id>, outside the locale segment (spec local 2026-11-26-apps-en-el-escritorio).
+  "desktop",
 ]);
 
 export function normalizeHandle(raw: string): string {
