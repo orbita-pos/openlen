@@ -353,11 +353,13 @@ describe("the install card", () => {
       expect(text).not.toContain("install icon");
     });
 
-    it("a browser it can't tell gets today's text, which names both", async () => {
+    it("a browser it can't tell gets the ways of the others, and never says Safari can't (it can: Add to Dock)", async () => {
       as("Lynx/2.9.0");
       const text = await manual();
       expect(text).toContain("Your browser didn’t offer to install it from here");
-      expect(text).toContain("Firefox and Safari can’t install apps on a computer");
+      expect(text).toContain("In Safari on a Mac, choose File → “Add to Dock…”");
+      expect(text).toContain("Firefox can’t install apps on a computer");
+      expect(text).not.toContain("Safari can’t install");
     });
 
     it("when the browser did offer, there are no steps to read: the button is all there is", async () => {

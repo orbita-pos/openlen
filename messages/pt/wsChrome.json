@@ -874,7 +874,7 @@
       "button": "Instalar",
       "later": "Agora não",
       "manual": {
-        "other": "Seu navegador não ofereceu a instalação por aqui. No Chrome ou no Edge, use o ícone de instalar na barra de endereços, ou abra o menu do navegador e escolha “Instalar”. O Firefox e o Safari não instalam apps no computador: abra este endereço no Chrome ou no Edge.",
+        "other": "Seu navegador não ofereceu a instalação por aqui. No Chrome ou no Edge, use o ícone de instalar na barra de endereços, ou abra o menu do navegador e escolha “Instalar”. No Safari do Mac, escolha Arquivo → “Adicionar ao Dock…”. O Firefox não instala apps no computador: abra este endereço no Chrome ou no Edge.",
         "chrome": "No Chrome, clique no ícone de instalar, no fim da barra de endereços, ou abra o menu (os três pontos) e procure “Instalar página como app…”.",
         "edge": "No Edge, clique no ícone de instalar, no fim da barra de endereços, ou abra o menu (os três pontos) e escolha “Aplicativos” → “Instalar este site como um aplicativo”.",
         "safari": "No Safari do Mac, escolha Arquivo → “Adicionar ao Dock…”.",
