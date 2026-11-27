@@ -121,6 +121,23 @@ describe("installThroughGates", () => {
     }
   });
 
+  // A desktop app's install uses these gates too: its log lines name it, so a failure is not read as a tool's.
+  it("a log tag names who installs: the failure and the warning carry it", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const failing = setup({ saveRelease: vi.fn(async () => { throw new Error("disk full"); }) });
+      await installThroughGates({ ...INPUT, logTag: "[desktop-apps]" }, failing.d);
+      expect(error).toHaveBeenCalledWith("[desktop-apps] install failed:", expect.any(Error));
+      const warned = setup({ markPublished: vi.fn(async () => { throw new Error("db down"); }) });
+      await installThroughGates({ ...INPUT, logTag: "[desktop-apps]" }, warned.d);
+      expect(warn).toHaveBeenCalledWith("[desktop-apps] could not keep the installed version as the security review's base", expect.any(Error));
+    } finally {
+      error.mockRestore();
+      warn.mockRestore();
+    }
+  });
+
   it("security stop returns its status and builds nothing", async () => {
     const stop = { status: 428, body: { error: "security_findings", fingerprint: "fp" } };
     const { d } = setup({ securityGate: vi.fn(async () => ({ stop })) });

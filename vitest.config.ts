@@ -143,6 +143,8 @@ export default defineConfig({
       "app/api/projects/[id]/event-cards/route.test.ts",
       // «Instalar» a tool (spec local 2026-11-04-herramientas-hechas-por-len). LISTA BLANCA.
       "app/api/projects/[id]/install/route.test.ts",
+      // An app installed on the desktop: install / state / remove (spec local 2026-11-26-apps-en-el-escritorio). LISTA BLANCA.
+      "app/api/projects/[id]/desktop/route.test.ts",
       // A/B testing: the routes the phone does not call are web-session only (review item 27). LISTA BLANCA.
       "app/api/projects/[id]/ab/**/*.test.ts",
       "app/api/ab/**/*.test.ts",

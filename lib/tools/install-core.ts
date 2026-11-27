@@ -21,14 +21,15 @@ export type CoreResult =
   | { ok: true; releaseSha: string; files: Record<string, ToolReleaseFile> }
   | { ok: false; status: number; body: Record<string, unknown> };
 
-/** The answer for a failure that came out of the gates' try: the same translation everywhere an install can throw. */
-export function installErrorResult(err: unknown): { status: number; body: Record<string, unknown> } {
+/** The answer for a failure that came out of the gates' try: the same translation everywhere an install can throw.
+ *  `logTag` names who installs in the log line (a tool's `[tools]`, a desktop app's `[desktop-apps]`). */
+export function installErrorResult(err: unknown, logTag = "[tools]"): { status: number; body: Record<string, unknown> } {
   if (err instanceof AppNoCompilaError) return { status: 422, body: { error: "app_does_not_compile", errors: err.errores.map(textoDeDiagnostico) } };
   const dataError = dataChangesErrorBody(err);
   if (dataError) return dataError;
   const fnError = functionsPublishErrorBody(err);
   if (fnError) return fnError;
-  console.error("[tools] install failed:", err);
+  console.error(`${logTag} install failed:`, err);
   return { status: 500, body: { error: "install_failed" } };
 }
 
@@ -49,9 +50,12 @@ export async function installThroughGates(
     readonly waitWhenPending?: boolean;
     /** After the functions are deployed and before the release is saved: the tool's MCP discovery. `deployed` is whether there were functions to deploy. */
     readonly afterDeploy?: (deployed: boolean) => Promise<ReleaseMcp | null>;
+    /** Who installs, for the log lines: `[tools]` unless the caller says otherwise. */
+    readonly logTag?: string;
   },
   d: CoreDeps,
 ): Promise<CoreResult> {
+  const logTag = i.logTag ?? "[tools]";
   const gate = await d.securityGate({
     projectId: i.projectId,
     actorId: i.actorId,
@@ -73,10 +77,10 @@ export async function installThroughGates(
     const mcp = i.afterDeploy ? await i.afterDeploy(functions !== null) : null;
     await d.saveRelease(release.sha, i.projectId, release.files, release.jobFiles ?? {}, mcp);
     if (gate.fingerprint) {
-      await d.markPublished(i.projectId, gate.fingerprint).catch((err: unknown) => console.warn("[tools] could not keep the installed version as the security review's base", err));
+      await d.markPublished(i.projectId, gate.fingerprint).catch((err: unknown) => console.warn(`${logTag} could not keep the installed version as the security review's base`, err));
     }
     return { ok: true, releaseSha: release.sha, files: release.files };
   } catch (err) {
-    return { ok: false, ...installErrorResult(err) };
+    return { ok: false, ...installErrorResult(err, logTag) };
   }
 }
