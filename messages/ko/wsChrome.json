@@ -883,6 +883,18 @@
       "open": "OpenLen에서 열기",
       "close": "닫기"
     },
+    "update": {
+      "available": "새 버전이 있어요",
+      "button": "업데이트",
+      "updating": "업데이트 중…",
+      "reason": {
+        "security": "업데이트하기 전에 살펴볼 내용이 보안 검토에서 발견되었어요.",
+        "securityPending": "보안 검토가 아직 진행 중이에요. 1분 뒤에 다시 시도해 주세요.",
+        "confirm": "업데이트하려면 먼저 OpenLen에서 확인해 주셔야 해요.",
+        "problem": "새 버전에 문제가 있어서 아직 설치할 수 없어요.",
+        "failed": "업데이트하지 못했어요. 잠시 후 다시 시도해 주세요."
+      }
+    },
     "gone": {
       "title": "{name}은(는) 더 이상 사용할 수 없어요",
       "titleUnnamed": "이 앱은 더 이상 사용할 수 없어요",

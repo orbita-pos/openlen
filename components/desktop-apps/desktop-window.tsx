@@ -119,6 +119,129 @@ function InstallCard({ name }: { name: string }) {
   );
 }
 
+/** The project in OpenLen, where the gates' dialogs live («Acerca de» and a stopped update both go there). */
+const openInOpenLenHref = (p: Pick<DesktopWindowProps, "locale" | "projectId">) => `/${p.locale}/new?project=${encodeURIComponent(p.projectId)}`;
+
+// THE NEW-VERSION NOTICE (spec §4.4). The window shows a FROZEN release; when the project's files moved on since it was
+// installed it says so, and the person updates it with one button — nothing changes on its own. The question is asked on
+// opening and whenever the window becomes visible again (never on a timer); «Actualizar» runs the install again through
+// the same gates as the Publicar menu's. A gate that wants something (the security review's 428, a data change's, a
+// build that doesn't compile) is NOT resolved here: the dialogs live in the workspace, so the strip says what is going on
+// and links to the project, and the version that was running keeps running.
+type StopReason = "security" | "securityPending" | "confirm" | "problem" | "failed";
+type UpdatePhase = { kind: "idle" } | { kind: "updating" } | { kind: "stopped"; reason: StopReason };
+
+/** Why the install said no (the codes are the gates': `lib/tools/install-core.ts`, `publish-through-gates.ts`). */
+function stopReason(status: number, error: unknown): StopReason {
+  if (status === 428) return error === "security_findings" ? "security" : error === "security_review_pending" ? "securityPending" : "confirm";
+  return status === 422 ? "problem" : "failed";
+}
+
+/** The frame's address for another release: `toolFrameUrl` keeps the version in `?v=`. */
+function withRelease(frameUrl: string, releaseSha: string): string {
+  const v = `v=${encodeURIComponent(releaseSha)}`;
+  if (/[?&]v=/.test(frameUrl)) return frameUrl.replace(/([?&])v=[^&#]*/, (_match, separator: string) => `${separator}${v}`);
+  return `${frameUrl}${frameUrl.includes("?") ? "&" : "?"}${v}`;
+}
+
+function useDesktopUpdate(p: DesktopWindowProps) {
+  const [shown, setShown] = useState({ frameUrl: p.frameUrl, releaseSha: p.releaseSha });
+  const [available, setAvailable] = useState(false);
+  const [phase, setPhase] = useState<UpdatePhase>({ kind: "idle" });
+  const alive = useRef(true);
+  const asking = useRef(false);
+  const updating = useRef(false);
+  /** How many updates have landed: an answer to a question asked before the last one says nothing about now. */
+  const landed = useRef(0);
+  const endpoint = `/api/projects/${encodeURIComponent(p.projectId)}/desktop`;
+
+  const check = useCallback(async () => {
+    if (asking.current || updating.current) return;
+    asking.current = true;
+    const epoch = landed.current;
+    try {
+      const res = await fetch(endpoint, { cache: "no-store" });
+      if (!res.ok) return;
+      const body = (await res.json()) as { updateAvailable?: unknown } | null;
+      if (!alive.current || updating.current || landed.current !== epoch) return;
+      const now = body?.updateAvailable === true;
+      setAvailable(now);
+      // What had stopped an earlier press says nothing about a version that is no longer there.
+      if (!now) setPhase({ kind: "idle" });
+    } catch {
+      // No answer is no notice: the window works the same offline.
+    } finally {
+      asking.current = false;
+    }
+  }, [endpoint]);
+
+  useEffect(() => {
+    alive.current = true;
+    void check();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void check();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      alive.current = false;
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [check]);
+
+  const update = useCallback(async () => {
+    if (updating.current) return;
+    updating.current = true;
+    setPhase({ kind: "updating" });
+    try {
+      // The locale and nothing else: the gates' answers (their fingerprints, their confirmations) are the workspace's.
+      const res = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ locale: p.locale }) });
+      const body = (await res.json().catch(() => null)) as { desktopApp?: { releaseSha?: unknown }; error?: unknown } | null;
+      if (!alive.current) return;
+      const releaseSha = body?.desktopApp?.releaseSha;
+      if (res.ok && typeof releaseSha === "string" && releaseSha) {
+        landed.current += 1;
+        // The frame is keyed by its address: a new one is a new document, the new release.
+        setShown((prev) => ({ frameUrl: withRelease(prev.frameUrl, releaseSha), releaseSha }));
+        setAvailable(false);
+        setPhase({ kind: "idle" });
+      } else {
+        setPhase({ kind: "stopped", reason: res.ok ? "failed" : stopReason(res.status, body?.error) });
+      }
+    } catch {
+      if (alive.current) setPhase({ kind: "stopped", reason: "failed" });
+    } finally {
+      updating.current = false;
+    }
+  }, [endpoint, p.locale]);
+
+  return { ...shown, available, phase, update };
+}
+
+function UpdateNotice({ phase, onUpdate, openHref }: { phase: UpdatePhase; onUpdate: () => void; openHref: string }) {
+  const t = useTranslations("wsChrome.desktop");
+  const text = phase.kind === "stopped" ? t(`update.reason.${phase.reason}`) : t("update.available");
+  return (
+    <>
+      <span className="fg min-w-0 truncate text-[12px]" title={text}>
+        {text}
+      </span>
+      {phase.kind === "stopped" ? (
+        <a className="text-link shrink-0 text-[12px] font-medium underline underline-offset-2" href={openHref} target="_blank" rel="noopener">
+          {t("about.open")}
+        </a>
+      ) : null}
+      <button
+        type="button"
+        className="shrink-0 rounded bg-[var(--accent-strong)] px-2 py-0.5 text-[11.5px] font-medium text-white hover:opacity-90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--accent-ring)]"
+        disabled={phase.kind === "updating"}
+        onClick={onUpdate}
+      >
+        {phase.kind === "updating" ? t("update.updating") : t("update.button")}
+      </button>
+    </>
+  );
+}
+
 function About({ p, onClose }: { p: DesktopWindowProps; onClose: () => void }) {
   const t = useTranslations("wsChrome.desktop");
   useEffect(() => {
@@ -138,7 +261,7 @@ function About({ p, onClose }: { p: DesktopWindowProps; onClose: () => void }) {
       <div className="mt-3 flex items-center justify-between gap-2">
         <a
           className="text-link text-[12.5px] font-medium underline underline-offset-2"
-          href={`/${p.locale}/new?project=${encodeURIComponent(p.projectId)}`}
+          href={openInOpenLenHref(p)}
           target="_blank"
           rel="noopener"
         >
@@ -156,13 +279,16 @@ export function DesktopWindow(p: DesktopWindowProps) {
   const t = useTranslations("wsChrome.desktop");
   const [aboutOpen, setAboutOpen] = useState(false);
   const closeAbout = useCallback(() => setAboutOpen(false), []);
+  const version = useDesktopUpdate(p);
   return (
     <div className="workspace-v2 flex h-dvh w-full flex-col overflow-hidden" data-desktop-window>
       <header className="bg-elev bd relative flex h-7 shrink-0 items-center gap-3 border-b px-3" data-desktop-strip>
         <span className="fg max-w-[40%] truncate text-[12px] font-medium">{p.name}</span>
-        {/* THE NEW-VERSION NOTICE GOES HERE (Task 6): «Hay una versión nueva» and «Actualizar». It takes the strip's free
-            space between the name and «Acerca de», and renders nothing when there is nothing to say. */}
-        <div className="flex min-w-0 flex-1 items-center" data-desktop-notice-slot />
+        {/* The new-version notice takes the strip's free space between the name and «Acerca de», and renders nothing when
+            there is nothing to say. The place is always there, so a screen reader announces what comes into it. */}
+        <div className="flex min-w-0 flex-1 items-center gap-2" data-desktop-notice-slot role="status">
+          {version.available ? <UpdateNotice phase={version.phase} onUpdate={() => void version.update()} openHref={openInOpenLenHref(p)} /> : null}
+        </div>
         <button
           type="button"
           className="fg-muted hover:fg rounded px-1.5 py-0.5 text-[12px] hover:bg-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent-ring)]"
@@ -176,14 +302,14 @@ export function DesktopWindow(p: DesktopWindowProps) {
       <div className="relative min-h-0 flex-1">
         {p.toolInstallationId ? (
           <ToolFrame
-            key={p.frameUrl}
-            src={p.frameUrl}
+            key={version.frameUrl}
+            src={version.frameUrl}
             frameOrigin={p.frameOrigin}
             caller={{ installationId: p.toolInstallationId }}
             context={{
               person: { name: p.personName, locale: p.locale },
               project: null,
-              tool: { id: p.toolInstallationId, version: p.releaseSha },
+              tool: { id: p.toolInstallationId, version: version.releaseSha },
               environment: "installed",
             }}
             onPrompt={null}
@@ -192,8 +318,8 @@ export function DesktopWindow(p: DesktopWindowProps) {
           />
         ) : (
           <iframe
-            key={p.frameUrl}
-            src={p.frameUrl}
+            key={version.frameUrl}
+            src={version.frameUrl}
             title={p.name}
             sandbox={SANDBOX_REMOTO}
             allow={ALLOW_REMOTO}

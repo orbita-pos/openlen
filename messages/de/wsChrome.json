@@ -883,6 +883,18 @@
       "open": "In OpenLen öffnen",
       "close": "Schließen"
     },
+    "update": {
+      "available": "Es gibt eine neue Version",
+      "button": "Aktualisieren",
+      "updating": "Wird aktualisiert…",
+      "reason": {
+        "security": "Die Sicherheitsprüfung hat etwas gefunden, das du dir vor dem Update ansehen solltest.",
+        "securityPending": "Die Sicherheitsprüfung läuft noch. Versuche es in einer Minute erneut.",
+        "confirm": "Für das Update brauchst du zuerst dein OK in OpenLen.",
+        "problem": "Die neue Version hat ein Problem und kann noch nicht installiert werden.",
+        "failed": "Das Update hat nicht geklappt. Versuche es gleich noch einmal."
+      }
+    },
     "gone": {
       "title": "{name} ist nicht mehr verfügbar",
       "titleUnnamed": "Diese App ist nicht mehr verfügbar",

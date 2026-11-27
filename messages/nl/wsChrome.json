@@ -883,6 +883,18 @@
       "open": "Openen in OpenLen",
       "close": "Sluiten"
     },
+    "update": {
+      "available": "Er is een nieuwe versie",
+      "button": "Bijwerken",
+      "updating": "Bijwerken…",
+      "reason": {
+        "security": "De beveiligingscontrole heeft iets gevonden dat je moet bekijken voordat je bijwerkt.",
+        "securityPending": "De beveiligingscontrole loopt nog. Probeer het over een minuut opnieuw.",
+        "confirm": "Voor het bijwerken heb je eerst jouw akkoord in OpenLen nodig.",
+        "problem": "De nieuwe versie heeft een probleem en kan nog niet worden geïnstalleerd.",
+        "failed": "Bijwerken is niet gelukt. Probeer het zo meteen opnieuw."
+      }
+    },
     "gone": {
       "title": "{name} is niet meer beschikbaar",
       "titleUnnamed": "Deze app is niet meer beschikbaar",

@@ -883,6 +883,18 @@
       "open": "Open in OpenLen",
       "close": "Close"
     },
+    "update": {
+      "available": "There’s a new version",
+      "button": "Update",
+      "updating": "Updating…",
+      "reason": {
+        "security": "The security review found something to look at before updating.",
+        "securityPending": "The security review is still running. Try again in a minute.",
+        "confirm": "Updating needs your OK in OpenLen first.",
+        "problem": "The new version has a problem and can’t be installed yet.",
+        "failed": "Couldn’t update. Try again in a moment."
+      }
+    },
     "gone": {
       "title": "{name} is no longer available",
       "titleUnnamed": "This app is no longer available",

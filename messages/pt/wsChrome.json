@@ -883,6 +883,18 @@
       "open": "Abrir no OpenLen",
       "close": "Fechar"
     },
+    "update": {
+      "available": "Há uma versão nova",
+      "button": "Atualizar",
+      "updating": "Atualizando…",
+      "reason": {
+        "security": "A revisão de segurança encontrou algo para olhar antes de atualizar.",
+        "securityPending": "A revisão de segurança ainda está em andamento. Tente de novo em um minuto.",
+        "confirm": "Para atualizar, é preciso da sua confirmação no OpenLen.",
+        "problem": "A versão nova tem um problema e ainda não pode ser instalada.",
+        "failed": "Não foi possível atualizar. Tente de novo em instantes."
+      }
+    },
     "gone": {
       "title": "{name} não está mais disponível",
       "titleUnnamed": "Este app não está mais disponível",

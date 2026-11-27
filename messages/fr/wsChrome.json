@@ -883,6 +883,18 @@
       "open": "Ouvrir dans OpenLen",
       "close": "Fermer"
     },
+    "update": {
+      "available": "Une nouvelle version est disponible",
+      "button": "Mettre à jour",
+      "updating": "Mise à jour…",
+      "reason": {
+        "security": "La revue de sécurité a trouvé quelque chose à examiner avant la mise à jour.",
+        "securityPending": "La revue de sécurité est encore en cours. Réessayez dans une minute.",
+        "confirm": "La mise à jour a besoin de votre accord dans OpenLen.",
+        "problem": "La nouvelle version a un problème et ne peut pas encore être installée.",
+        "failed": "La mise à jour a échoué. Réessayez dans un instant."
+      }
+    },
     "gone": {
       "title": "{name} n’est plus disponible",
       "titleUnnamed": "Cette application n’est plus disponible",

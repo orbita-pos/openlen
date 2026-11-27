@@ -248,6 +248,234 @@ describe("the install card", () => {
   });
 });
 
+describe("the new-version notice (spec §4.4)", () => {
+  const API = "/api/projects/p1/desktop";
+  const FRAME_SHA2 = "https://lienzo-0123456789abcdef0123456789abcdef.openlen.app/?v=sha2";
+  const slot = () => host.querySelector("[data-desktop-notice-slot]")!;
+  const frame = () => host.querySelector("iframe")!;
+  const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+  const state = (updateAvailable: boolean) => json({ desktopApp: { id: "d1", releaseSha: "sha1" }, updateAvailable, published: false });
+  const installed = (releaseSha: string) =>
+    json({ desktopApp: { id: "d1", url: "/desktop/d1", name: "Bookings", releaseSha, installedAt: "2026-11-20T12:00:00.000Z" }, published: false });
+
+  type Handlers = { get?: () => Response | Promise<Response>; post?: () => Response | Promise<Response> };
+  /** The desktop route and nothing else is answered here; every call to it is kept. Whatever else the window asks (a tool's
+   *  jobs) is answered as in the other tests. */
+  function stubApi(handlers: Handlers) {
+    const calls: Array<{ method: string; body: string | undefined }> = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: unknown, init?: RequestInit) => {
+        if (String(input) !== API) return json({ jobs: [] });
+        const method = init?.method ?? "GET";
+        calls.push({ method, body: typeof init?.body === "string" ? init.body : undefined });
+        return (method === "POST" ? handlers.post?.() : handlers.get?.()) ?? json({}, 500);
+      }),
+    );
+    return calls;
+  }
+  const gets = (calls: Array<{ method: string }>) => calls.filter((c) => c.method === "GET").length;
+  const posts = (calls: Array<{ method: string }>) => calls.filter((c) => c.method === "POST");
+  async function settle() {
+    await act(async () => void (await vi.advanceTimersByTimeAsync(0)));
+  }
+  function setVisibility(visibility: "visible" | "hidden") {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => visibility });
+    document.dispatchEvent(new Event("visibilitychange"));
+  }
+  afterEach(() => void delete (document as unknown as Record<string, unknown>).visibilityState);
+
+  it("asks GET on mount and on visibilitychange to visible, never on an interval", async () => {
+    const calls = stubApi({ get: () => state(false) });
+    await render();
+    await settle();
+    expect(gets(calls)).toBe(1);
+    expect(calls[0]).toEqual({ method: "GET", body: undefined });
+
+    // Leaving the window asks nothing; coming back does.
+    await act(async () => void setVisibility("hidden"));
+    await settle();
+    expect(gets(calls)).toBe(1);
+    await act(async () => void setVisibility("visible"));
+    await settle();
+    expect(gets(calls)).toBe(2);
+
+    // And no clock asks: half an hour goes by.
+    await act(async () => void (await vi.advanceTimersByTimeAsync(30 * 60 * 1000)));
+    expect(gets(calls)).toBe(2);
+    expect(posts(calls)).toHaveLength(0);
+
+    // A closed window asks nothing more.
+    await act(async () => root!.unmount());
+    root = createRoot(host);
+    await act(async () => void setVisibility("visible"));
+    expect(gets(calls)).toBe(2);
+  });
+
+  it("updateAvailable shows the strip with Actualizar — and nothing changes on its own", async () => {
+    const calls = stubApi({ get: () => state(true) });
+    await render();
+    await settle();
+    expect(slot().textContent).toContain("There’s a new version");
+    expect(slot().querySelector("button")!.textContent).toBe("Update");
+    // It said so; it did not do it.
+    expect(posts(calls)).toHaveLength(0);
+    expect(frame().getAttribute("src")).toBe(APP.frameUrl);
+    // Announced to a screen reader when it appears.
+    expect(slot().getAttribute("role")).toBe("status");
+  });
+
+  it("nothing to say: no notice (not updated, not asked yet, or the question failed)", async () => {
+    stubApi({ get: () => state(false) });
+    await render();
+    await settle();
+    expect(slot().textContent).toBe("");
+
+    stubApi({ get: () => json({ error: "boom" }, 500) });
+    await act(async () => void setVisibility("visible"));
+    await settle();
+    expect(slot().textContent).toBe("");
+
+    vi.stubGlobal("fetch", vi.fn(async () => Promise.reject(new TypeError("offline"))));
+    await act(async () => void setVisibility("visible"));
+    await settle();
+    expect(slot().textContent).toBe("");
+    expect(frame().getAttribute("src")).toBe(APP.frameUrl);
+  });
+
+  it("a notice that was up goes away when the project is back to what is installed", async () => {
+    let available = true;
+    stubApi({ get: () => state(available) });
+    await render();
+    await settle();
+    expect(slot().textContent).toContain("new version");
+    available = false;
+    await act(async () => void setVisibility("visible"));
+    await settle();
+    expect(slot().textContent).toBe("");
+  });
+
+  it("Actualizar 200 reloads the frame with the new releaseSha", async () => {
+    const calls = stubApi({ get: () => state(true), post: () => installed("sha2") });
+    await render();
+    await settle();
+    const before = frame();
+    await act(async () => void (slot().querySelector("button") as HTMLButtonElement).click());
+    await settle();
+    // The POST is the locale and nothing else: the gates' dialogs live in the workspace.
+    expect(posts(calls)).toEqual([{ method: "POST", body: JSON.stringify({ locale: "en" }) }]);
+    expect(frame().getAttribute("src")).toBe(FRAME_SHA2);
+    expect(frame()).not.toBe(before);
+    expect(host.querySelectorAll("iframe")).toHaveLength(1);
+    expect(slot().textContent).toBe("");
+  });
+
+  it("while it updates the button says so and a second press sends nothing", async () => {
+    let done!: (r: Response) => void;
+    const calls = stubApi({ get: () => state(true), post: () => new Promise<Response>((resolve) => void (done = resolve)) });
+    await render();
+    await settle();
+    const press = () => (slot().querySelector("button") as HTMLButtonElement).click();
+    await act(async () => void press());
+    await settle();
+    const working = slot().querySelector("button") as HTMLButtonElement;
+    expect(working.textContent).toBe("Updating…");
+    expect(working.disabled).toBe(true);
+    await act(async () => void press());
+    expect(posts(calls)).toHaveLength(1);
+    await act(async () => done(installed("sha2")));
+    await settle();
+    expect(frame().getAttribute("src")).toBe(FRAME_SHA2);
+  });
+
+  it("a tool's frame reloads with the new version in its context too", async () => {
+    stubApi({ get: () => state(true), post: () => installed("sha2") });
+    await render({ toolInstallationId: "ti1" });
+    await settle();
+    expect(bridge.create).toHaveBeenCalledTimes(1);
+    await act(async () => void (slot().querySelector("button") as HTMLButtonElement).click());
+    await settle();
+    expect(frame().getAttribute("src")).toBe(FRAME_SHA2);
+    const options = bridge.create.mock.calls.at(-1)![0] as { context(): { tool: { version: string } } };
+    expect(options.context().tool.version).toBe("sha2");
+  });
+
+  it("a question that was still out when the update landed does not bring the notice back", async () => {
+    let late!: (r: Response) => void;
+    let n = 0;
+    stubApi({
+      get: () => (++n === 1 ? state(true) : new Promise<Response>((resolve) => void (late = resolve))),
+      post: () => installed("sha2"),
+    });
+    await render();
+    await settle();
+    await act(async () => void setVisibility("visible")); // asks again; the answer is slow
+    await act(async () => void (slot().querySelector("button") as HTMLButtonElement).click());
+    await settle();
+    expect(frame().getAttribute("src")).toBe(FRAME_SHA2);
+    await act(async () => late(state(true)));
+    await settle();
+    expect(slot().textContent).toBe("");
+  });
+
+  it.each([
+    ["a 428 of the security review", 428, { error: "security_findings" }, "security review found something"],
+    ["a 428 of a review still running", 428, { error: "security_review_pending" }, "still running"],
+    ["a 428 that asks to confirm a data change", 428, { error: "confirmation_required", destructive: true }, "needs your OK in OpenLen"],
+    ["a 422 that doesn’t compile", 422, { error: "app_does_not_compile", errors: ["/src/App.jsx:3 nope"] }, "has a problem"],
+    ["a 422 of a tool manifest", 422, { error: "tool_manifest_invalid", problems: [] }, "has a problem"],
+  ])("Actualizar stopped by %s shows the reason and the open-in-OpenLen link, frame untouched", async (_name, status, body, reason) => {
+    let answer = () => json(body, status);
+    const calls = stubApi({ get: () => state(true), post: () => answer() });
+    await render({ locale: "es" });
+    await settle();
+    const before = frame();
+    await act(async () => void (slot().querySelector("button") as HTMLButtonElement).click());
+    await settle();
+
+    expect(slot().textContent).toContain(reason);
+    const link = slot().querySelector("a")!;
+    expect(link.textContent).toBe("Open in OpenLen");
+    expect(link.getAttribute("href")).toBe("/es/new?project=p1");
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toContain("noopener");
+    // The version that was running still is: the same frame, the same address, nothing asked of the server twice.
+    expect(frame()).toBe(before);
+    expect(frame().getAttribute("src")).toBe(APP.frameUrl);
+
+    // Once the person has dealt with it in OpenLen, the same button tries again.
+    answer = () => installed("sha2");
+    const retry = slot().querySelector("button") as HTMLButtonElement;
+    expect(retry.textContent).toBe("Update");
+    expect(retry.disabled).toBe(false);
+    await act(async () => void retry.click());
+    await settle();
+    expect(posts(calls)).toHaveLength(2);
+    expect(frame().getAttribute("src")).toBe(FRAME_SHA2);
+    expect(slot().textContent).toBe("");
+  });
+
+  it("any other failure — the server’s or the network’s — says so, with the link, and leaves the frame alone", async () => {
+    let answer: () => Response | Promise<Response> = () => json({ error: "install_failed" }, 500);
+    stubApi({ get: () => state(true), post: () => answer() });
+    await render();
+    await settle();
+    const before = frame();
+    await act(async () => void (slot().querySelector("button") as HTMLButtonElement).click());
+    await settle();
+    expect(slot().textContent).toContain("Couldn’t update");
+    expect(slot().querySelector("a")).not.toBeNull();
+    expect(frame()).toBe(before);
+
+    answer = () => Promise.reject(new TypeError("offline"));
+    await act(async () => void (slot().querySelector("button") as HTMLButtonElement).click());
+    await settle();
+    expect(slot().textContent).toContain("Couldn’t update");
+    expect((slot().querySelector("button") as HTMLButtonElement).disabled).toBe(false);
+    expect(frame()).toBe(before);
+  });
+});
+
 describe("a tool's dialogs, with only the texts the page sends", () => {
   type Options = {
     onConfirmChange(change: unknown): Promise<boolean>;
