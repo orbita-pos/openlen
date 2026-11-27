@@ -23,6 +23,7 @@ export function ToolFrame({
   projectTitle,
   theme,
   frameRef,
+  onFrameLoad,
 }: {
   src: string;
   frameOrigin: string;
@@ -36,6 +37,8 @@ export function ToolFrame({
   theme?: () => ToolContext["theme"];
   /** The frame's element, for whoever else answers it (the desktop window's `window.openlenApp` host). */
   frameRef?: RefObject<HTMLIFrameElement | null>;
+  /** Every `load` of the frame's element (the desktop window counts them: a second one may be another release). */
+  onFrameLoad?: (frame: HTMLIFrameElement) => void;
 }) {
   const ownFrame = useRef<HTMLIFrameElement>(null);
   const iframe = frameRef ?? ownFrame;
@@ -73,7 +76,7 @@ export function ToolFrame({
   const nameOf = (change: ToolDataChange) => change.projectTitle ?? projectTitle?.(change.projectId) ?? change.projectId;
   return (
     <div className="relative h-full w-full">
-      <iframe ref={iframe} src={src} title={title} sandbox={SANDBOX_REMOTO} allow={ALLOW_REMOTO} className="h-full w-full border-0 bg-[var(--bg)]" data-tool-frame={caller && "installationId" in caller ? caller.installationId : caller && "lenArtifactId" in caller ? caller.lenArtifactId : "draft"} />
+      <iframe ref={iframe} src={src} title={title} sandbox={SANDBOX_REMOTO} allow={ALLOW_REMOTO} className="h-full w-full border-0 bg-[var(--bg)]" onLoad={onFrameLoad ? (e) => onFrameLoad(e.currentTarget) : undefined} data-tool-frame={caller && "installationId" in caller ? caller.installationId : caller && "lenArtifactId" in caller ? caller.lenArtifactId : "draft"} />
       {asking ? (
         <DataChangeDialog
           open

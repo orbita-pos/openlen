@@ -45,6 +45,14 @@ export interface DesktopUpdate {
   published: boolean;
   phase: UpdatePhase;
   update: () => Promise<void>;
+  /** The frame may be running another release than `releaseSha` (Claude's «mixed versions»): the route reported another
+   *  installed release, or the frame loaded again and the check that followed has not said it is still this one. The app
+   *  has no permissions while this holds; it only ends with the window reloaded (or an in-window update, which already
+   *  takes them until then). */
+  holdsTwoVersions: boolean;
+  /** The frame's element fired `load` again (the app reloaded itself, or crashed and came back): it may have loaded the
+   *  release installed NOW, which is not necessarily the window's. */
+  frameReloaded: () => void;
 }
 
 type StateBody = { updateAvailable?: unknown; published?: unknown; desktopApp?: { releaseSha?: unknown; name?: unknown } | null } | null;
@@ -63,6 +71,11 @@ export function useDesktopUpdate(p: UpdateSource): DesktopUpdate {
   const landed = useRef(0);
   /** The release the frame runs now (what an answer is compared with: it moves when an update lands). */
   const running = useRef(p.releaseSha);
+  /** The route said the installed release is not the one this frame was given: a reload of the frame would run it. Sticky. */
+  const [otherInstalled, setOtherInstalled] = useState(false);
+  /** A load of the frame after its first one that no check after it has cleared yet (each load starts a new one). */
+  const [reloadUnchecked, setReloadUnchecked] = useState(false);
+  const reloadCheck = useRef(0);
   const endpoint = `/api/projects/${encodeURIComponent(p.projectId)}/desktop`;
 
   // Claude's probe: a deadline on every question, one request in flight for whoever asks, and the window being looked at again
@@ -111,7 +124,9 @@ export function useDesktopUpdate(p: UpdateSource): DesktopUpdate {
         // Two ways to be behind: the project moved on since the install, or the install moved on since this frame (the person
         // updated from the workspace, where a gate that stopped «Actualizar» sent them). Either way only the strip says so.
         const installed = body.desktopApp?.releaseSha;
-        const now = body.updateAvailable === true || (typeof installed === "string" && installed !== "" && installed !== running.current);
+        const elsewhere = typeof installed === "string" && installed !== "" && installed !== running.current;
+        if (elsewhere) setOtherInstalled(true);
+        const now = body.updateAvailable === true || elsewhere;
         setAvailable(now);
         setPublished(body.published === true);
         adoptName(body.desktopApp?.name);
@@ -180,7 +195,28 @@ export function useDesktopUpdate(p: UpdateSource): DesktopUpdate {
     }
   }, [endpoint, p.locale, adoptName]);
 
-  return { name, ...shown, available, published, phase, update };
+  const frameReloaded = useCallback(() => {
+    const serial = ++reloadCheck.current;
+    const epoch = landed.current;
+    setReloadUnchecked(true);
+    // A question from AFTER the load (one already out may have been answered before the frame fetched its release). No
+    // answer, or one without the installed release, leaves it closed: failing closed until a later load's check, or a reload.
+    probe.askFresh().then(
+      (body) => {
+        if (!alive.current || serial !== reloadCheck.current || landed.current !== epoch) return;
+        const installed = body?.desktopApp?.releaseSha;
+        if (typeof installed !== "string" || installed === "") return;
+        if (installed !== running.current) {
+          setOtherInstalled(true);
+          setAvailable(true);
+        }
+        setReloadUnchecked(false);
+      },
+      () => {},
+    );
+  }, [probe]);
+
+  return { name, ...shown, available, published, phase, update, holdsTwoVersions: otherInstalled || reloadUnchecked, frameReloaded };
 }
 
 /** Where the strip's one action goes (`failureAction`): all in OpenLen, outside the window's own scope. */

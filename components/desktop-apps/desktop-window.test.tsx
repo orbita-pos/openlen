@@ -272,6 +272,108 @@ describe("permissions and notifications (spec local 2026-11-27-notificaciones-de
     expect(localStorage.getItem("openlen:desktop-permissions")).toBe(before);
   });
 
+  describe("the frame loading another version than the window's (Claude's «mixed versions»)", () => {
+    const ALL_UNAVAILABLE = { notifications: "unavailable", shortcuts: "unavailable", overlay: "unavailable", "menu-bar": "unavailable", "full-access": "unavailable" };
+    const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+    /** The route reports `installed` as the installation's release; `hold` keeps the next answer until it is let go. */
+    function stubState(installed: () => string) {
+      const gets: Array<() => void> = [];
+      let holding = false;
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (_input: unknown, init?: RequestInit) => {
+          if (init?.method === "POST") return json({});
+          if (holding) await new Promise<void>((r) => gets.push(r));
+          return json({ desktopApp: { id: "d1", releaseSha: installed() }, updateAvailable: false, published: false });
+        }),
+      );
+      return {
+        hold: () => void (holding = true),
+        release: () => {
+          holding = false;
+          gets.splice(0).forEach((r) => r());
+        },
+      };
+    }
+    const tick = () => act(async () => void (await new Promise((r) => setTimeout(r, 0))));
+    const load = () => act(async () => void frame().dispatchEvent(new Event("load")));
+    async function stateNow(): Promise<unknown> {
+      const answers: Array<{ value?: unknown }> = [];
+      const spy = vi.spyOn(frame().contentWindow!, "postMessage").mockImplementation(((m: { value?: unknown }) => void answers.push(m)) as never);
+      await ask("permissions.state", undefined);
+      spy.mockRestore();
+      return answers.at(-1)?.value;
+    }
+    beforeEach(() => {
+      vi.useRealTimers();
+      localStorage.setItem(
+        "openlen:desktop-permissions",
+        JSON.stringify({ "u1|d1|notifications": { answer: "granted", releaseSha: "sha1", installedAt: APP.installedAt } }),
+      );
+    });
+
+    it("a second frame load onto a newer installed release drops every permission", async () => {
+      let installed = "sha1";
+      stubState(() => installed);
+      await render();
+      await tick();
+      await load();
+      await tick();
+      expect(await stateNow()).toMatchObject({ notifications: "granted" });
+      // Updated from the workspace while this window stayed open; the app reloads its frame: v2's code runs here now.
+      installed = "sha2";
+      await load();
+      await tick();
+      expect(await stateNow()).toEqual(ALL_UNAVAILABLE);
+      // Nothing was written: the saved answer is there after the window reloads.
+      expect(localStorage.getItem("openlen:desktop-permissions")).toContain('"releaseSha":"sha1"');
+    });
+
+    it("a second load of the same release keeps them", async () => {
+      stubState(() => "sha1");
+      await render();
+      await tick();
+      await load();
+      await load();
+      await tick();
+      expect(await stateNow()).toMatchObject({ notifications: "granted" });
+    });
+
+    it("until the check after a second load answers, there are none (failing closed)", async () => {
+      const route = stubState(() => "sha1");
+      await render();
+      await tick();
+      await load();
+      route.hold();
+      await load();
+      await tick();
+      expect(await stateNow()).toEqual(ALL_UNAVAILABLE);
+      route.release();
+      await tick();
+      await tick();
+      expect(await stateNow()).toMatchObject({ notifications: "granted" });
+    });
+
+    it("a probe reporting another installed release drops every permission", async () => {
+      stubState(() => "sha2");
+      await render();
+      await tick();
+      expect(await stateNow()).toEqual(ALL_UNAVAILABLE);
+    });
+
+    it("a tool's frame is counted the same way", async () => {
+      let installed = "sha1";
+      stubState(() => installed);
+      await render({ toolInstallationId: "ti1" });
+      await tick();
+      await load();
+      installed = "sha2";
+      await load();
+      await tick();
+      expect(await stateNow()).toEqual(ALL_UNAVAILABLE);
+    });
+  });
+
   it("before any update the old yes of another version is asked again (the window's own version is the one compared)", async () => {
     localStorage.setItem(
       "openlen:desktop-permissions",

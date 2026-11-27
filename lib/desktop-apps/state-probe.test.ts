@@ -130,3 +130,33 @@ describe("createStateProbe", () => {
     expect(run).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("askFresh: an answer from after now (the frame loaded again, so an answer to a question already out is too old)", () => {
+  it("with nothing out it asks now", async () => {
+    const run = vi.fn(async () => "now");
+    const probe = createStateProbe(run);
+    await expect(probe.askFresh()).resolves.toBe("now");
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it("with a question out it waits for it, then asks again — never takes the old answer", async () => {
+    let answer: (v: string) => void = () => {};
+    const run = vi.fn((_signal: AbortSignal) =>
+      run.mock.calls.length === 1 ? new Promise<string>((r) => (answer = r)) : Promise.resolve("after"),
+    );
+    const probe = createStateProbe(run);
+    void probe.ask();
+    const fresh = probe.askFresh();
+    expect(run).toHaveBeenCalledTimes(1);
+    answer("before");
+    await expect(fresh).resolves.toBe("after");
+    expect(run).toHaveBeenCalledTimes(2);
+  });
+
+  it("a question out that fails still lets the fresh one go out", async () => {
+    const run = vi.fn((_signal: AbortSignal) => (run.mock.calls.length === 1 ? Promise.reject(new Error("x")) : Promise.resolve("after")));
+    const probe = createStateProbe(run);
+    void probe.ask().catch(() => {});
+    await expect(probe.askFresh()).resolves.toBe("after");
+  });
+});

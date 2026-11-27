@@ -199,9 +199,23 @@ export function DesktopWindow(p: DesktopWindowProps) {
   // `window.openlenApp` in the frame asks; this window answers (spec local 2026-11-27-notificaciones-del-escritorio): with the
   // version the frame shows NOW. What the app declares was read for the version the page loaded with, so once another
   // version runs here the window holds two versions and, like Claude's, has no permissions until it reloads: `[]` makes
-  // every one «unavailable» (it writes nothing — a saved answer stays for after the reload).
+  // every one «unavailable» (it writes nothing — a saved answer stays for after the reload). The frame's address carries
+  // its version, but the host serves the installation's CURRENT release whatever it says, and the frame never says which
+  // it runs (it would be the app's word). So, like Claude tracking every content frame's version: an in-window update, the
+  // route reporting another installed release, or the frame loading again (its element's `load`, which fires here even
+  // cross-origin) until a check from after that load says the release is still this one — all take every permission.
   const frame = useRef<HTMLIFrameElement>(null);
-  const declared = version.releaseSha === p.releaseSha ? p.declaredPermissions : NOTHING_DECLARED;
+  const loads = useRef(new WeakMap<HTMLIFrameElement, number>());
+  const frameReloaded = version.frameReloaded;
+  const onFrameLoad = useCallback(
+    (element: HTMLIFrameElement) => {
+      const n = (loads.current.get(element) ?? 0) + 1;
+      loads.current.set(element, n);
+      if (n > 1) frameReloaded();
+    },
+    [frameReloaded],
+  );
+  const declared = version.releaseSha === p.releaseSha && !version.holdsTwoVersions ? p.declaredPermissions : NOTHING_DECLARED;
   const appApi = useAppApiHost({
     frame,
     frameOrigin: p.frameOrigin,
@@ -268,6 +282,7 @@ export function DesktopWindow(p: DesktopWindowProps) {
             title={name}
             theme={desktopToolTheme}
             frameRef={frame}
+            onFrameLoad={onFrameLoad}
           />
         ) : (
           <iframe
@@ -278,6 +293,7 @@ export function DesktopWindow(p: DesktopWindowProps) {
             sandbox={SANDBOX_REMOTO}
             allow={ALLOW_REMOTO}
             className="h-full w-full border-0 bg-[var(--bg)]"
+            onLoad={(e) => onFrameLoad(e.currentTarget)}
             data-desktop-frame
           />
         )}

@@ -17,6 +17,9 @@ export interface StateProbe<T> {
   /** How long until `askOnFocus` would go out: what a check skipped inside the minute waits for, so it can be deferred to
    *  then instead of dropped. 0 when it would go out now, and when a question is already out (a focus shares it). */
   focusDelayMs(): number;
+  /** A question that goes out AFTER this moment: one already out may have been answered before something that just happened
+   *  (the frame loading again), so it is waited for — its answer never used — and a new one goes out. */
+  askFresh(): Promise<T>;
 }
 
 export function createStateProbe<T>(
@@ -65,6 +68,12 @@ export function createStateProbe<T>(
     focusDelayMs() {
       if (inflight || lastAt === null) return 0;
       return Math.max(0, focusGapMs - (Date.now() - lastAt));
+    },
+    askFresh() {
+      const out = inflight;
+      if (!out) return ask();
+      // Whatever went out after it (a question that started once it ended) is newer than now too, so `ask` may share it.
+      return out.then(ask, ask);
     },
   };
 }
