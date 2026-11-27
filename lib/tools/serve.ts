@@ -54,12 +54,25 @@ export function toolParentOrigins(requestHost: string | null, env: Env = process
   return [...new Set(origins)];
 }
 
-/** The bridge script itself, for whoever serves a tool (its installed host, or its project's canvas). */
-export function toolBridgeScriptResponse(requestHost: string | null, env: Env = process.env, parents: readonly string[] = toolParentOrigins(requestHost, env)): Response {
-  return new Response(toolBridgeClientSource([...parents]), {
+function scriptResponse(source: string): Response {
+  return new Response(source, {
     status: 200,
     headers: { "content-type": "application/javascript; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" },
   });
+}
+
+/** The bridge script itself, for whoever serves a tool (its installed host, or its project's canvas). */
+export function toolBridgeScriptResponse(requestHost: string | null, env: Env = process.env, parents: readonly string[] = toolParentOrigins(requestHost, env)): Response {
+  return scriptResponse(toolBridgeClientSource([...parents]));
+}
+
+/** A script of the host's own, served beside the release and put first in its shell's <head> — the desktop's
+ *  `window.openlenApp` (`lib/desktop-apps/app-api/`). `build` makes it for the origins that may answer it, and `inject`
+ *  adds its tag to the shell AFTER the tool bridge's, so that it comes first. */
+export interface ExtraScript {
+  readonly path: string;
+  build(parents: readonly string[]): string;
+  inject(html: string): string;
 }
 
 function localeOf(acceptLanguage: string | null): string {
@@ -85,6 +98,8 @@ export async function serveRelease(
     readonly bridge: boolean;
     readonly ancestors: string;
     readonly parents?: readonly string[];
+    /** A script the host serves of its own at its path (never a file of the release) and injects into the shell. */
+    readonly extraScript?: ExtraScript;
   },
   o: { readonly requestHost: string | null; readonly acceptLanguage: string | null; readonly env?: Env },
   deps?: ServeDeps,
@@ -103,13 +118,15 @@ export async function serveRelease(
     return new Response(html, { status: 402, headers: { ...frame, "content-type": "text/html; charset=utf-8" } });
   }
   if (path === TOOL_BRIDGE_PATH) return toolBridgeScriptResponse(o.requestHost, env, r.parents);
+  if (r.extraScript && path === r.extraScript.path) return scriptResponse(r.extraScript.build(r.parents ?? toolParentOrigins(o.requestHost, env)));
 
   const release = await d.readRelease(r.releaseSha);
   if (!release) return notFound();
   const file = release[path === "/" ? "/index.html" : path];
   if (!file) return notFound();
   if (path === "/" || path === "/index.html") {
-    return new Response(r.bridge ? injectToolBridge(file.content) : file.content, { status: 200, headers: { ...frame, "content-type": "text/html; charset=utf-8" } });
+    const shell = r.bridge ? injectToolBridge(file.content) : file.content;
+    return new Response(r.extraScript ? r.extraScript.inject(shell) : shell, { status: 200, headers: { ...frame, "content-type": "text/html; charset=utf-8" } });
   }
   const body = isBlobPointer(file.content) ? new Uint8Array(await d.getBlob(file.content)) : file.content;
   return new Response(body, {

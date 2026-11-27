@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { TOOL_BRIDGE_PATH } from "@/lib/tools/serve";
 
+import { APP_API_PATH } from "./app-api/protocol";
 import { serveDesktopApp, type DesktopServeDeps } from "./serve";
 import type { DesktopAppRow } from "./store";
 
@@ -26,7 +27,9 @@ const RELEASE = {
   "/index.html": { content: `<!doctype html><html><head><title>B</title></head><body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>`, contentType: "text/html; charset=utf-8" },
   "/src/main.tsx": { content: "console.log(1)", contentType: "text/javascript; charset=utf-8" },
   [TOOL_BRIDGE_PATH]: { content: "alert('a release file must never answer the bridge path')", contentType: "text/javascript; charset=utf-8" },
+  [APP_API_PATH]: { content: "alert('a release file must never answer the app API path')", contentType: "text/javascript; charset=utf-8" },
 };
+const APP_TAG = `<script src="${APP_API_PATH}"></script>`;
 
 const deps = (over: Partial<DesktopServeDeps> = {}): DesktopServeDeps => ({
   readRelease: vi.fn(async () => RELEASE),
@@ -42,11 +45,12 @@ const serve = (path: string, row: DesktopAppRow = PLAIN, d: DesktopServeDeps = d
   serveDesktopApp(row, path, { requestHost: "openlen.com", acceptLanguage, env }, d);
 
 describe("serveDesktopApp — an ordinary app", () => {
-  it("plain app index has no bridge script", async () => {
+  it("a plain app's index gets /openlen-app.js first in <head> and not the tool bridge", async () => {
     const res = await serve("/");
     expect(res.status).toBe(200);
     const html = await res.text();
-    expect(html).toBe(RELEASE["/index.html"].content);
+    expect(html).toBe(RELEASE["/index.html"].content.replace("<head>", `<head>${APP_TAG}`));
+    expect(html.match(/openlen-app.js/g)).toHaveLength(1);
     expect(html).not.toContain("tool-bridge.js");
     expect(res.headers.get("cache-control")).toBe("no-store");
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
@@ -133,6 +137,15 @@ describe("serveDesktopApp — a tool on the desktop", () => {
     expect(js).toContain("window.openlen");
   });
 
+  it("a tool on the desktop gets both: the app API first, then the tool bridge", async () => {
+    const html = await (await serve("/index.html", TOOL)).text();
+    expect(html.match(/openlen-app.js/g)).toHaveLength(1);
+    expect(html.match(/tool-bridge.js/g)).toHaveLength(1);
+    expect(html).toContain(`<head>${APP_TAG}<script src="${TOOL_BRIDGE_PATH}"></script><title>`);
+    expect((await serve(APP_API_PATH, TOOL)).status).toBe(200);
+    expect((await serve(TOOL_BRIDGE_PATH, TOOL)).status).toBe(200);
+  });
+
   it("it asks about the installation the row points at", async () => {
     const d = deps();
     await serve("/", TOOL, d);
@@ -179,5 +192,62 @@ describe("serveDesktopApp — a tool on the desktop", () => {
 
   it("a free owner's tool still answers its bridge path with the plan page: the bridge exists, the plan comes first", async () => {
     expect((await serve(TOOL_BRIDGE_PATH, TOOL, deps({ plan: vi.fn(async () => "free" as const) }))).status).toBe(402);
+  });
+});
+
+describe("serveDesktopApp — /openlen-app.js (window.openlenApp)", () => {
+  it("is served no-store, nosniff, as JavaScript, for the app origin", async () => {
+    const res = await serve(APP_API_PATH);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("application/javascript; charset=utf-8");
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+    const js = await res.text();
+    expect(js).toContain("window.openlenApp");
+    expect(js).toContain(`["https://openlen.com"]`);
+    expect(js).not.toContain("window.openlen =");
+  });
+
+  it("a plain app has it although it has no tool bridge: the two are separate", async () => {
+    expect((await serve(TOOL_BRIDGE_PATH)).status).toBe(404);
+    expect((await serve(APP_API_PATH)).status).toBe(200);
+  });
+
+  it("with the tools off, an ordinary app still has it", async () => {
+    const off = { ...ENV, OPENLEN_TOOLS: "0" };
+    expect((await serve(APP_API_PATH, PLAIN, deps(), null, off)).status).toBe(200);
+    expect((await serve("/", PLAIN, deps(), null, off)).status).toBe(200);
+  });
+
+  it("🔴 a file of the release can never answer its path", async () => {
+    const js = await (await serve(APP_API_PATH)).text();
+    expect(js).not.toContain("a release file must never answer");
+    expect(js).toContain("window.openlenApp");
+  });
+
+  it("the plan comes first, as for the bridge: a free owner gets the plan page, not the script", async () => {
+    const res = await serve(APP_API_PATH, PLAIN, deps({ plan: vi.fn(async () => "free" as const) }));
+    expect(res.status).toBe(402);
+    expect(res.headers.get("content-type")).toBe("text/html; charset=utf-8");
+  });
+
+  it("a removed row, a switched-off tool or a missing release is a 404, script included", async () => {
+    const d = deps();
+    expect((await serve(APP_API_PATH, { ...PLAIN, removedAt: new Date() }, d)).status).toBe(404);
+    expect(d.readRelease).not.toHaveBeenCalled();
+    const off = deps({ toolInstallation: vi.fn(async () => null) });
+    expect((await serve(APP_API_PATH, TOOL, off)).status).toBe(404);
+  });
+
+  it("not on the production host: the workspace on localhost at the request's port may answer too", async () => {
+    const dev = { NEXT_PUBLIC_SITE_URL: "https://openlen.com", NODE_ENV: "development" };
+    const res = await serveDesktopApp(PLAIN, APP_API_PATH, { requestHost: "localhost:3100", acceptLanguage: null, env: dev }, deps());
+    const js = await res.text();
+    for (const origin of ["https://openlen.com", "http://localhost:3100", "http://127.0.0.1:3100"]) expect(js).toContain(origin);
+  });
+
+  it("the pages and other files are unchanged by the script's existence", async () => {
+    expect(await (await serve("/src/main.tsx")).text()).toBe("console.log(1)");
+    expect((await serve("/nope.js")).status).toBe(404);
   });
 });
