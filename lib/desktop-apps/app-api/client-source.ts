@@ -14,8 +14,8 @@
 //     browser has it, on top of the events the script saw itself; only trusted events count), and posts nothing without;
 //   · `state` and `show` and `manage` wait 30 s for the window; `request` waits on the person and has no limit;
 //   · unframed (the private host opened by itself in a tab) there is no one to ask: every method rejects ENOTSUP.
-// Every rejection is an `Error` whose `code` is `EPERM`, `EINVAL` or `ENOTSUP`. Plain ES5 on purpose: it runs before the
-// app's bundle, in any browser. The window validates every request again (an app can post to its parent by hand), so the
+// Every rejection is an `Error` whose `code` is `EPERM`, `EINVAL` or `ENOTSUP`. ES5 syntax on purpose (it uses `Map` and `Promise`): it
+// runs before the app's bundle, in any browser that has them. The window validates every request again (an app can post to its parent by hand), so the
 // arguments go as the app gave them: `show({ body, title })` is the window's EINVAL, not something hidden here.
 import { APP_API_CHANNEL } from "./protocol";
 

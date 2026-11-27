@@ -14,9 +14,25 @@ describe("injectAppApi", () => {
   });
 
   it("goes before whatever else the head begins with", () => {
-    const html = injectAppApi(`<!doctype html><html lang="es"><head data-x="a>b"><meta charset="utf-8"><script src="/x.js"></script></head></html>`);
-    expect(html.indexOf(TAG)).toBeLessThan(html.indexOf("charset"));
-    expect(html.indexOf(TAG)).toBeLessThan(html.indexOf("/x.js"));
+    expect(injectAppApi(`<!doctype html><html lang="es"><head><meta charset="utf-8"><script src="/x.js"></script></head></html>`)).toBe(
+      `<!doctype html><html lang="es"><head>${TAG}<meta charset="utf-8"><script src="/x.js"></script></head></html>`,
+    );
+  });
+
+  it("a `>` inside a quoted attribute of <head> does not take the tag into the value", () => {
+    expect(injectAppApi(`<html><head data-x="a>b"><meta charset="utf-8"></head></html>`)).toBe(`<html><head data-x="a>b">${TAG}<meta charset="utf-8"></head></html>`);
+    expect(injectAppApi(`<html><head data-x='a>b' lang=es><meta charset="utf-8"></head></html>`)).toBe(`<html><head data-x='a>b' lang=es>${TAG}<meta charset="utf-8"></head></html>`);
+  });
+
+  it("idempotent when the tag is first in the head; the same tag elsewhere in the document does not count", () => {
+    const once = injectAppApi("<html><head></head><body></body></html>");
+    expect(injectAppApi(once)).toBe(once);
+    expect(injectAppApi(`<html><head></head><body>${TAG}</body></html>`)).toBe(`<html><head>${TAG}</head><body>${TAG}</body></html>`);
+    // the other fallbacks are idempotent too
+    for (const bare of ["<html><body>hi</body></html>", "<!doctype html><p>hi</p>", "<p>hi</p>"]) {
+      const first = injectAppApi(bare);
+      expect(injectAppApi(first), bare).toBe(first);
+    }
   });
 
   it("is not fooled by <header>", () => {
@@ -40,12 +56,11 @@ describe("injectAppApi", () => {
   });
 
   it("🔴 stays linear on a shell built to make a pattern backtrack (the author's text, the server's process)", () => {
-    const big = (s: string) => s.repeat(Math.ceil(1_000_000 / s.length));
-    for (const hostile of [big("<head "), big("<head x"), big("<html "), big("<!doctype "), big("<head\n")]) {
-      const started = Date.now();
+    for (const hostile of ["<head ".repeat(200_000), "<head x".repeat(200_000), '<head x="'.repeat(120_000), "<head\n".repeat(200_000), "<html ".repeat(200_000), "<!doctype ".repeat(100_000)]) {
+      const started = performance.now();
       const out = injectAppApi(hostile);
-      expect(Date.now() - started).toBeLessThan(500);
-      expect(out.length).toBeGreaterThan(0);
+      expect(performance.now() - started).toBeLessThan(200);
+      expect(out.endsWith(hostile)).toBe(true);
     }
   });
 });
