@@ -1,13 +1,14 @@
 // «INSTALAR EN EL ESCRITORIO» (spec local 2026-11-26-apps-en-el-escritorio, §4.1, §4.4, §4.6): the Publicar menu's button
 // and the window's «Actualizar» both land here. POST installs or updates through the same gates as publishing (security
 // review, compile, data changes, functions) and answers their codes — the person's tap is the approval; GET says what is
-// installed and whether the project moved on since; DELETE is «Quitar del escritorio».
+// installed and whether the project moved on since (the owner's), and `GET ?for=publish` says to whoever can publish
+// whether anyone has it installed (a boolean, nothing more); DELETE is «Quitar del escritorio».
 // Web session only: the phone neither installs nor opens these (it has no window to install into), so — as the A/B
 // routes — this one doesn't take the phone's key, has no app CORS, and isn't on `RUTAS_DE_LA_APP`.
 import { z } from "zod";
 
 import { auth } from "@/auth";
-import { desktopAppState, installDesktopApp, removeDesktopApp } from "@/lib/desktop-apps/install";
+import { desktopAppState, desktopInstalledForPublish, installDesktopApp, removeDesktopApp } from "@/lib/desktop-apps/install";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,10 +44,16 @@ export async function POST(req: Request, { params }: Ctx): Promise<Response> {
   return json(result.body, result.status);
 }
 
-export async function GET(_req: Request, { params }: Ctx): Promise<Response> {
+export async function GET(req: Request, { params }: Ctx): Promise<Response> {
   const userId = (await auth())?.user?.id;
   if (!userId) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
+  // `?for=publish` is the publish dialog's question (spec §5): is there an app on the desktop sharing the production data?
+  // Anyone who can publish gets the boolean; the owner's read of what is installed stays the owner's.
+  if (new URL(req.url).searchParams.get("for") === "publish") {
+    const publish = await desktopInstalledForPublish({ projectId: id, actorId: userId });
+    return json(publish.body, publish.status);
+  }
   const result = await desktopAppState({ projectId: id, actorId: userId });
   return json(result.body, result.status);
 }

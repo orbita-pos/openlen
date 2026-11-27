@@ -11,7 +11,7 @@ import { AbExperimentRunning } from "@/components/workspace-v2/ab/experiment-run
 import { LenWatchFixPending } from "@/components/workspace-v2/len-watch/fix-pending";
 import { SecurityPanel, fixRequestText } from "@/components/workspace-v2/security-findings";
 import { useSecurityReview } from "@/components/workspace-v2/use-security-review";
-import { useDesktopApp } from "@/components/workspace-v2/desktop-apps/use-desktop-app";
+import { useDesktopInstalledForPublish } from "@/components/workspace-v2/desktop-apps/use-desktop-app";
 import {
   AlertCircle,
   CheckCircle2,
@@ -184,9 +184,10 @@ export function PublishModal({
   const [security, setSecurity] = useSecurityReview(project.id, open, locale);
   const aceptarSeguridad = useRef<string | null>(null);
   // La app en el escritorio (spec local 2026-11-26-apps-en-el-escritorio, §5): hay UNA producción, la del sitio y la de
-  // la app instalada. Si la persona la tiene instalada, publicar lo dice. Sólo una app se instala, y sólo su dueño recibe
-  // respuesta de la ruta (un 404 deja el aviso fuera).
-  const { state: escritorio } = useDesktopApp(project.id, open && project.esApp === true);
+  // la app instalada. Si alguien la tiene instalada, publicar lo dice — también a un editor: su publicación migra la base
+  // de producción que usa la versión congelada del dueño, así que la pregunta es la de quien publica (`?for=publish`, un
+  // booleano para cualquiera con acceso de edición), no la lectura del dueño. Sólo una app se instala.
+  const escritorioInstalado = useDesktopInstalledForPublish(project.id, open && project.esApp === true);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -720,7 +721,7 @@ export function PublishModal({
 
           <DataChangesNotice preview={dataPreview} copyDraftData={copyDraftData} onCopyDraftData={setCopyDraftData} />
 
-          {escritorio?.desktopApp && (
+          {escritorioInstalado && (
             <div data-desktop-notice className="flex items-start gap-2 rounded-lg bg-zinc-50/60 dark:bg-zinc-900/50 ring-1 ring-zinc-200 dark:ring-zinc-800 px-3 py-2 text-[12px] text-zinc-600 dark:text-zinc-300">
               <AlertCircle size={13} className="mt-0.5 shrink-0" />
               <span>{tSecretos("desktopInstall.publishNotice")}</span>

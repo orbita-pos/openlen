@@ -19,12 +19,12 @@ const { POST, GET, DELETE } = await import("./route");
 const ctx = { params: Promise.resolve({ id: "p1" }) };
 const url = "http://localhost:3000/api/projects/p1/desktop";
 const post = (body: unknown = {}) => POST(new Request(url, { method: "POST", headers: { host: "localhost:3000" }, body: JSON.stringify(body) }), ctx);
-const get = () => GET(new Request(url), ctx);
+const get = (query = "") => GET(new Request(url + query), ctx);
 const del = () => DELETE(new Request(url, { method: "DELETE" }), ctx);
 
 // The project, its files and the person's row live in these, and the fake store keeps the row's id like the real one.
 let files: Record<string, string>;
-let rol: "dueno" | "editor";
+let rol: "dueno" | "editor" | "lector" | "none";
 let row: DesktopAppRow | null;
 let gate: { stop: { status: number; body: Record<string, unknown> } } | { fingerprint: string | null };
 let sha: string;
@@ -33,7 +33,13 @@ function fakeDeps(): DesktopDeps {
   return {
     enabled: () => true,
     plan: async () => "pro",
-    access: async () => ({ rol, duenoId: "u1" }),
+    // What `exigirAcceso(..., "editar")` answers: a non-member is a 404, a reader a 403, the rest get their role.
+    access: async () =>
+      rol === "none"
+        ? new Response(JSON.stringify({ error: "not_found" }), { status: 404 })
+        : rol === "lector"
+          ? new Response(JSON.stringify({ error: "solo_lectura" }), { status: 403 })
+          : { rol, duenoId: "u1" },
     loadProject: async () => ({ title: "Reservas", subdomain: null, data: { html: "<div id=root></div>", app: { catalogo: "2026-11", entrada: "/src/main.tsx" } } as ProjectData }),
     files: async () => files,
     usesStripe: async () => false,
@@ -46,6 +52,7 @@ function fakeDeps(): DesktopDeps {
     saveRelease: async () => {},
     markPublished: async () => {},
     desktopAppOf: async () => row,
+    hasActiveDesktopApp: async () => !!row && row.removedAt === null,
     upsertDesktopApp: async (i) => {
       row = {
         id: row?.id ?? "d1",
@@ -160,6 +167,50 @@ describe("GET /api/projects/[id]/desktop", () => {
     const res = await get();
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: "not_found" });
+  });
+});
+
+// The publish dialog's question (spec §5): whoever can publish hears that the site and the desktop app share their production
+// data — an editor's publish migrates the database the OWNER's frozen release uses — so this read is not the owner's.
+describe("GET /api/projects/[id]/desktop?for=publish", () => {
+  it("for=publish 401 without session", async () => {
+    vi.mocked(auth).mockResolvedValue(null as never);
+    expect((await get("?for=publish")).status).toBe(401);
+  });
+
+  it("for=publish answers an editor with installed only", async () => {
+    await post({});
+    rol = "editor";
+    const res = await get("?for=publish");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    // A boolean and nothing about whose, what, or which version.
+    expect(await res.json()).toEqual({ installed: true });
+  });
+
+  it("answers the owner too, and false when nobody has it (or it was removed)", async () => {
+    expect(await (await get("?for=publish")).json()).toEqual({ installed: false });
+    await post({});
+    expect(await (await get("?for=publish")).json()).toEqual({ installed: true });
+    await del();
+    expect(await (await get("?for=publish")).json()).toEqual({ installed: false });
+  });
+
+  it("for=publish 404 without edit access", async () => {
+    await post({});
+    for (const without of ["none", "lector"] as const) {
+      rol = without;
+      const res = await get("?for=publish");
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual({ error: "not_found" });
+    }
+  });
+
+  it("the read without for=publish is still the owner's: an editor gets a 404 there", async () => {
+    await post({});
+    rol = "editor";
+    expect((await get()).status).toBe(404);
+    expect((await get("?for=other")).status).toBe(404);
   });
 });
 

@@ -86,18 +86,24 @@ describe("el diálogo de publicar", () => {
 });
 
 // APPS EN EL ESCRITORIO (spec local 2026-11-26-apps-en-el-escritorio, §5): hay UNA producción, la del sitio publicado y
-// la de la app instalada. Publicar lo dice si la persona tiene la app en su escritorio.
+// la de la app instalada. Publicar lo dice si alguien tiene la app en su escritorio — y lo oye QUIEN PUBLICA, también un
+// editor: su publicación migra la base de producción que usa la versión congelada del dueño. Por eso el diálogo pregunta
+// con `?for=publish` (un booleano para cualquiera con acceso de edición), no con la lectura del dueño.
 describe("el diálogo de publicar, con la app en el escritorio", () => {
-  const ESCRITORIO = { id: "d1", url: "/desktop/d1", name: "Caja", releaseSha: "abc123", installedAt: "2026-11-26T10:00:00.000Z" };
-
-  async function abrir(esApp: boolean, escritorio: Record<string, unknown> | null) {
+  async function abrir(esApp: boolean, instalada: boolean, { editor = false }: { editor?: boolean } = {}) {
     const llamadas: string[] = [];
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
         llamadas.push(String(url));
-        if (String(url).endsWith("/desktop")) {
-          return new Response(JSON.stringify({ desktopApp: escritorio, updateAvailable: false, published: true }), { status: 200 });
+        if (String(url) === "/api/projects/p1/desktop?for=publish") {
+          return new Response(JSON.stringify({ installed: instalada }), { status: 200 });
+        }
+        // La lectura del dueño: a un editor la ruta le contesta 404.
+        if (String(url) === "/api/projects/p1/desktop") {
+          return editor
+            ? new Response(JSON.stringify({ error: "not_found" }), { status: 404 })
+            : new Response(JSON.stringify({ desktopApp: instalada ? { id: "d1", url: "/desktop/d1" } : null, updateAvailable: false, published: true }), { status: 200 });
         }
         return new Response(JSON.stringify({ available: true }), { status: 200 });
       }),
@@ -119,19 +125,28 @@ describe("el diálogo de publicar, con la app en el escritorio", () => {
   }
 
   it("shows the desktop notice when a desktop app exists", async () => {
-    const { texto, llamadas } = await abrir(true, ESCRITORIO);
-    expect(llamadas).toContain("/api/projects/p1/desktop");
+    const { texto, llamadas } = await abrir(true, true);
+    expect(llamadas).toContain("/api/projects/p1/desktop?for=publish");
     expect(texto).toContain("desktopInstall.publishNotice");
   });
 
+  it("an editor sees the desktop notice", async () => {
+    const { texto, llamadas } = await abrir(true, true, { editor: true });
+    expect(texto).toContain("desktopInstall.publishNotice");
+    // Con la pregunta del publicador, no con la del dueño (que a él le daría 404).
+    expect(llamadas).not.toContain("/api/projects/p1/desktop");
+  });
+
   it("sin la app en el escritorio, no dice nada", async () => {
-    const { texto } = await abrir(true, null);
+    const { texto } = await abrir(true, false);
     expect(texto).not.toContain("desktopInstall.publishNotice");
+    const editor = await abrir(true, false, { editor: true });
+    expect(editor.texto).not.toContain("desktopInstall.publishNotice");
   });
 
   it("una página no pregunta por el escritorio: sólo las apps se instalan", async () => {
-    const { texto, llamadas } = await abrir(false, ESCRITORIO);
-    expect(llamadas.some((u) => u.endsWith("/desktop"))).toBe(false);
+    const { texto, llamadas } = await abrir(false, true);
+    expect(llamadas.some((u) => u.includes("/desktop"))).toBe(false);
     expect(texto).not.toContain("desktopInstall.publishNotice");
   });
 });

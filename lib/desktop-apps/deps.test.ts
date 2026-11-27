@@ -24,7 +24,7 @@ vi.mock("@/lib/db", () => ({
   db: { select: () => ({ from: () => ({ where: () => ({ limit }) }) }) },
   schema: { projects: { id: "id", title: "title", subdomain: "subdomain", data: "data" } },
 }));
-vi.mock("./store", () => ({ desktopAppOf: vi.fn(), upsertDesktopApp: vi.fn(), markDesktopAppRemoved: vi.fn() }));
+vi.mock("./store", () => ({ desktopAppOf: vi.fn(), hasActiveDesktopApp: vi.fn(), upsertDesktopApp: vi.fn(), markDesktopAppRemoved: vi.fn() }));
 vi.mock("@/lib/tools/store", () => ({ installationOf: vi.fn() }));
 vi.mock("@/lib/stripe/enabled", () => ({ stripeEnabled: vi.fn() }));
 vi.mock("@/lib/stripe/state", () => ({ stripeStateFor: vi.fn() }));
@@ -63,6 +63,7 @@ describe("realDesktopDeps", () => {
     expect(d.access).toBe(baseDeps.access);
     expect(d.files).toBe(baseDeps.files);
     expect(d.desktopAppOf).toBe(store.desktopAppOf);
+    expect(d.hasActiveDesktopApp).toBe(store.hasActiveDesktopApp);
     expect(d.upsertDesktopApp).toBe(store.upsertDesktopApp);
     expect(d.markRemoved).toBe(store.markDesktopAppRemoved);
   });

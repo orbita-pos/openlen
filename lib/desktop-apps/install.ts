@@ -31,6 +31,8 @@ export interface DesktopDeps extends CoreDeps {
   /** The person's installation of a TOOL project (the rail's), removed, switched off or not. */
   toolInstallation(personId: string, projectId: string): Promise<{ id: string; iconPath: string; enabled: boolean; removedAt: Date | null } | null>;
   desktopAppOf(personId: string, projectId: string): Promise<DesktopAppRow | null>;
+  /** Whether ANYONE has the project on their desktop, not removed (only the owner can, today): publishing warns. */
+  hasActiveDesktopApp(projectId: string): Promise<boolean>;
   upsertDesktopApp(i: Parameters<typeof upsertDesktopApp>[0]): Promise<DesktopAppRow>;
   markRemoved(id: string, personId: string): Promise<boolean>;
   /** The private host's label for a new row's id. 🔴 Throws without a secret: a row never gets an empty label. */
@@ -133,6 +135,18 @@ export async function desktopAppState(i: { readonly projectId: string; readonly 
   if (!row || row.removedAt) return { status: 200, body: { desktopApp: null, updateAvailable: false, published } };
   const current = filesFingerprint(project.data.html, await d.files(i.projectId));
   return { status: 200, body: { desktopApp: toDesktopAppView(row), updateAvailable: current !== row.filesFingerprint, published } };
+}
+
+/** The GET `?for=publish` (spec §5): the publish dialog warns that the site and the desktop app share their production data,
+ *  and whoever can publish needs to hear it — an editor's publish migrates the production database the OWNER's frozen
+ *  release uses. So this one answers anyone with edit access, and only `installed`: a boolean, nothing about whose. No access
+ *  is a 404 like the owner's GET (a reader doesn't publish); with the switch off nobody has anything installed. */
+export async function desktopInstalledForPublish(i: { readonly projectId: string; readonly actorId: string }, deps?: DesktopDeps): Promise<Answer> {
+  const d = await depsOrReal(deps);
+  if (!d.enabled()) return { status: 200, body: { installed: false } };
+  const access = await d.access(i.projectId, i.actorId);
+  if (access instanceof Response) return notFound();
+  return { status: 200, body: { installed: await d.hasActiveDesktopApp(i.projectId) } };
 }
 
 /** The DELETE, «Quitar del escritorio» (spec §4.6): the row stays, marked, so the window can say the app is gone. */

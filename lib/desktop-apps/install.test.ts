@@ -8,7 +8,7 @@ import { DataChangesNeedConfirmationError } from "@/lib/backend/data-changes";
 import type { ProjectData } from "@/lib/projects/types";
 
 import { filesFingerprint } from "./fingerprint";
-import { desktopAppState, installDesktopApp, removeDesktopApp, type DesktopDeps } from "./install";
+import { desktopAppState, desktopInstalledForPublish, installDesktopApp, removeDesktopApp, type DesktopDeps } from "./install";
 import type { DesktopAppRow } from "./store";
 
 const HTML = '<div id="root"></div>';
@@ -57,7 +57,8 @@ function fakeStore() {
     row.removedAt ??= new Date("2026-11-26T12:00:00Z");
     return true;
   });
-  return { rows, upsertDesktopApp, desktopAppOf, markRemoved };
+  const hasActiveDesktopApp = vi.fn(async (projectId: string) => [...rows.values()].some((r) => r.projectId === projectId && !r.removedAt));
+  return { rows, upsertDesktopApp, desktopAppOf, hasActiveDesktopApp, markRemoved };
 }
 
 const deps = (over: Partial<DesktopDeps> = {}, store = fakeStore()): DesktopDeps & { store: ReturnType<typeof fakeStore> } => ({
@@ -77,6 +78,7 @@ const deps = (over: Partial<DesktopDeps> = {}, store = fakeStore()): DesktopDeps
   saveRelease: vi.fn(async () => {}),
   markPublished: vi.fn(async () => {}),
   desktopAppOf: store.desktopAppOf,
+  hasActiveDesktopApp: store.hasActiveDesktopApp,
   upsertDesktopApp: store.upsertDesktopApp,
   markRemoved: store.markRemoved,
   hostLabelFor: (id) => `lienzo-${id.padEnd(32, "0")}`,
@@ -392,6 +394,49 @@ describe("desktopAppState (the GET)", () => {
       expect(d.desktopAppOf).not.toHaveBeenCalled();
     }
     expect(await desktopAppState({ projectId: "p1", actorId: "u1" }, deps({ loadProject: vi.fn(async () => null) }))).toEqual({ status: 404, body: { error: "not_found" } });
+  });
+});
+
+describe("desktopInstalledForPublish (the GET ?for=publish)", () => {
+  const forPublish = (d: DesktopDeps, actorId = "u1") => desktopInstalledForPublish({ projectId: "p1", actorId }, d);
+
+  it("OPENLEN_DESKTOP_APPS=0: nobody has anything installed, and nothing else is asked", async () => {
+    const d = deps({ enabled: () => false });
+    expect(await forPublish(d)).toEqual({ status: 200, body: { installed: false } });
+    expect(d.access).not.toHaveBeenCalled();
+    expect(d.hasActiveDesktopApp).not.toHaveBeenCalled();
+  });
+
+  it("an editor hears that the owner has it installed: a boolean, nothing about whose", async () => {
+    const d = deps();
+    await install(d); // the owner, u1
+    const asEditor = deps({ access: vi.fn(async () => ({ rol: "editor" as const, duenoId: "u1" })) }, d.store);
+    expect(await forPublish(asEditor, "u2")).toEqual({ status: 200, body: { installed: true } });
+    expect(asEditor.access).toHaveBeenCalledWith("p1", "u2");
+    expect(asEditor.hasActiveDesktopApp).toHaveBeenCalledWith("p1");
+    // Not the owner's row, not the project: the answer needs neither.
+    expect(asEditor.desktopAppOf).not.toHaveBeenCalled();
+    expect(asEditor.loadProject).not.toHaveBeenCalled();
+  });
+
+  it("false while nobody has it installed, and again once it is removed", async () => {
+    const d = deps();
+    expect((await forPublish(d)).body).toEqual({ installed: false });
+    await install(d);
+    expect((await forPublish(d)).body).toEqual({ installed: true });
+    await removeDesktopApp({ projectId: "p1", actorId: "u1" }, d);
+    expect((await forPublish(d)).body).toEqual({ installed: false });
+  });
+
+  it("no edit access (not a member, or a reader): 404 not_found, and the installation isn't looked up", async () => {
+    for (const access of [
+      vi.fn(async () => new Response(JSON.stringify({ error: "not_found" }), { status: 404 })),
+      vi.fn(async () => new Response(JSON.stringify({ error: "solo_lectura" }), { status: 403 })),
+    ]) {
+      const d = deps({ access });
+      expect(await forPublish(d)).toEqual({ status: 404, body: { error: "not_found" } });
+      expect(d.hasActiveDesktopApp).not.toHaveBeenCalled();
+    }
   });
 });
 

@@ -52,6 +52,7 @@ export async function realDesktopDeps(): Promise<DesktopDeps> {
     usesStripe: async (projectId) => stripeOn.stripeEnabled() && (await (await import("@/lib/stripe/state")).stripeStateFor(projectId)) !== null,
     toolInstallation: (personId, projectId) => toolStore.installationOf(personId, projectId),
     desktopAppOf: store.desktopAppOf,
+    hasActiveDesktopApp: store.hasActiveDesktopApp,
     upsertDesktopApp: store.upsertDesktopApp,
     markRemoved: store.markDesktopAppRemoved,
     hostLabelFor: (id) => hostLabelOrThrow(id),
