@@ -57,6 +57,8 @@ export async function installDesktopApp(
     readonly confirmFingerprint?: string;
     readonly copyDraftData?: boolean;
     readonly skipMissingSecrets?: boolean;
+    /** The window's «Actualizar» (it only ever updates): an app that is no longer on the desktop is not installed again. */
+    readonly fromWindow?: boolean;
   },
   deps?: DesktopDeps,
 ): Promise<Answer> {
@@ -66,6 +68,13 @@ export async function installDesktopApp(
   const access = await d.access(i.projectId, i.actorId);
   if (access instanceof Response) return { status: access.status, body: (await access.json().catch(() => ({}))) as Record<string, unknown> };
   if (access.rol !== "dueno") return { status: 403, body: { error: "owner_only" } };
+
+  // Claude reconciles with what is installed before it acts and closes a window when its app is uninstalled, so a window
+  // left open after a removal elsewhere cannot exist there. Here it can, and its button must not undo the removal.
+  if (i.fromWindow) {
+    const current = await d.desktopAppOf(i.actorId, i.projectId);
+    if (!current || current.removedAt) return { status: 409, body: { error: "desktop_app_removed" } };
+  }
 
   const project = await d.loadProject(i.projectId);
   const app = project?.data.app;

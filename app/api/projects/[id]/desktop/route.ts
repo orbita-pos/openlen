@@ -22,6 +22,8 @@ const Body = z.object({
   confirmFingerprint: z.string().max(200).optional(),
   copyDraftData: z.boolean().optional(),
   skipMissingSecrets: z.boolean().optional(),
+  /** Sent by the window's «Actualizar»: it only updates, so an app removed elsewhere is a 409 and not installed again. */
+  fromWindow: z.boolean().optional(),
 });
 
 type Ctx = { params: Promise<{ id: string }> };

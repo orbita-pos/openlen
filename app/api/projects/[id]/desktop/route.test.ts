@@ -125,6 +125,24 @@ describe("POST /api/projects/[id]/desktop", () => {
     expect(await res.json()).toEqual({ error: "owner_only" });
   });
 
+  // The window's «Actualizar» sends `fromWindow`: a window left open after «Quitar del escritorio» must not reinstall.
+  it("fromWindow: an app removed elsewhere is a 409 desktop_app_removed and stays removed; the workspace's POST brings it back", async () => {
+    await post({});
+    await del();
+    const stale = await post({ locale: "es", fromWindow: true });
+    expect(stale.status).toBe(409);
+    expect(await stale.json()).toEqual({ error: "desktop_app_removed" });
+    expect(row?.removedAt).not.toBeNull();
+
+    expect((await post({ locale: "es" })).status).toBe(200);
+    expect(row?.removedAt).toBeNull();
+    expect((await post({ locale: "es", fromWindow: true })).status).toBe(200);
+  });
+
+  it("fromWindow must be a boolean", async () => {
+    expect((await post({ fromWindow: "yes" })).status).toBe(400);
+  });
+
   it("an empty body is fine (the locale defaults); a malformed one is 400; invalid JSON is 400", async () => {
     expect((await POST(new Request(url, { method: "POST" }), ctx)).status).toBe(200);
     expect((await post({ copyDraftData: "yes" })).status).toBe(400);

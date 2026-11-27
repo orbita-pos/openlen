@@ -265,6 +265,57 @@ describe("installDesktopApp: through the gates, then the row", () => {
     expect(d.store.rows.get("u1/p1")!.removedAt).toBeNull();
   });
 
+  // Claude reconciles with what is installed before it acts, and a window cannot outlive an uninstall. A window that stayed
+  // open after the app was removed elsewhere must not bring it back: only the workspace's own button (no flag) installs again.
+  describe("from the window (fromWindow: true)", () => {
+    it("🔴 an app removed elsewhere is not installed again: 409 desktop_app_removed, nothing run, nothing saved", async () => {
+      const d = deps();
+      await install(d);
+      await removeDesktopApp({ projectId: "p1", actorId: "u1" }, d);
+      vi.clearAllMocks();
+
+      expect(await install(d, { fromWindow: true })).toEqual({ status: 409, body: { error: "desktop_app_removed" } });
+      expect(d.securityGate).not.toHaveBeenCalled();
+      expect(d.build).not.toHaveBeenCalled();
+      expect(d.saveRelease).not.toHaveBeenCalled();
+      expect(d.upsertDesktopApp).not.toHaveBeenCalled();
+      expect(d.store.rows.get("u1/p1")!.removedAt).not.toBeNull();
+    });
+
+    it("🔴 an app never installed is the same: 409 desktop_app_removed", async () => {
+      const d = deps();
+      expect(await install(d, { fromWindow: true })).toEqual({ status: 409, body: { error: "desktop_app_removed" } });
+      expect(d.securityGate).not.toHaveBeenCalled();
+      expect(d.upsertDesktopApp).not.toHaveBeenCalled();
+    });
+
+    it("an installed app updates as usual", async () => {
+      let files = FILES;
+      const d = deps({ files: vi.fn(async () => files) });
+      await install(d);
+      files = { ...FILES, "/src/App.tsx": "changed" };
+      d.build = vi.fn(async () => ({ ...RELEASE, sha: "sha2" }));
+      const r = await install(d, { fromWindow: true });
+      expect(r.status).toBe(200);
+      expect(d.store.rows.get("u1/p1")!.releaseSha).toBe("sha2");
+    });
+
+    it("the workspace's own install (no flag) still brings a removed app back", async () => {
+      const d = deps();
+      await install(d);
+      await removeDesktopApp({ projectId: "p1", actorId: "u1" }, d);
+      expect((await install(d, { fromWindow: false })).status).toBe(200);
+      expect(d.store.rows.get("u1/p1")!.removedAt).toBeNull();
+    });
+
+    it("the earlier checks answer first: a free owner is plan_required, a member is owner_only", async () => {
+      expect(await install(deps({ plan: vi.fn(async () => "free" as const) }), { fromWindow: true })).toEqual({ status: 402, body: { error: "plan_required" } });
+      const asEditor = deps({ access: vi.fn(async () => ({ rol: "editor" as const, duenoId: "u9" })) });
+      expect(await install(asEditor, { fromWindow: true })).toEqual({ status: 403, body: { error: "owner_only" } });
+      expect(asEditor.desktopAppOf).not.toHaveBeenCalled();
+    });
+  });
+
   it("a gate stop leaves the row's releaseSha unchanged", async () => {
     let files = FILES;
     const d = deps({ files: vi.fn(async () => files) });
