@@ -57,6 +57,53 @@ describe("TypeScript", () => {
     // Cada uno resuelve y es un string: asignarlo a un number es TS2322 (no TS2307).
     expect(r.typescript.map((d) => d.codigo)).toEqual(rutas.map(() => "TS2322"));
   });
+
+  // window.openlenApp (spec local 2026-11-27-notificaciones-del-escritorio, §7.3): la API que la ventana del escritorio
+  // le pone a una app instalada. Está en el ambiente de TODAS las apps (la app no sabe si la abrirán ahí), opcional:
+  // fuera de la ventana no existe, así que se escribe siempre `window.openlenApp?.`.
+  describe("window.openlenApp (la ventana del escritorio)", () => {
+    it("window.openlenApp?.notification.show({ body: \"x\" }) gives no TS error in a .tsx app", () => {
+      const r = revisar({
+        "/src/App.tsx": 'export function avisar() {\n  return window.openlenApp?.notification.show({ body: "x" });\n}',
+      });
+      expect(r.typescript).toEqual([]);
+    });
+
+    it("toda la API, con sus tipos: permisos, estado, pedir, gestionar y mostrar", () => {
+      const r = revisar({
+        "/src/permisos.tsx": [
+          "export async function todo() {",
+          '  const uno: "granted" | "denied" | "prompt" | "unavailable" | undefined = await window.openlenApp?.permissions.state("notifications");',
+          "  const mapa = await window.openlenApp?.permissions.state();",
+          '  const pedido = await window.openlenApp?.permissions.request(["notifications"]);',
+          '  const otro = await window.openlenApp?.permissions.request("notifications");',
+          "  const todos = await window.openlenApp?.permissions.request();",
+          '  const n: "granted" | "denied" | "prompt" | "unavailable" | undefined = mapa?.notifications;',
+          '  const m: "granted" | "denied" | "prompt" | "unavailable" | undefined = pedido?.["full-access"];',
+          "  await window.openlenApp?.permissions.manage();",
+          '  await window.openlenApp?.notification.show({ body: "listo" });',
+          "  return { uno, mapa, pedido, otro, todos, n, m };",
+          "}",
+        ].join("\n"),
+      });
+      expect(r.typescript).toEqual([]);
+    });
+
+    it("🔴 lo que la API no tiene sigue siendo un error: otra clave en show, un permiso que no existe, un miembro que no existe", () => {
+      const r = revisar({
+        "/src/mal.tsx": [
+          'export const a = () => window.openlenApp?.notification.show({ body: "x", title: "y" });', // sólo `body`
+          'export const b = () => window.openlenApp?.permissions.request(["nope"]);', // un nombre de permiso que no existe
+          "export const c = () => window.openlenApp?.nada;",
+        ].join("\n"),
+      });
+      expect(r.typescript.map((d) => [d.linea, d.codigo])).toEqual([
+        [1, "TS2353"],
+        [2, "TS2345"],
+        [3, "TS2339"],
+      ]);
+    });
+  });
 });
 
 describe("ESLint", () => {

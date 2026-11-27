@@ -195,13 +195,17 @@ const INDICE = `MORE, IN ${CARPETA_DOCS} (read them when you need them):
 - ${RUTA_LIBRERIAS}: the chart, carousel and gallery libraries that survive publishing, with their exact tag; read it before adding one.
 - ${RUTA_APPS}: how a web app is built here (React in /src, its packages, its screens); read it BEFORE converting a page into an app.`;
 
+/** The desktop is for an app that exists: the doc a PAGE carries for converting it never has the notifications paragraph
+ *  (what Len reads on a page doesn't move; the converted app's own manual brings it). */
+const SIN_ESCRITORIO = { OPENLEN_DESKTOP_APPS: "0" } as const;
+
 /** /.openlen/docs/apps.md en una página: el manual de una app recién
  *  convertida, para escribirla en /src antes de `convert_to_app`. */
 export function manualParaConvertir(): string {
   return `# HOW A WEB APP IS BUILT HERE (for converting this page into an app with convert_to_app)
 Convert only after the user accepted. Build the whole app in /src FIRST, with the pages still in place —read each one—, and then call convert_to_app, which swaps the pages for the app in one step. The app keeps the page's look (its colors, fonts and texts): the pages become screens (/menu/index.html → /src/screens/Menu.tsx at the route #/menu, the home at #/), what repeats in every page (the header, the menu, the footer) becomes a component in /src/components, the loose JavaScript becomes React state, and each form saves to a table (a migration in /supabase/migrations, and the form inserts into it with supabase-js) instead of going to the Inbox. Below, the rules every app follows once converted.
 
-${manualDeLaApp(manualSinPartir(), { catalogo: CATALOGO_ACTUAL, entrada: ENTRADA })
+${manualDeLaApp(manualSinPartir(), { catalogo: CATALOGO_ACTUAL, entrada: ENTRADA }, false, SIN_ESCRITORIO)
   .replace(/^# OpenLen: how the platform works\n\n/, "")
   .replace("THIS PROJECT IS A WEB APP:", "A WEB APP, ONCE CONVERTED:")
   // Su índice nombra la guía de diseño de una APP, que en una página no está
@@ -381,7 +385,7 @@ export function buildManualDeLaPlataforma(
 ): string {
   const conSkills = skillsEnabled(env);
   const page = partirElManual(manualSinPartir(), conSkills).agents;
-  const forTheApp = app ? manualDeLaApp(manualSinPartir(), app, conSkills) : null;
+  const forTheApp = app ? manualDeLaApp(manualSinPartir(), app, conSkills, env) : null;
   const base = forTheApp ? (game && !tool ? manualOfGame(forTheApp) : forTheApp) : realTerminal ? page.replace(TESTS_NOT_RUN, TESTS_RUN) : page;
   const withFunctions = functionsEnabledIn(env) ? conEdgeFunctions(base, env) : base;
   const agents = shopifyEnabledIn(env) ? conShopify(withFunctions, app) : withFunctions;

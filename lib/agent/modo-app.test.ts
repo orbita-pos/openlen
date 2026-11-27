@@ -381,6 +381,56 @@ describe("open npm in Len's manual", () => {
   });
 });
 
+// NOTIFICATIONS OF AN APP ON THE DESKTOP (spec local 2026-11-27-notificaciones-del-escritorio, §6): one paragraph in the
+// app's manual, only while the desktop apps AND their notifications are both on, and never in a page's.
+describe("desktop notifications in Len's manual", () => {
+  const manual = (env: Record<string, string>, app: typeof APP | null = APP) => buildManualDeLaPlataforma({ ...ENV, ...env }, "len", app);
+  const MARKER = "NOTIFICATIONS ON THE DESKTOP:";
+
+  it("🔴 the paragraph appears with both switches on and not with either off", () => {
+    const on = manual({});
+    expect(on).toContain(MARKER);
+    expect(on).toContain("window.openlenApp?.");
+    expect(on).toContain('<script id="openlen-app-manifest" type="application/json">{"permissions":["notifications"]}</script>');
+    expect(on).toContain('window.openlenApp?.permissions.request(["notifications"])');
+    expect(on).toContain("window.openlenApp?.notification.show({ body })");
+    // Each switch alone takes it away; only the literal "0" does.
+    expect(manual({ OPENLEN_DESKTOP_APPS: "0" })).not.toContain(MARKER);
+    expect(manual({ OPENLEN_DESKTOP_NOTIFICATIONS: "0" })).not.toContain(MARKER);
+    expect(manual({ OPENLEN_DESKTOP_APPS: "0", OPENLEN_DESKTOP_NOTIFICATIONS: "0" })).not.toContain(MARKER);
+    expect(manual({ OPENLEN_DESKTOP_APPS: "1", OPENLEN_DESKTOP_NOTIFICATIONS: "no" })).toContain(MARKER);
+  });
+
+  it("with a switch off the manual is the app's manual byte for byte: the paragraph is the only difference", () => {
+    const on = manual({});
+    const off = manual({ OPENLEN_DESKTOP_NOTIFICATIONS: "0" });
+    const start = on.indexOf(MARKER);
+    const end = on.indexOf("\n\n", start);
+    expect(on.slice(0, start) + on.slice(end + 2)).toBe(off);
+  });
+
+  it("is short: the manual is cached, so it costs a few lines", () => {
+    const on = manual({});
+    const start = on.indexOf(MARKER);
+    expect(start).toBeGreaterThan(-1);
+    const paragraph = on.slice(start, on.indexOf("\n\n", start));
+    expect(paragraph.split("\n").length).toBeLessThanOrEqual(6);
+    expect(paragraph.length).toBeLessThan(1200);
+  });
+
+  it("it says where it works: only in the installed desktop window, only while it is open, and undefined everywhere else", () => {
+    const on = manual({});
+    expect(on).toContain("there, and only while its window is open, it can show notifications");
+    expect(on).toContain("window.openlenApp exists only in that window (on the canvas, in your eyes and in the published app it is undefined)");
+    expect(on).toContain("EPERM, EINVAL or ENOTSUP");
+  });
+
+  it("a page's manual and the doc for converting a page never carry it", () => {
+    expect(manual({}, null)).not.toContain("openlenApp");
+    expect(Object.values(documentosDeLaPlataforma()).join("\n")).not.toContain("openlenApp");
+  });
+});
+
 describe("A/B testing is for static pages (review item 1)", () => {
   const ON = { ...ENV, OPENLEN_AB_TESTING: "1" };
   const names = (d: Record<string, unknown>[]) => d.map((x) => String(x.name));

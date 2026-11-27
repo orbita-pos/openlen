@@ -33,6 +33,7 @@ import type { AppDeProyecto } from "@/lib/projects/types";
 import { CONVERTIR_EN_APP, LA_PAGINA_QUE_CRECE, laPaginaQueCrece } from "@/lib/agent/convertir-en-app";
 import { CREATE_AB_VARIANT } from "@/lib/agent/tools-ab-name";
 import { catalogo, dependenciaDe } from "@/lib/apps/dependencias";
+import { desktopAppsEnabled, desktopNotificationsEnabled } from "@/lib/desktop-apps/enabled";
 import { appFileNames } from "@/lib/apps/esqueleto";
 import { MIN_PACKAGE_AGE_DAYS, MIN_VERSION_AGE_DAYS } from "@/lib/apps/npm/gate";
 import { ICONOS_DE_LAS_APPS } from "@/lib/apps/iconos";
@@ -219,10 +220,24 @@ const QUE_PIDE_PUBLICAR = `WHAT PUBLISHING REQUIRES:
 const INDICE_DE_LA_APP = `MORE, IN /.openlen/docs (read them when you need them):
 - ${RUTA_GUIA}: the design guide for an app —what it opens on, its states, its numbers, color and type—; read it BEFORE building an app from scratch or a redesign. What you add to an app that already exists is written the way that app is.`;
 
+/** NOTIFICATIONS OF AN APP ON THE DESKTOP (spec local 2026-11-27-notificaciones-del-escritorio, §6): the API is
+ *  `lib/desktop-apps/app-api/`, its types are in the checker's ambient file (`lib/apps/checker/checker-core.mjs`). A few
+ *  lines, because the manual is cached: how to declare it and use it, and that it exists only in the installed window. */
+const NOTIFICACIONES_DEL_ESCRITORIO = `NOTIFICATIONS ON THE DESKTOP:
+- The person can install the app on their desktop: there, and only while its window is open, it can show notifications. window.openlenApp exists only in that window (on the canvas, in your eyes and in the published app it is undefined), so always write window.openlenApp?.… and let the app work without it.
+- Declare the permission in /index.html: <script id="openlen-app-manifest" type="application/json">{"permissions":["notifications"]}</script>. Then await window.openlenApp?.permissions.request(["notifications"]) (OpenLen asks the person; it asks again after the app is updated) and await window.openlenApp?.notification.show({ body }), body of 1 to 300 characters and no other key (the title and the icon are the app's). Both reject with an Error whose code is EPERM, EINVAL or ENOTSUP: catch it. Add it only when the user asks to be notified of something.`;
+
 /** /AGENTS.md de una app, antes de las palancas de la terminal. */
 /** `conSkills`: con las skills encendidas, sin el índice —la guía es la skill `frontend-design`, y la
- *  anuncia el catálogo (spec local 2026-10-27-len-five-skills)—. */
-export function manualDeLaApp(manualDePagina: string, app: AppDeProyecto, conSkills = false): string {
+ *  anuncia el catálogo (spec local 2026-10-27-len-five-skills)—.
+ *  `env`: el párrafo de las notificaciones del escritorio sólo sale con las apps del escritorio Y sus notificaciones
+ *  encendidas (`OPENLEN_DESKTOP_APPS`, `OPENLEN_DESKTOP_NOTIFICATIONS`); se inyecta para que se pueda probar. */
+export function manualDeLaApp(
+  manualDePagina: string,
+  app: AppDeProyecto,
+  conSkills = false,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): string {
   return [
     "# OpenLen: how the platform works",
     seccionDeLaApp(app),
@@ -232,6 +247,7 @@ export function manualDeLaApp(manualDePagina: string, app: AppDeProyecto, conSki
     LA_CARPETA(app),
     elBackend(manualDePagina, app),
     QUE_PIDE_PUBLICAR,
+    ...(desktopAppsEnabled(env) && desktopNotificationsEnabled(env) ? [NOTIFICACIONES_DEL_ESCRITORIO] : []),
     ...(conSkills ? [] : [INDICE_DE_LA_APP]),
   ].join("\n\n");
 }

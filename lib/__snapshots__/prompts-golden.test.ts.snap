@@ -14143,6 +14143,10 @@ WHAT PUBLISHING REQUIRES:
 • No external image URL (unsplash, picsum, placehold.co…), not even one that comes in the request: a server we don't control is a 404 on the published app. The photos the user uploads or that find_photo gives you are fine.
 • MAPS and VIDEOS are <iframe>s, as in a page: \`https://maps.google.com/maps?q=<address>&output=embed\`, \`https://www.youtube.com/embed/<ID>\` — and a video ONLY if they give you the link.
 
+NOTIFICATIONS ON THE DESKTOP:
+- The person can install the app on their desktop: there, and only while its window is open, it can show notifications. window.openlenApp exists only in that window (on the canvas, in your eyes and in the published app it is undefined), so always write window.openlenApp?.… and let the app work without it.
+- Declare the permission in /index.html: <script id="openlen-app-manifest" type="application/json">{"permissions":["notifications"]}</script>. Then await window.openlenApp?.permissions.request(["notifications"]) (OpenLen asks the person; it asks again after the app is updated) and await window.openlenApp?.notification.show({ body }), body of 1 to 300 characters and no other key (the title and the icon are the app's). Both reject with an Error whose code is EPERM, EINVAL or ENOTSUP: catch it. Add it only when the user asks to be notified of something.
+
 THE PERSON'S MCP SERVERS (~/.len/mcp.json)
 - ~/.len/mcp.json lists the MCP servers of the person you are talking to, for all their projects: {"servers": {"<name>": {"transport": "streamable-http", "url": "https://…", "headers": {"Authorization": "Bearer \${credential:NAME}"}}}}. Only https:// servers (no stdio).
 - You never see or write a key: a header that carries one is written as \${credential:NAME}, and the person types its value in OpenLen. A key in clear is refused.
