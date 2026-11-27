@@ -142,10 +142,19 @@ describe("installDesktopApp: the order of the checks", () => {
   });
 
   it("6. a tool whose installation was removed: 409 tool_not_installed", async () => {
-    const removed = { id: "i1", iconPath: "/icon.svg", removedAt: new Date("2026-11-20T00:00:00Z") };
+    const removed = { id: "i1", iconPath: "/icon.svg", enabled: true, removedAt: new Date("2026-11-20T00:00:00Z") };
     const d = deps({ loadProject: vi.fn(async () => project({}, { tool: { bornAt: "x" } })), toolInstallation: vi.fn(async () => removed) });
     expect(await install(d)).toEqual({ status: 409, body: { error: "tool_not_installed" } });
     expect(d.securityGate).not.toHaveBeenCalled();
+  });
+
+  // Switching a tool off stops it everywhere (controller ruling on the spec): off in the rail is not installed here.
+  it("a switched-off tool is tool_not_installed", async () => {
+    const off = { id: "i1", iconPath: "/icon.svg", enabled: false, removedAt: null };
+    const d = deps({ loadProject: vi.fn(async () => project({}, { tool: { bornAt: "x" } })), toolInstallation: vi.fn(async () => off) });
+    expect(await install(d)).toEqual({ status: 409, body: { error: "tool_not_installed" } });
+    expect(d.securityGate).not.toHaveBeenCalled();
+    expect(d.upsertDesktopApp).not.toHaveBeenCalled();
   });
 
   it("the checks that don't need the project run before it is loaded, and the cheap ones before the gates", async () => {
@@ -203,7 +212,7 @@ describe("installDesktopApp: through the gates, then the row", () => {
   });
 
   it("a tool uses its toolInstallation id and icon", async () => {
-    const active = { id: "ti1", iconPath: "/icon.svg", removedAt: null };
+    const active = { id: "ti1", iconPath: "/icon.svg", enabled: true, removedAt: null };
     const d = deps({ loadProject: vi.fn(async () => project({}, { tool: { bornAt: "x" } })), toolInstallation: vi.fn(async () => active) });
     const r = await install(d);
 

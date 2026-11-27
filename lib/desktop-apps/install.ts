@@ -28,8 +28,8 @@ export interface DesktopDeps extends CoreDeps {
   files(projectId: string): Promise<Record<string, string>>;
   /** Stripe lives in the project (spec §5): a frozen release would carry test ids against the live key. */
   usesStripe(projectId: string): Promise<boolean>;
-  /** The person's installation of a TOOL project (the rail's), removed or not. */
-  toolInstallation(personId: string, projectId: string): Promise<{ id: string; iconPath: string; removedAt: Date | null } | null>;
+  /** The person's installation of a TOOL project (the rail's), removed, switched off or not. */
+  toolInstallation(personId: string, projectId: string): Promise<{ id: string; iconPath: string; enabled: boolean; removedAt: Date | null } | null>;
   desktopAppOf(personId: string, projectId: string): Promise<DesktopAppRow | null>;
   upsertDesktopApp(i: Parameters<typeof upsertDesktopApp>[0]): Promise<DesktopAppRow>;
   markRemoved(id: string, personId: string): Promise<boolean>;
@@ -71,10 +71,11 @@ export async function installDesktopApp(
   if (await d.usesStripe(i.projectId)) return { status: 409, body: { error: "uses_stripe" } };
 
   // A tool's window gets the bridge through the person's installation of it (spec §4.3): the row points at it.
+  // Switching a tool off stops it everywhere, so a switched-off installation counts as not installed, like a removed one.
   let tool: { id: string; iconPath: string } | null = null;
   if (project.data.tool) {
     const installation = await d.toolInstallation(i.actorId, i.projectId);
-    if (!installation || installation.removedAt) return { status: 409, body: { error: "tool_not_installed" } };
+    if (!installation || installation.removedAt || !installation.enabled) return { status: 409, body: { error: "tool_not_installed" } };
     tool = installation;
   }
 
