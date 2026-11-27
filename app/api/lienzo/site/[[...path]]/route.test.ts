@@ -14,13 +14,21 @@ vi.mock("@/lib/lienzo/proyecto-guardado", () => ({
 // AN INSTALLED TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.4): its label lives in toolInstallations.
 const tools = vi.hoisted(() => ({
   byLabel: {} as Record<string, unknown>,
+  /** The installation a desktop row points at, by id. */
+  byId: {} as Record<string, unknown>,
   /** An AGENT's tool (spec local 2026-11-22-artifacts-de-len): its label lives in lenArtifacts. */
   agentByLabel: {} as Record<string, unknown>,
   releases: {} as Record<string, Record<string, { content: string; contentType: string }>>,
 }));
 vi.mock("@/lib/tools/store", () => ({
   installationByLabel: vi.fn(async (label: string) => tools.byLabel[label] ?? null),
+  installationById: vi.fn(async (id: string) => tools.byId[id] ?? null),
   readRelease: vi.fn(async (sha: string) => tools.releases[sha] ?? { "/index.html": { content: "<html><head></head><body>tool</body></html>", contentType: "text/html; charset=utf-8" } }),
+}));
+// AN APP ON THE DESKTOP (spec local 2026-11-26-apps-en-el-escritorio, §4.3): its label lives in desktopApps.
+const desktop = vi.hoisted(() => ({ byLabel: {} as Record<string, unknown> }));
+vi.mock("@/lib/desktop-apps/store", () => ({
+  desktopAppByLabel: vi.fn(async (label: string) => desktop.byLabel[label] ?? null),
 }));
 vi.mock("@/lib/len-artifacts/store", () => ({
   lenArtifactByLabel: vi.fn(async (label: string) => tools.agentByLabel[label] ?? null),
@@ -38,6 +46,7 @@ import { etiquetaDeLienzo } from "@/lib/lienzo/host";
 import { PAGE_PERMISSIONS_POLICY } from "@/lib/publish/permissions-policy";
 import { boxMarker } from "@/lib/agent/sandbox/box-marker";
 import { lenArtifactByLabel } from "@/lib/len-artifacts/store";
+import { desktopAppByLabel } from "@/lib/desktop-apps/store";
 import { lenArtifactContentPolicy } from "@/lib/len-artifacts/serve";
 import { ORIGENES_DE_LA_APP } from "@/lib/movil/cors";
 
@@ -363,7 +372,8 @@ describe("GET /api/lienzo/site — tools made by Len", () => {
 });
 
 // AN AGENT'S TOOL (spec local 2026-11-22-artifacts-de-len, §2): its label lives in lenArtifacts, and is looked up
-// only when no canvas owns the label and no installed tool took it — canvas first, installed tool second, agent tool third.
+// only when no canvas owns the label and no installed tool or app of the desktop took it — canvas first, installed tool
+// second, app of the desktop third, agent tool fourth.
 describe("GET /api/lienzo/site — an agent's tool", () => {
   const WORKSPACE = "lienzo-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   const PHONE = "lienzo-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
@@ -475,5 +485,104 @@ describe("GET /api/lienzo/site — an agent's tool", () => {
   it("when the lookup fails the label is a 404, not a 500", async () => {
     vi.mocked(lenArtifactByLabel).mockRejectedValueOnce(new Error("db down"));
     expect((await pide(`${WORKSPACE}.openlen.app`, "/")).status).toBe(404);
+  });
+});
+
+// AN APP ON THE DESKTOP (spec local 2026-11-26-apps-en-el-escritorio, §4.3, §6): its label lives in desktopApps and is
+// looked up only when no canvas owns it and no installed tool took it — on its own switch, whether or not the tools are on.
+describe("GET /api/lienzo/site — an app on the desktop", () => {
+  const PLAIN = "lienzo-dddddddddddddddddddddddddddddddd";
+  const TOOL = "lienzo-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+  const INSTALLED = "lienzo-00112233445566778899aabbccddeeff";
+  const NOTHING = "lienzo-cccccccccccccccccccccccccccccccc";
+  const row = (hostLabel: string, over: Record<string, unknown> = {}) => ({
+    id: "d1",
+    personId: "u1",
+    projectId: P2,
+    releaseSha: "desktop-sha",
+    name: "Bookings",
+    iconPath: null,
+    toolInstallationId: null,
+    filesFingerprint: "fp",
+    hostLabel,
+    installedAt: new Date(),
+    updatedAt: new Date(),
+    removedAt: null,
+    ...over,
+  });
+
+  beforeEach(() => {
+    vi.mocked(desktopAppByLabel).mockClear();
+    vi.mocked(lenArtifactByLabel).mockClear();
+    tools.byLabel = {};
+    tools.agentByLabel = {};
+    tools.byId = { ti1: { id: "ti1", enabled: true, removedAt: null } };
+    tools.releases = { "desktop-sha": { "/index.html": { content: "<html><head></head><body>desktop</body></html>", contentType: "text/html; charset=utf-8" } } };
+    desktop.byLabel = { [PLAIN]: row(PLAIN), [TOOL]: row(TOOL, { toolInstallationId: "ti1" }) };
+  });
+
+  it("an ordinary app is served as installed, with no bridge, framed only by the workspace", async () => {
+    const res = await pide(`${PLAIN}.openlen.app`, "/");
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("desktop");
+    expect(html).not.toContain("tool-bridge.js");
+    expect(res.headers.get("content-security-policy")).toBe("frame-ancestors https://openlen.com");
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect((await pide(`${PLAIN}.openlen.app`, "/openlen/tool-bridge.js")).status).toBe(404);
+  });
+
+  it("a tool on the desktop gets the bridge", async () => {
+    const html = await (await pide(`${TOOL}.openlen.app`, "/")).text();
+    expect(html).toContain('<script src="/openlen/tool-bridge.js"></script>');
+    expect((await pide(`${TOOL}.openlen.app`, "/openlen/tool-bridge.js")).status).toBe(200);
+  });
+
+  it("🔴 a tool on the desktop whose installation is switched off, removed or gone is a 404, for the page and for the bridge", async () => {
+    for (const installation of [{ id: "ti1", enabled: false, removedAt: null }, { id: "ti1", enabled: true, removedAt: new Date() }, undefined]) {
+      tools.byId = installation ? { ti1: installation } : {};
+      expect((await pide(`${TOOL}.openlen.app`, "/")).status).toBe(404);
+      expect((await pide(`${TOOL}.openlen.app`, "/openlen/tool-bridge.js")).status).toBe(404);
+    }
+  });
+
+  it("with OPENLEN_DESKTOP_APPS=0 it is not served, and not even looked up", async () => {
+    vi.stubEnv("OPENLEN_DESKTOP_APPS", "0");
+    expect((await pide(`${PLAIN}.openlen.app`, "/")).status).toBe(404);
+    expect(desktopAppByLabel).not.toHaveBeenCalled();
+  });
+
+  it("with OPENLEN_TOOLS=0 (the installed tools off) an app of the desktop is still served: they are two switches", async () => {
+    vi.stubEnv("OPENLEN_TOOLS", "0");
+    expect((await pide(`${PLAIN}.openlen.app`, "/")).status).toBe(200);
+  });
+
+  it("a path its release doesn't have is a 404", async () => {
+    expect((await pide(`${PLAIN}.openlen.app`, "/nope.js")).status).toBe(404);
+  });
+
+  it("🔴 a label with a canvas is the canvas, and never reaches the table of desktop apps", async () => {
+    const label = etiquetaDeLienzo(P1, { AUTH_SECRET: SECRETO })!;
+    desktop.byLabel[label] = row(label, { projectId: P1 });
+    const doc = guardarDocumento({ html: "<!doctype html><p>home</p>", projectId: P1, userId: "u1", pagina: null });
+    const res = await pide(`${label}.openlen.app`, `/?__lienzo=${doc}`);
+    expect(await res.text()).toContain("<p>home</p>");
+    expect(desktopAppByLabel).not.toHaveBeenCalled();
+  });
+
+  it("🔴 an installed tool takes the label before an app of the desktop", async () => {
+    tools.byLabel = { [INSTALLED]: { id: "i1", personId: "u1", projectId: P2, releaseSha: "sha1", placement: "rail", titles: {}, descriptions: {}, iconPath: "/icon.svg", hostLabel: INSTALLED, enabled: true, installedAt: new Date(), updatedAt: new Date(), removedAt: null, servedTo: "workspace" } };
+    desktop.byLabel[INSTALLED] = row(INSTALLED);
+    const res = await pide(`${INSTALLED}.openlen.app`, "/");
+    expect(res.status).toBe(200);
+    expect(desktopAppByLabel).not.toHaveBeenCalled();
+  });
+
+  it("a label the desktop doesn't own goes on to the agent's tools; and when the lookup fails the label is a 404, not a 500", async () => {
+    expect((await pide(`${NOTHING}.openlen.app`, "/")).status).toBe(404);
+    expect(desktopAppByLabel).toHaveBeenCalledWith(NOTHING);
+    expect(lenArtifactByLabel).toHaveBeenCalledWith(NOTHING);
+    vi.mocked(desktopAppByLabel).mockRejectedValueOnce(new Error("db down"));
+    expect((await pide(`${PLAIN}.openlen.app`, "/")).status).toBe(404);
   });
 });

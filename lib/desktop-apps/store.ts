@@ -5,7 +5,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, or, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 
@@ -81,6 +81,20 @@ export async function desktopAppByLabel(label: string): Promise<DesktopAppRow | 
  *  the desktop app share their production data (spec §5). */
 export async function hasActiveDesktopApp(projectId: string): Promise<boolean> {
   const [row] = await db.select({ id: a.id }).from(a).where(and(eq(a.projectId, projectId), isNull(a.removedAt))).limit(1);
+  return !!row;
+}
+
+/** Whether the project's production backend has someone on the desktop to answer (spec §5): `hasActiveDesktopApp`, but a
+ *  row of a TOOL counts only while the installation it points at exists, is on and is not removed — a switched-off tool is
+ *  not served (`desktopAppIsLive`), so it is no reason to call production. A missing installation fails `enabled = true`. */
+export async function hasLiveDesktopApp(projectId: string): Promise<boolean> {
+  const t = schema.toolInstallations;
+  const [row] = await db
+    .select({ id: a.id })
+    .from(a)
+    .leftJoin(t, eq(t.id, a.toolInstallationId))
+    .where(and(eq(a.projectId, projectId), isNull(a.removedAt), or(isNull(a.toolInstallationId), and(eq(t.enabled, true), isNull(t.removedAt)))))
+    .limit(1);
   return !!row;
 }
 

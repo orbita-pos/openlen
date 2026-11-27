@@ -3,6 +3,8 @@
 // the app's origins. Framed only by the workspace (`frame-ancestors`), never cached. On the phone's own label (phase 5,
 // §4.14) it is framed only by the phone app, and its bridge takes answers only from it. Switched off, removed or
 // with its release gone, it doesn't exist; on the Free plan it says a paid plan is needed (§4.13).
+// `serveRelease` is what is left once the row is known to be live — the release, the plan, the bridge and the frame
+// headers — and an app on the desktop (`lib/desktop-apps/serve.ts`, with or without the bridge) calls it too.
 import "server-only";
 
 import { isBlobPointer } from "@/lib/files/blob-pointer";
@@ -27,7 +29,7 @@ export interface ServeDeps {
   planRequiredText(locale: string): Promise<string>;
 }
 
-async function realServeDeps(): Promise<ServeDeps> {
+export async function realServeDeps(): Promise<ServeDeps> {
   const [store, limits, blob] = await Promise.all([import("./store"), import("@/lib/limits"), import("@/lib/files/blob")]);
   return {
     readRelease: store.readRelease,
@@ -69,6 +71,49 @@ function localeOf(acceptLanguage: string | null): string {
 }
 
 const notFound = () => new Response("Not found", { status: 404, headers: { "cache-control": "no-store", "x-content-type-options": "nosniff" } });
+export { notFound as releaseNotFound };
+
+/** An installed release on its private host. `bridge` says whether the page gets `window.openlen` (a tool does, an
+ *  ordinary app of the desktop does not: with the person's session that bridge reads their other projects); without
+ *  it the bridge path is a 404 and the shell is served as built. `ancestors` is the `frame-ancestors` list and
+ *  `parents` the origins the bridge answers (the app's own, when absent). The caller has already decided the row is live. */
+export async function serveRelease(
+  r: {
+    readonly releaseSha: string;
+    readonly personId: string;
+    readonly path: string;
+    readonly bridge: boolean;
+    readonly ancestors: string;
+    readonly parents?: readonly string[];
+  },
+  o: { readonly requestHost: string | null; readonly acceptLanguage: string | null; readonly env?: Env },
+  deps?: ServeDeps,
+): Promise<Response> {
+  const d = deps ?? (await realServeDeps());
+  const env = o.env ?? process.env;
+  const { path } = r;
+  const frame = { "content-security-policy": `frame-ancestors ${r.ancestors}`, "referrer-policy": "no-referrer", "x-content-type-options": "nosniff", "cache-control": "no-store" };
+
+  if ((await d.plan(r.personId)) === "free") {
+    const text = await d.planRequiredText(localeOf(o.acceptLanguage));
+    const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0"><p>${text.replace(/[<>&]/g, "")}</p></body></html>`;
+    return new Response(html, { status: 402, headers: { ...frame, "content-type": "text/html; charset=utf-8" } });
+  }
+  if (path === TOOL_BRIDGE_PATH) return r.bridge ? toolBridgeScriptResponse(o.requestHost, env, r.parents) : notFound();
+
+  const release = await d.readRelease(r.releaseSha);
+  if (!release) return notFound();
+  const file = release[path === "/" ? "/index.html" : path];
+  if (!file) return notFound();
+  if (path === "/" || path === "/index.html") {
+    return new Response(r.bridge ? injectToolBridge(file.content) : file.content, { status: 200, headers: { ...frame, "content-type": "text/html; charset=utf-8" } });
+  }
+  const body = isBlobPointer(file.content) ? new Uint8Array(await d.getBlob(file.content)) : file.content;
+  return new Response(body, {
+    status: 200,
+    headers: { "content-type": file.contentType, "cache-control": "no-store", "referrer-policy": "no-referrer", "x-content-type-options": "nosniff" },
+  });
+}
 
 export async function serveToolRelease(
   row: ToolInstallationRow,
@@ -77,29 +122,18 @@ export async function serveToolRelease(
   deps?: ServeDeps,
 ): Promise<Response> {
   if (!row.enabled || row.removedAt) return notFound();
-  const d = deps ?? (await realServeDeps());
   const env = o.env ?? process.env;
   const phone = o.servedTo === "phone";
-  const ancestors = phone ? ORIGENES_DE_LA_APP.join(" ") : frameAncestors(env);
-  const frame = { "content-security-policy": `frame-ancestors ${ancestors}`, "referrer-policy": "no-referrer", "x-content-type-options": "nosniff", "cache-control": "no-store" };
-
-  if ((await d.plan(row.personId)) === "free") {
-    const text = await d.planRequiredText(localeOf(o.acceptLanguage));
-    const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0"><p>${text.replace(/[<>&]/g, "")}</p></body></html>`;
-    return new Response(html, { status: 402, headers: { ...frame, "content-type": "text/html; charset=utf-8" } });
-  }
-  if (path === TOOL_BRIDGE_PATH) return toolBridgeScriptResponse(o.requestHost, env, phone ? ORIGENES_DE_LA_APP : undefined);
-
-  const release = await d.readRelease(row.releaseSha);
-  if (!release) return notFound();
-  const file = release[path === "/" ? "/index.html" : path];
-  if (!file) return notFound();
-  if (path === "/" || path === "/index.html") {
-    return new Response(injectToolBridge(file.content), { status: 200, headers: { ...frame, "content-type": "text/html; charset=utf-8" } });
-  }
-  const body = isBlobPointer(file.content) ? new Uint8Array(await d.getBlob(file.content)) : file.content;
-  return new Response(body, {
-    status: 200,
-    headers: { "content-type": file.contentType, "cache-control": "no-store", "referrer-policy": "no-referrer", "x-content-type-options": "nosniff" },
-  });
+  return serveRelease(
+    {
+      releaseSha: row.releaseSha,
+      personId: row.personId,
+      path,
+      bridge: true,
+      ancestors: phone ? ORIGENES_DE_LA_APP.join(" ") : frameAncestors(env),
+      ...(phone ? { parents: ORIGENES_DE_LA_APP } : {}),
+    },
+    { requestHost: o.requestHost, acceptLanguage: o.acceptLanguage, env },
+    deps,
+  );
 }

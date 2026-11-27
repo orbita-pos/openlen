@@ -78,9 +78,22 @@ export async function GET(
         return serveToolRelease(tool, ruta, { requestHost: req.headers.get("host"), acceptLanguage: req.headers.get("accept-language"), servedTo: tool.servedTo });
       }
     }
-    // AN AGENT'S TOOL (spec local 2026-11-22-artifacts-de-len, §2): third and last — no canvas and no installed
-    // tool owns the label. Its published version, with the bridge, on its own switch (OPENLEN_LEN_ARTIFACTS), whether or not
-    // the installed tools (OPENLEN_TOOLS) are on.
+    // AN APP ON THE DESKTOP (spec local 2026-11-26-apps-en-el-escritorio, §4.3): third — no canvas and no installed tool
+    // owns the label. Its release as installed (the bridge only if it is a tool), on its own switch (OPENLEN_DESKTOP_APPS),
+    // whether or not the installed tools (OPENLEN_TOOLS) are on. Its row is not removed, and a tool's installation is on:
+    // `serveDesktopApp` decides, and answers a 404 when it is not.
+    const { desktopAppsEnabled } = await import("@/lib/desktop-apps/enabled");
+    if (desktopAppsEnabled()) {
+      const { desktopAppByLabel } = await import("@/lib/desktop-apps/store");
+      const desktop = await desktopAppByLabel(etiqueta).catch(() => null);
+      if (desktop) {
+        const { serveDesktopApp } = await import("@/lib/desktop-apps/serve");
+        return serveDesktopApp(desktop, ruta, { requestHost: req.headers.get("host"), acceptLanguage: req.headers.get("accept-language") });
+      }
+    }
+    // AN AGENT'S TOOL (spec local 2026-11-22-artifacts-de-len, §2): fourth and last — no canvas, no installed
+    // tool and no app of the desktop owns the label. Its published version, with the bridge, on its own switch
+    // (OPENLEN_LEN_ARTIFACTS), whether or not the installed tools (OPENLEN_TOOLS) are on.
     const { lenArtifactsEnabled } = await import("@/lib/len-artifacts/enabled");
     if (lenArtifactsEnabled()) {
       const { lenArtifactByLabel } = await import("@/lib/len-artifacts/store");

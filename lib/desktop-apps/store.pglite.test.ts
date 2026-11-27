@@ -92,6 +92,48 @@ describe("desktop apps", () => {
     expect(await store.hasActiveDesktopApp("p1")).toBe(false);
   });
 
+  // The production backend answers a desktop app only while it is served (spec §5): a tool's row needs its installation on.
+  const toolInstallation = (id: string, over: { personId?: string; enabled?: boolean; removedAt?: string | null } = {}) =>
+    pg().query(
+      `INSERT INTO "toolInstallations" ("id", "personId", "projectId", "releaseSha", "placement", "iconPath", "hostLabel", "enabled", "removedAt")
+       VALUES ($1, $2, 'p1', 'sha-1', 'rail', '/icon.svg', $3, $4, $5)`,
+      [id, over.personId ?? "u1", `lienzo-tool-${id}`, over.enabled ?? true, over.removedAt ?? null],
+    );
+
+  it("hasLiveDesktopApp: an ordinary app counts until it is removed", async () => {
+    expect(await store.hasLiveDesktopApp("p1")).toBe(false);
+    const row = await install();
+    expect(await store.hasLiveDesktopApp("p1")).toBe(true);
+    expect(await store.hasLiveDesktopApp("p2")).toBe(false);
+    await store.markDesktopAppRemoved(row.id, "u1");
+    expect(await store.hasLiveDesktopApp("p1")).toBe(false);
+  });
+
+  it("hasLiveDesktopApp: a tool's row counts only while its installation exists, is on and is not removed", async () => {
+    const row = await install({ toolInstallationId: "ti-1" });
+    // the installation is not there at all
+    expect(await store.hasActiveDesktopApp("p1")).toBe(true);
+    expect(await store.hasLiveDesktopApp("p1")).toBe(false);
+    await toolInstallation("ti-1");
+    expect(await store.hasLiveDesktopApp("p1")).toBe(true);
+    await pg().query(`UPDATE "toolInstallations" SET "enabled" = false WHERE "id" = 'ti-1'`);
+    expect(await store.hasLiveDesktopApp("p1")).toBe(false);
+    await pg().query(`UPDATE "toolInstallations" SET "enabled" = true, "removedAt" = now() WHERE "id" = 'ti-1'`);
+    expect(await store.hasLiveDesktopApp("p1")).toBe(false);
+    await pg().query(`UPDATE "toolInstallations" SET "removedAt" = NULL WHERE "id" = 'ti-1'`);
+    expect(await store.hasLiveDesktopApp("p1")).toBe(true);
+    await store.markDesktopAppRemoved(row.id, "u1");
+    expect(await store.hasLiveDesktopApp("p1")).toBe(false);
+  });
+
+  it("hasLiveDesktopApp: one person's switched-off tool does not hide another person's live app", async () => {
+    await install({ toolInstallationId: "ti-1" });
+    await toolInstallation("ti-1", { enabled: false });
+    expect(await store.hasLiveDesktopApp("p1")).toBe(false);
+    await install({ personId: "u2" });
+    expect(await store.hasLiveDesktopApp("p1")).toBe(true);
+  });
+
   it("markDesktopAppRemoved by another person returns false and changes nothing", async () => {
     const row = await install();
     expect(await store.markDesktopAppRemoved(row.id, "u2")).toBe(false);
