@@ -4,19 +4,21 @@
 // names the permissions the app may ask for, like Claude's `claude-artifacts-manifest`. Pure and client-safe — strings in,
 // names out, no DOM, no Node, no OpenLen — because the SERVER reads it from the release's HTML and the window (a client
 // component) shares its types.
-//   · limits are Claude's: the tag's text ≤ 16.000 characters, ≤ 32 names of ≤ 64 characters; and ours: only the first
-//     1 MiB of the shell is scanned, so a manifest beyond it is not read;
+//   · limits and shape are Claude's (its zod schema): the tag's text ≤ 16.000 characters; `permissions`, if there, a list
+//     of at most 32 strings of at most 64 characters — anything else is the WHOLE manifest invalid; and ours: only the
+//     first 1 MiB of the shell is scanned, so a manifest beyond it is not read;
 //   · other keys are ignored; a name that does not exist is ignored in silence;
 //   · JSON that does not parse (or has the wrong shape) leaves the app with NO permissions and returns an `error` for the
 //     page's CONSOLE — never for the person — so whoever built the app finds out;
 //   · only `notifications` can be granted (`GRANTABLE`); the other four names exist so an app can declare them, and they
 //     are always «unavailable» (a PWA has no shortcuts, overlay, menu bar or full access).
-// The scan is tolerant, not a parser: it walks the `<script>` elements and the comments in order, so a manifest inside a
-// comment or inside another script's text is not one. The first tag that matches id AND type wins. It does not track the
-// other raw-text elements (`<style>`, `<textarea>`, `<title>`…), `<template>` or the empty comments `<!-->`: every mis-read
-// there fails closed (a manifest swallowed is a manifest not read) except a manifest inside an element whose content a
-// browser does not run as script (`<template>`, `<textarea>`, `<style>`, `<title>`…), which is read; that grants nothing by
-// itself — the person still answers.
+// Which tag: the one Claude's `querySelector('script#…[type="application/json"]')` would find in the parsed page — the first
+// `<script>` element whose id is exactly this and whose type is `application/json` in any letter case (HTML compares `type`
+// that way in selectors), with no spaces around. The scan is not a parser but follows the parser where it matters: a
+// script inside a comment, inside another script's text, inside a raw-text element (`<style>`, `<textarea>`, `<title>`,
+// `<xmp>`, `<iframe>`, `<noembed>`, `<noframes>`, `<noscript>` — a browser running scripts reads it as text) or after
+// `<plaintext>` is no element; one inside a `<template>`, at any depth, is inert content a selector does not see. What it
+// still reads differently (foreign content like `<svg>`, the empty comment `<!-->`) can only make it miss a manifest.
 
 export const DESKTOP_PERMISSIONS = ["notifications", "shortcuts", "overlay", "menu-bar", "full-access"] as const;
 export type DesktopPermission = (typeof DESKTOP_PERMISSIONS)[number];
@@ -29,17 +31,32 @@ export const MANIFEST_MAX_NAMES = 32;
 export const PERMISSION_NAME_MAX_CHARS = 64;
 export const SCANNED_SHELL_MAX_CHARS = 1_048_576;
 
-// An HTML comment (to the first `-->`, or the end), a `<script …>…</script>` (to the first `</script`, or the end) or, last,
-// a `<script` open tag that never reaches its `>` outside quotes, which swallows the rest of the text as a browser does at
-// the end of the input inside a tag. 🔴 The scan must stay LINEAR: the author controls this HTML and the server scans it in
-// its own process, so every part that can fail after reading far ahead has an alternative that ends at the end of the text
-// instead of leaving the engine to backtrack and try the next occurrence — which is quadratic (128 KB took 2 s):
+// One token at a time, in order: an HTML comment (to the first `-->`, or the end); a `<script …>…</script>` (to the first
+// `</script`, or the end); a raw-text element, swallowed whole to its own close tag (or the end); a `<template …>` open tag
+// or a `</template>` close tag (the depth is counted in `manifestText`); or, last, a raw-text, script or template open tag
+// that never reaches its `>` outside quotes, or a `<plaintext>`, either of which swallows the rest of the text as a browser
+// does. 🔴 The scan must stay LINEAR: the author controls this HTML and the server scans it in its own process, so every
+// part that can fail after reading far ahead has an alternative that ends at the end of the text instead of leaving the
+// engine to backtrack and try the next occurrence — which is quadratic (128 KB took 2 s):
 //   · the last alternative, for an open tag that never reaches its `>` (it has no groups, so `manifestText` skips it);
-//   · `(?:>|$)` in the close tag, for a `</script ` or `</script/` that never reaches its `>`.
+//   · `(?:>|$)` in every close tag, for a `</script ` or `</style/` that never reaches its `>`;
+//   · `|$` after every lazy body, for an element never closed.
 // The attribute group reads quoted values whole, so a `>` inside one does not end the tag. And only the first 1 MiB of a
 // shell is scanned at all (`SCANNED_SHELL_MAX_CHARS`), whatever else lies behind.
-const SCAN =
-  /<!--[\s\S]*?(?:-->|$)|<script(?=[\s/>])((?:"[^"]*"|'[^']*'|[^>"'])*)>([\s\S]*?)(?:<\/script(?=[\s/>])[^>]*(?:>|$)|$)|<script(?=[\s/>])[\s\S]*$/gi;
+const RAW_TEXT = "style|textarea|title|xmp|iframe|noembed|noframes|noscript";
+const OPEN_TAG_REST = `(?:"[^"]*"|'[^']*'|[^>"'])*>`;
+const SCAN = new RegExp(
+  [
+    `<!--[\\s\\S]*?(?:-->|$)`,
+    `<script(?=[\\s/>])(?<attributes>(?:"[^"]*"|'[^']*'|[^>"'])*)>(?<text>[\\s\\S]*?)(?:<\\/script(?=[\\s/>])[^>]*(?:>|$)|$)`,
+    `<(?<raw>${RAW_TEXT})(?=[\\s/>])${OPEN_TAG_REST}[\\s\\S]*?(?:<\\/\\k<raw>(?=[\\s/>])[^>]*(?:>|$)|$)`,
+    `(?<open><template(?=[\\s/>])${OPEN_TAG_REST})`,
+    `(?<close><\\/template(?=[\\s/>])[^>]*(?:>|$))`,
+    `<(?:script|template|${RAW_TEXT})(?=[\\s/>])[\\s\\S]*$`,
+    `<plaintext(?=[\\s/>])[\\s\\S]*$`,
+  ].join("|"),
+  "gi",
+);
 const ATTRIBUTE = /([^\s"'<>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
 
 function attributesOf(source: string): Map<string, string> {
@@ -53,13 +70,16 @@ function attributesOf(source: string): Map<string, string> {
 }
 
 function manifestText(html: string): string | null {
+  let templateDepth = 0;
   for (const match of html.matchAll(SCAN)) {
-    const [, attributeSource, text] = match;
-    if (attributeSource === undefined || text === undefined) continue; // a comment
-    const attributes = attributesOf(attributeSource);
+    const g = match.groups ?? {};
+    if (g.open !== undefined) templateDepth++;
+    else if (g.close !== undefined) templateDepth = Math.max(0, templateDepth - 1);
+    if (g.attributes === undefined || g.text === undefined || templateDepth > 0) continue; // not a script, or inert
+    const attributes = attributesOf(g.attributes);
     if (attributes.get("id") !== MANIFEST_ID) continue;
-    if ((attributes.get("type") ?? "").trim().toLowerCase() !== "application/json") continue;
-    return text;
+    if ((attributes.get("type") ?? "").toLowerCase() !== "application/json") continue;
+    return g.text;
   }
   return null;
 }
@@ -96,12 +116,18 @@ export function readDeclaredPermissions(html: string): { permissions: DesktopPer
     return none(`${MANIFEST_ID} "permissions" must be an array of names, so the app declares no permissions.`);
   }
 
-  // The first 32 names that are names (a string of ≤ 64 characters) are the ones read; of those, the ones that exist.
-  const names = declared
-    .filter((name): name is string => typeof name === "string" && name.length <= PERMISSION_NAME_MAX_CHARS)
-    .slice(0, MANIFEST_MAX_NAMES);
+  // Claude's schema: at most 32 entries, each a string of at most 64 characters — or the whole manifest is invalid.
+  if (
+    declared.length > MANIFEST_MAX_NAMES ||
+    declared.some((name) => typeof name !== "string" || name.length > PERMISSION_NAME_MAX_CHARS)
+  ) {
+    return none(
+      `${MANIFEST_ID} "permissions" must be a list of at most ${MANIFEST_MAX_NAMES} names of at most ${PERMISSION_NAME_MAX_CHARS} characters, so the app declares no permissions.`,
+    );
+  }
+  // Of those names, the ones that exist, each once.
   const permissions: DesktopPermission[] = [];
-  for (const name of names) {
+  for (const name of declared as string[]) {
     if (isDesktopPermission(name) && !permissions.includes(name)) permissions.push(name);
   }
   return { permissions, error: null };

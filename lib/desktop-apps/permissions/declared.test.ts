@@ -34,7 +34,7 @@ describe("readDeclaredPermissions", () => {
       "type='application/json' id='openlen-app-manifest'",
       'type=application/json id=openlen-app-manifest',
       'data-x="a>b" ID="openlen-app-manifest" TYPE="Application/JSON"',
-      'defer id="openlen-app-manifest" type=" application/json "',
+      'defer id="openlen-app-manifest" type="application/json"',
     ]) {
       expect(readDeclaredPermissions(manifest('{"permissions":["notifications"]}', attrs))).toEqual({
         permissions: ["notifications"],
@@ -50,11 +50,19 @@ describe("readDeclaredPermissions", () => {
     });
   });
 
-  it("drops what is not a name and keeps each name once", () => {
-    expect(readDeclaredPermissions(manifest('{"permissions":[1,null,{"a":1},"notifications","notifications"]}'))).toEqual({
+  it("keeps each name once", () => {
+    expect(readDeclaredPermissions(manifest('{"permissions":["notifications","notifications"]}'))).toEqual({
       permissions: ["notifications"],
       error: null,
     });
+  });
+
+  it("an entry that is not a name makes the whole manifest invalid, as Claude's schema", () => {
+    for (const bad of ["1", "null", '{"a":1}', "true"]) {
+      const out = readDeclaredPermissions(manifest(`{"permissions":[${bad},"notifications"]}`));
+      expect(out.permissions).toEqual([]);
+      expect(out.error).toMatch(/openlen-app-manifest/);
+    }
   });
 
   it("ignores the keys it does not know", () => {
@@ -100,27 +108,26 @@ describe("readDeclaredPermissions", () => {
     expect(out.error).toMatch(/16000/);
   });
 
-  it("keeps only the first 32 names", () => {
-    const names = ["notifications", ...Array.from({ length: 31 }, (_, i) => `unknown-${i}`), "shortcuts"];
-    expect(names).toHaveLength(33);
+  it("takes 32 names and makes the whole manifest invalid at 33, as Claude's schema", () => {
+    const names = ["notifications", ...Array.from({ length: 31 }, (_, i) => `unknown-${i}`)];
+    expect(names).toHaveLength(32);
     expect(readDeclaredPermissions(manifest(JSON.stringify({ permissions: names })))).toEqual({
       permissions: ["notifications"],
       error: null,
     });
-
-    const first = ["overlay", ...Array.from({ length: 31 }, (_, i) => `unknown-${i}`)];
-    expect(readDeclaredPermissions(manifest(JSON.stringify({ permissions: [...first, "notifications"] }))).permissions).toEqual(["overlay"]);
+    const out = readDeclaredPermissions(manifest(JSON.stringify({ permissions: [...names, "shortcuts"] })));
+    expect(out.permissions).toEqual([]);
+    expect(out.error).toMatch(/32/);
   });
 
-  it("drops a name over 64 characters without it counting toward the 32", () => {
-    const tooLong = "n".repeat(65);
-    const exactly64 = "x".repeat(64);
-    const names = [...Array.from({ length: 40 }, () => tooLong), exactly64, "notifications"];
-    expect(readDeclaredPermissions(manifest(JSON.stringify({ permissions: names })))).toEqual({
+  it("takes a name of 64 characters and makes the whole manifest invalid with one of 65", () => {
+    expect(readDeclaredPermissions(manifest(JSON.stringify({ permissions: ["x".repeat(64), "notifications"] })))).toEqual({
       permissions: ["notifications"],
       error: null,
     });
-    expect(readDeclaredPermissions(manifest(JSON.stringify({ permissions: [tooLong] })))).toEqual({ permissions: [], error: null });
+    const out = readDeclaredPermissions(manifest(JSON.stringify({ permissions: ["n".repeat(65), "notifications"] })));
+    expect(out.permissions).toEqual([]);
+    expect(out.error).toMatch(/64/);
   });
 
   it("ignores a tag of another type or another id", () => {
@@ -129,6 +136,37 @@ describe("readDeclaredPermissions", () => {
     expect(readDeclaredPermissions(manifest(json, 'id="openlen-app-manifest"'))).toEqual({ permissions: [], error: null });
     expect(readDeclaredPermissions(manifest(json, 'id="other-manifest" type="application/json"'))).toEqual({ permissions: [], error: null });
     expect(readDeclaredPermissions(manifest(json, 'type="application/json"'))).toEqual({ permissions: [], error: null });
+    // the type as a selector compares it: any letter case, but nothing around it
+    expect(readDeclaredPermissions(manifest(json, 'id="openlen-app-manifest" type=" application/json "'))).toEqual({ permissions: [], error: null });
+    // the id exactly, as #id in a selector
+    expect(readDeclaredPermissions(manifest(json, 'id="OpenLen-App-Manifest" type="application/json"'))).toEqual({ permissions: [], error: null });
+  });
+
+  it("a manifest a selector would not find is not one: in a template (any depth), in a raw-text element, after plaintext", () => {
+    const tag = '<script id="openlen-app-manifest" type="application/json">{"permissions":["notifications"]}</script>';
+    const none = { permissions: [], error: null };
+    expect(readDeclaredPermissions(`<template>${tag}</template>`)).toEqual(none);
+    expect(readDeclaredPermissions(`<template><template></template>${tag}</template>`)).toEqual(none);
+    expect(readDeclaredPermissions(`<TEMPLATE shadowrootmode="open">${tag}</TEMPLATE>`)).toEqual(none);
+    for (const raw of ["style", "textarea", "title", "xmp", "iframe", "noembed", "noframes", "noscript"]) {
+      expect(readDeclaredPermissions(`<${raw}>${tag}</${raw}>`)).toEqual(none);
+      expect(readDeclaredPermissions(`<${raw} data-x="a>b">${tag}`)).toEqual(none);
+    }
+    expect(readDeclaredPermissions(`<plaintext>${tag}`)).toEqual(none);
+    // …and after each of them closes, the manifest is read
+    expect(readDeclaredPermissions(`<template><p>x</p></template>${tag}`).permissions).toEqual(["notifications"]);
+    expect(readDeclaredPermissions(`<template><template></template></template>${tag}`).permissions).toEqual(["notifications"]);
+    expect(readDeclaredPermissions(`<title>Mi agenda</title>\
+${tag}`).permissions).toEqual(["notifications"]);
+    expect(readDeclaredPermissions(`<style>a{}</STYLE >${tag}`).permissions).toEqual(["notifications"]);
+    // a template close tag in a script's text closes nothing
+    expect(readDeclaredPermissions(`<template><script>"</template>"</script>${tag}</template>`)).toEqual(none);
+  });
+
+  it("an inner script open tag inside a script's text ends nothing: the next script is still found", () => {
+    const json = '{"permissions":["notifications"]}';
+    const html = `<script>var a = "<script>";</script><script id="openlen-app-manifest" type="application/json">${json}</script>`;
+    expect(readDeclaredPermissions(html)).toEqual({ permissions: ["notifications"], error: null });
   });
 
   it("ignores a tag that is not a script, one inside a comment and one inside another script's text", () => {
@@ -180,6 +218,14 @@ describe("readDeclaredPermissions", () => {
     expect(millisecondsFor('<script a="'.repeat(Math.floor(1_000_000 / 11)))).toBeLessThan(500);
     expect(millisecondsFor('<script id="' + "x".repeat(5_000_000))).toBeLessThan(500);
     expect(millisecondsFor('<script a="'.repeat(Math.ceil(5_000_000 / 11)))).toBeLessThan(500);
+  });
+
+  it("scans unterminated raw-text and template tags, and their bodies, in linear time", () => {
+    for (const open of ["<style ", '<textarea a="', "<template ", '<template a="', "<title>", "<template>", "<noscript>"]) {
+      expect(millisecondsFor(open.repeat(Math.floor(1_000_000 / open.length)))).toBeLessThan(500);
+    }
+    expect(millisecondsFor("<style>" + "</style ".repeat(120_000))).toBeLessThan(500);
+    expect(millisecondsFor("</template ".repeat(90_000))).toBeLessThan(500);
   });
 
   it("scans close-tag lookalikes without a > in linear time", () => {
