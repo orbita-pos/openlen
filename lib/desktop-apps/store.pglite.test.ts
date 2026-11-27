@@ -75,6 +75,56 @@ describe("desktop apps", () => {
     expect((await store.desktopAppById(row.id))?.removedAt).toBeNull();
   });
 
+  // The mark a «yes» to a permission is bound to (spec local 2026-11-27-notificaciones-del-escritorio, §5): a reinstall after
+  // «Quitar del escritorio» is a NEW installation, so a «yes» saved on another device for the old one stops being worth anything.
+  it("reinstall after remove renews installedAt", async () => {
+    const row = await install();
+    const old = new Date("2026-01-01T00:00:00.000Z");
+    await pg().query(`UPDATE "desktopApps" SET "installedAt" = $1, "updatedAt" = $1 WHERE "id" = $2`, [old.toISOString(), row.id]);
+    expect(await store.markDesktopAppRemoved(row.id, "u1")).toBe(true);
+    const before = Date.now();
+    const again = await install({ releaseSha: "sha-2" });
+    expect(again.id).toBe(row.id);
+    expect(again.installedAt.getTime()).toBeGreaterThanOrEqual(before);
+    expect(again.installedAt.getTime()).toBeGreaterThan(old.getTime());
+    // The one the next read hands the window is the stored one.
+    expect((await store.desktopAppById(row.id))?.installedAt.toISOString()).toBe(again.installedAt.toISOString());
+  });
+
+  it("an update of an active row keeps installedAt", async () => {
+    const row = await install();
+    const old = new Date("2026-01-01T00:00:00.000Z");
+    await pg().query(`UPDATE "desktopApps" SET "installedAt" = $1 WHERE "id" = $2`, [old.toISOString(), row.id]);
+    const again = await install({ releaseSha: "sha-2", filesFingerprint: "fp-2" });
+    expect(again.id).toBe(row.id);
+    expect(again.releaseSha).toBe("sha-2");
+    expect(again.installedAt.toISOString()).toBe(old.toISOString());
+    expect(again.updatedAt.getTime()).toBeGreaterThan(old.getTime());
+    expect((await store.desktopAppById(row.id))?.installedAt.toISOString()).toBe(old.toISOString());
+  });
+
+  it("removing alone keeps installedAt; only coming back renews it", async () => {
+    const row = await install();
+    const old = new Date("2026-01-01T00:00:00.000Z");
+    await pg().query(`UPDATE "desktopApps" SET "installedAt" = $1 WHERE "id" = $2`, [old.toISOString(), row.id]);
+    await store.markDesktopAppRemoved(row.id, "u1");
+    expect((await store.desktopAppById(row.id))?.installedAt.toISOString()).toBe(old.toISOString());
+  });
+
+  it("another person's installation of the same project is a different row, with its own installedAt", async () => {
+    const mine = await install();
+    const old = new Date("2026-01-01T00:00:00.000Z");
+    await pg().query(`UPDATE "desktopApps" SET "installedAt" = $1 WHERE "id" = $2`, [old.toISOString(), mine.id]);
+    await store.markDesktopAppRemoved(mine.id, "u1");
+    const theirs = await install({ personId: "u2" });
+    expect(theirs.id).not.toBe(mine.id);
+    expect(theirs.installedAt.getTime()).toBeGreaterThan(old.getTime());
+    // Mine is still removed, with the old mark.
+    const stillMine = await store.desktopAppById(mine.id);
+    expect(stillMine?.removedAt).not.toBeNull();
+    expect(stillMine?.installedAt.toISOString()).toBe(old.toISOString());
+  });
+
   it("byLabel ignores removed rows", async () => {
     const row = await install();
     expect((await store.desktopAppByLabel(row.hostLabel))?.id).toBe(row.id);

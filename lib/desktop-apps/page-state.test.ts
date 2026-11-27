@@ -26,15 +26,25 @@ const RAIL_ON: ToolInstallationState = { enabled: true, removedAt: null, project
 
 const PROD = { NODE_ENV: "production", PUBLISH_BASE_HOST: "openlen.app" };
 
+/** The shell of an installed version, as `toolReleases.files` keeps it. */
+const shell = (permissions: string[]): Record<string, { content: string; contentType: string }> => ({
+  "/index.html": {
+    content: `<!doctype html><html><head><script id="openlen-app-manifest" type="application/json">${JSON.stringify({ permissions })}</script></head><body><div id="root"></div></body></html>`,
+    contentType: "text/html; charset=utf-8",
+  },
+});
+
 /** `row` is the row the lookup answers (null = none); everything else overrides a dependency. */
 function deps(over: Partial<Omit<PageStateDeps, "row">> & { row?: DesktopAppRow | null } = {}): PageStateDeps {
   const { row = PLAIN, ...rest } = over;
   return {
     enabled: () => true,
+    notificationsEnabled: () => true,
     toolsEnabled: () => true,
     row: vi.fn(async () => row),
     toolInstallation: vi.fn(async () => RAIL_ON),
     plan: vi.fn(async () => "pro" as const),
+    readRelease: vi.fn(async () => shell([])),
     env: PROD,
     ...rest,
   };
@@ -137,6 +147,9 @@ describe("desktopPageState", () => {
       releaseSha: "sha1",
       toolInstallationId: null,
       installedAt: INSTALLED_AT.toISOString(),
+      personId: "u1",
+      declaredPermissions: [],
+      notificationsOn: true,
     });
     // An ordinary app never asks about a tool installation.
     expect(d.toolInstallation).not.toHaveBeenCalled();
@@ -155,6 +168,76 @@ describe("desktopPageState", () => {
   it("with the canvas origin switched off there is no isolated host, so the app is gone", async () => {
     const state = await ask(deps({ env: { ...PROD, OPENLEN_LIENZO_ORIGEN: "0" } }));
     expect(state).toEqual({ kind: "gone", name: "Bookings" });
+  });
+
+  // What the installed version declares (spec local 2026-11-27-notificaciones-del-escritorio, §4.1): read from the shell of the
+  // release the window frames, so what the dialog asks about is what the frame runs.
+  it("ready carries the release's declared permissions", async () => {
+    const d = deps({ readRelease: vi.fn(async () => shell(["notifications", "shortcuts", "nonsense"])) });
+    const state = await ask(d);
+    expect(state).toMatchObject({ kind: "ready", declaredPermissions: ["notifications", "shortcuts"] });
+    // The release read is the installed one — the frame's own version.
+    expect(d.readRelease).toHaveBeenCalledWith("sha1");
+  });
+
+  it("ready carries no declared permissions for a release that declares none", async () => {
+    const plain = { "/index.html": { content: "<!doctype html><html><body>hi</body></html>", contentType: "text/html" } };
+    expect(await ask(deps({ readRelease: vi.fn(async () => plain) }))).toMatchObject({ kind: "ready", declaredPermissions: [] });
+  });
+
+  it("an unreadable release shell gives no permissions, still ready", async () => {
+    const unreadable: Array<[string, PageStateDeps["readRelease"]]> = [
+      ["no release row", async () => null],
+      ["no /index.html", async () => ({ "/main.js": { content: "x", contentType: "text/javascript" } })],
+      // A blob pointer is a file kept in object storage: the shell is never one a manifest can be read from.
+      ["a blob pointer", async () => ({ "/index.html": { content: `￿openlen-blob:${"a".repeat(64)}:10:${"b".repeat(40)}`, contentType: "text/html" } })],
+      ["a read that throws", async () => { throw new Error("db down"); }],
+    ];
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      for (const [, readRelease] of unreadable) {
+        const state = await ask(deps({ readRelease: vi.fn(readRelease) }));
+        expect(state).toMatchObject({ kind: "ready", name: "Bookings", declaredPermissions: [] });
+      }
+      // Only the read that FAILED is logged: a missing file is a fact about the app, not a fault.
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("a broken manifest gives no permissions, still ready, and keeps its error out of the state", async () => {
+    const broken = { "/index.html": { content: `<script id="openlen-app-manifest" type="application/json">{nope</script>`, contentType: "text/html" } };
+    const state = await ask(deps({ readRelease: vi.fn(async () => broken) }));
+    expect(state).toMatchObject({ kind: "ready", declaredPermissions: [] });
+    expect(JSON.stringify(state)).not.toContain("not valid JSON");
+    expect(Object.keys(state)).not.toContain("error");
+  });
+
+  it("notificationsOn follows OPENLEN_DESKTOP_NOTIFICATIONS", async () => {
+    expect(await ask(deps({ notificationsEnabled: () => true }))).toMatchObject({ kind: "ready", notificationsOn: true });
+    expect(await ask(deps({ notificationsEnabled: () => false }))).toMatchObject({ kind: "ready", notificationsOn: false });
+  });
+
+  it("🔴 personId is the session's own, the one the row was checked against", async () => {
+    const state = await ask(deps({ row: { ...PLAIN, personId: "u9" } }), { sessionUserId: "u9" });
+    expect(state).toMatchObject({ kind: "ready", personId: "u9" });
+  });
+
+  it("🔴 the release is not read for any state but ready: no name, no files, no person for anyone else's row", async () => {
+    const readRelease = vi.fn(async () => shell(["notifications"]));
+    for (const d of [
+      deps({ readRelease, enabled: () => false }),
+      deps({ readRelease, row: null }),
+      deps({ readRelease, row: { ...PLAIN, personId: "someone-else" } }),
+      deps({ readRelease, row: { ...PLAIN, removedAt: new Date() } }),
+      deps({ readRelease, plan: vi.fn(async () => "free" as const) }),
+      deps({ readRelease, env: { ...PROD, OPENLEN_LIENZO_ORIGEN: "0" } }),
+    ]) {
+      expect((await ask(d)).kind).not.toBe("ready");
+    }
+    expect(await ask(deps({ readRelease }), { sessionUserId: null })).toEqual({ kind: "sign_in" });
+    expect(readRelease).not.toHaveBeenCalled();
   });
 
   it("a lookup that fails is an error, never «the app is gone» (the person would uninstall a working app)", async () => {

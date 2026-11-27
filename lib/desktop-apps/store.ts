@@ -14,7 +14,11 @@ export type DesktopAppRow = typeof schema.desktopApps.$inferSelect;
 const a = schema.desktopApps;
 
 /** Installs an app for a person, or moves their installation to the new release: the row's `id` and `hostLabel` stay,
- *  and a removed row comes back (`removedAt` is cleared). */
+ *  and a removed row comes back (`removedAt` is cleared). `installedAt` is the mark of THIS installation (spec local
+ *  2026-11-27-notificaciones-del-escritorio, §5): an update of an active row keeps it, but a row that comes back from being
+ *  removed is a new installation and gets a new one — the «yes» to a permission a device saved for the old one stops
+ *  being worth anything. It is decided here, in the same statement that clears `removedAt`, so no reader can see one without
+ *  the other. */
 export async function upsertDesktopApp(input: {
   readonly personId: string;
   readonly projectId: string;
@@ -52,6 +56,8 @@ export async function upsertDesktopApp(input: {
         iconPath: input.iconPath,
         toolInstallationId: input.toolInstallationId,
         filesFingerprint: input.filesFingerprint,
+        // The existing row's own `removedAt` (an ON CONFLICT SET reads the row as it was, whatever order the columns are in).
+        installedAt: sql`CASE WHEN ${a.removedAt} IS NULL THEN ${a.installedAt} ELSE ${sql.param(now, a.installedAt)} END`,
         updatedAt: now,
         removedAt: null,
       },

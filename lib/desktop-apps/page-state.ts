@@ -10,10 +10,13 @@
 // A lookup that FAILS is an error, never `gone`: that page tells a person to uninstall the app from their browser.
 import "server-only";
 
+import { isBlobPointer } from "@/lib/files/blob-pointer";
 import type { Plan } from "@/lib/plan";
 import { toolFrameUrl } from "@/lib/tools/host";
+import type { ToolReleaseFile } from "@/lib/tools/types";
 
 import { desktopAppStatus, type DesktopGoneReason, type ToolInstallationState } from "./live";
+import { readDeclaredPermissions, type DesktopPermission } from "./permissions/declared";
 import type { DesktopAppRow } from "./store";
 
 type Env = Readonly<Record<string, string | undefined>>;
@@ -39,16 +42,30 @@ export type DesktopPageState =
       releaseSha: string;
       /** The person's installation of the tool this row is, or null for an ordinary app: the caller of its bridge. */
       toolInstallationId: string | null;
+      /** The mark of THIS installation, one canonical ISO string (`toISOString()`, the same every time for the same row): the
+       *  window compares it as a string with the one a «yes» was saved under, so a reinstall (a new mark) voids that «yes». */
       installedAt: string;
+      /** The session's own id — the row was checked to be theirs — for the keys the window saves its answers under. Never
+       *  another person's: it is what keeps one person's «yes» from being read as another's on a shared device. */
+      personId: string;
+      /** What the installed version's shell declares (`notifications`, …), read from the release this window frames. `[]` for an
+       *  app that declares nothing, whose manifest is broken, or whose shell cannot be read. Declared, not granted. */
+      declaredPermissions: DesktopPermission[];
+      /** `OPENLEN_DESKTOP_NOTIFICATIONS` is not `0`: off, the window's API still exists and every permission is «unavailable». */
+      notificationsOn: boolean;
     };
 
 export interface PageStateDeps {
   enabled(): boolean;
+  /** `OPENLEN_DESKTOP_NOTIFICATIONS`: only the window's notifications, not the apps. */
+  notificationsEnabled(): boolean;
   /** `OPENLEN_TOOLS`: a TOOL on the desktop obeys it, an ordinary app does not. */
   toolsEnabled(): boolean;
   row(id: string): Promise<DesktopAppRow | null>;
   toolInstallation(id: string): Promise<ToolInstallationState | null>;
   plan(personId: string): Promise<Plan>;
+  /** The files of an installed version (`toolReleases.files`): the reader serving uses. */
+  readRelease(sha: string): Promise<Record<string, ToolReleaseFile> | null>;
   env?: Env;
 }
 
@@ -62,11 +79,29 @@ async function realDeps(): Promise<PageStateDeps> {
   ]);
   return {
     enabled: () => enabled.desktopAppsEnabled(),
+    notificationsEnabled: () => enabled.desktopNotificationsEnabled(),
     toolsEnabled: () => tools.toolsEnabled(),
     row: store.desktopAppById,
     toolInstallation: toolStore.installationById,
     plan: limits.getUserPlan,
+    readRelease: toolStore.readRelease,
   };
+}
+
+/** What the shell of the installed version —its `/index.html`, the file the frame is served— declares. Failing closed: a
+ *  release that is not there, a shell that is not there or is a blob pointer (a file kept in object storage, never the
+ *  shell of an app), a manifest that is invalid or a read that throws all declare nothing, and the window still opens — an
+ *  app without notifications is an app that works, and the person is not told about an app's broken manifest (whoever built
+ *  the app finds out from the page's console). A failed read is logged, so a database that is down is not silent. */
+async function declaredPermissionsOf(releaseSha: string, d: PageStateDeps): Promise<DesktopPermission[]> {
+  try {
+    const shell = (await d.readRelease(releaseSha))?.["/index.html"];
+    if (!shell || typeof shell.content !== "string" || isBlobPointer(shell.content)) return [];
+    return readDeclaredPermissions(shell.content).permissions;
+  } catch (err) {
+    console.warn("[desktop-apps] could not read the installed version's shell, so its declared permissions are none:", err);
+    return [];
+  }
 }
 
 /** The state, and — only when the window is there to be shown (`ready` or `plan_required`) — the row it comes from, for the
@@ -98,6 +133,10 @@ export async function desktopWindow(
       releaseSha: row.releaseSha,
       toolInstallationId: row.toolInstallationId,
       installedAt: row.installedAt.toISOString(),
+      // The session's own id — `row.personId` was checked against it above.
+      personId: i.sessionUserId,
+      declaredPermissions: await declaredPermissionsOf(row.releaseSha, d),
+      notificationsOn: d.notificationsEnabled(),
     },
     row,
   };
