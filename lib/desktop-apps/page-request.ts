@@ -19,6 +19,7 @@ export const requestLocale = cache(async (): Promise<DesktopLocale> => {
 
 export const desktopRequest = cache(async (id: string): Promise<{ state: DesktopPageState; personName: string }> => {
   const [session, list] = await Promise.all([auth(), headers()]);
-  const { state } = await desktopWindow({ id, sessionUserId: session?.user?.id ?? null, requestHost: list.get("host") });
+  // The page is the one caller that reads the release for what the app declares (the manifest and icon routes only need the row).
+  const { state } = await desktopWindow({ id, sessionUserId: session?.user?.id ?? null, requestHost: list.get("host"), withDeclaredPermissions: true });
   return { state, personName: session?.user?.name ?? "" };
 });

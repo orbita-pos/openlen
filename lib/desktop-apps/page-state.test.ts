@@ -34,6 +34,11 @@ const shell = (permissions: string[]): Record<string, { content: string; content
   },
 });
 
+/** A shell whose manifest is not valid JSON. */
+const BROKEN = {
+  "/index.html": { content: `<script id="openlen-app-manifest" type="application/json">{nope</script>`, contentType: "text/html" },
+};
+
 /** `row` is the row the lookup answers (null = none); everything else overrides a dependency. */
 function deps(over: Partial<Omit<PageStateDeps, "row">> & { row?: DesktopAppRow | null } = {}): PageStateDeps {
   const { row = PLAIN, ...rest } = over;
@@ -50,8 +55,13 @@ function deps(over: Partial<Omit<PageStateDeps, "row">> & { row?: DesktopAppRow 
   };
 }
 
-const ask = (d: PageStateDeps, over: { id?: string; sessionUserId?: string | null; requestHost?: string | null } = {}) =>
-  desktopPageState({ id: "d1", sessionUserId: "u1", requestHost: "openlen.com", ...over }, d);
+const ask = (
+  d: PageStateDeps,
+  over: { id?: string; sessionUserId?: string | null; requestHost?: string | null; withDeclaredPermissions?: boolean } = {},
+) => desktopPageState({ id: "d1", sessionUserId: "u1", requestHost: "openlen.com", ...over }, d);
+
+/** What the PAGE asks: the window's state with the release read for what the app declares. */
+const askAsPage = (d: PageStateDeps, over: { sessionUserId?: string | null } = {}) => ask(d, { ...over, withDeclaredPermissions: true });
 
 describe("desktopPageState", () => {
   it("the switch off is `off`, and nothing is read", async () => {
@@ -149,6 +159,7 @@ describe("desktopPageState", () => {
       installedAt: INSTALLED_AT.toISOString(),
       personId: "u1",
       declaredPermissions: [],
+      manifestWarning: null,
       notificationsOn: true,
     });
     // An ordinary app never asks about a tool installation.
@@ -174,15 +185,40 @@ describe("desktopPageState", () => {
   // release the window frames, so what the dialog asks about is what the frame runs.
   it("ready carries the release's declared permissions", async () => {
     const d = deps({ readRelease: vi.fn(async () => shell(["notifications", "shortcuts", "nonsense"])) });
-    const state = await ask(d);
-    expect(state).toMatchObject({ kind: "ready", declaredPermissions: ["notifications", "shortcuts"] });
+    const state = await askAsPage(d);
+    expect(state).toMatchObject({ kind: "ready", declaredPermissions: ["notifications", "shortcuts"], manifestWarning: null });
     // The release read is the installed one — the frame's own version.
     expect(d.readRelease).toHaveBeenCalledWith("sha1");
   });
 
-  it("ready carries no declared permissions for a release that declares none", async () => {
+  it("ready carries no declared permissions, and no warning, for a release that declares none", async () => {
     const plain = { "/index.html": { content: "<!doctype html><html><body>hi</body></html>", contentType: "text/html" } };
-    expect(await ask(deps({ readRelease: vi.fn(async () => plain) }))).toMatchObject({ kind: "ready", declaredPermissions: [] });
+    expect(await askAsPage(deps({ readRelease: vi.fn(async () => plain) }))).toMatchObject({
+      kind: "ready",
+      declaredPermissions: [],
+      manifestWarning: null,
+    });
+  });
+
+  // Only the page needs what an app declares. The manifest and the icon ask for the window too, for the row, and must not pay
+  // for reading a release — which is the whole `files` of a version — to throw the answer away.
+  it("the manifest route path does not read the release", async () => {
+    const d = deps({ readRelease: vi.fn(async () => shell(["notifications"])) });
+    const state = await ask(d);
+    expect(state).toMatchObject({ kind: "ready", declaredPermissions: [], manifestWarning: null });
+    expect(d.readRelease).not.toHaveBeenCalled();
+    // The row still comes with it (the manifest and the icon need it).
+    expect((await desktopWindow({ id: "d1", sessionUserId: "u1", requestHost: "openlen.com" }, d)).row).toEqual(PLAIN);
+    expect(d.readRelease).not.toHaveBeenCalled();
+  });
+
+  it("notifications off → no release read", async () => {
+    // A release a read of which WOULD warn: with the switch off it is not even read.
+    const d = deps({ notificationsEnabled: () => false, readRelease: vi.fn(async () => BROKEN) });
+    const state = await askAsPage(d);
+    // Every permission is «unavailable» with the switch off: there is nothing to ask about, and nothing to warn about.
+    expect(state).toMatchObject({ kind: "ready", notificationsOn: false, declaredPermissions: [], manifestWarning: null });
+    expect(d.readRelease).not.toHaveBeenCalled();
   });
 
   it("an unreadable release shell gives no permissions, still ready", async () => {
@@ -196,8 +232,8 @@ describe("desktopPageState", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       for (const [, readRelease] of unreadable) {
-        const state = await ask(deps({ readRelease: vi.fn(readRelease) }));
-        expect(state).toMatchObject({ kind: "ready", name: "Bookings", declaredPermissions: [] });
+        const state = await askAsPage(deps({ readRelease: vi.fn(readRelease) }));
+        expect(state).toMatchObject({ kind: "ready", name: "Bookings", declaredPermissions: [], manifestWarning: null });
       }
       // Only the read that FAILED is logged: a missing file is a fact about the app, not a fault.
       expect(warn).toHaveBeenCalledTimes(1);
@@ -206,12 +242,31 @@ describe("desktopPageState", () => {
     }
   });
 
-  it("a broken manifest gives no permissions, still ready, and keeps its error out of the state", async () => {
-    const broken = { "/index.html": { content: `<script id="openlen-app-manifest" type="application/json">{nope</script>`, contentType: "text/html" } };
-    const state = await ask(deps({ readRelease: vi.fn(async () => broken) }));
-    expect(state).toMatchObject({ kind: "ready", declaredPermissions: [] });
-    expect(JSON.stringify(state)).not.toContain("not valid JSON");
+  // The spec (§4.1): a manifest that does not parse leaves the app with no permissions and says so in the page's CONSOLE —
+  // never to the person. The window logs it (Claude logs its EINVAL to the page console the same way), so the state carries it.
+  it("a broken manifest gives no permissions, still ready, and carries its warning for the console", async () => {
+    const state = await askAsPage(deps({ readRelease: vi.fn(async () => BROKEN) }));
+    expect(state).toMatchObject({ kind: "ready", name: "Bookings", declaredPermissions: [] });
+    const warning = (state as { manifestWarning: string | null }).manifestWarning;
+    expect(warning).toContain("openlen-app-manifest");
+    expect(warning).toContain("not valid JSON");
     expect(Object.keys(state)).not.toContain("error");
+  });
+
+  it("an over-sized manifest carries its warning too; a valid one carries none", async () => {
+    const big = {
+      "/index.html": {
+        content: `<script id="openlen-app-manifest" type="application/json">${JSON.stringify({ permissions: ["notifications"], pad: "x".repeat(20_000) })}</script>`,
+        contentType: "text/html",
+      },
+    };
+    const over = await askAsPage(deps({ readRelease: vi.fn(async () => big) }));
+    expect(over).toMatchObject({ kind: "ready", declaredPermissions: [] });
+    expect((over as { manifestWarning: string | null }).manifestWarning).toContain("16000");
+    expect(await askAsPage(deps({ readRelease: vi.fn(async () => shell(["notifications"])) }))).toMatchObject({
+      declaredPermissions: ["notifications"],
+      manifestWarning: null,
+    });
   });
 
   it("notificationsOn follows OPENLEN_DESKTOP_NOTIFICATIONS", async () => {
@@ -234,9 +289,9 @@ describe("desktopPageState", () => {
       deps({ readRelease, plan: vi.fn(async () => "free" as const) }),
       deps({ readRelease, env: { ...PROD, OPENLEN_LIENZO_ORIGEN: "0" } }),
     ]) {
-      expect((await ask(d)).kind).not.toBe("ready");
+      expect((await askAsPage(d)).kind).not.toBe("ready");
     }
-    expect(await ask(deps({ readRelease }), { sessionUserId: null })).toEqual({ kind: "sign_in" });
+    expect(await askAsPage(deps({ readRelease }), { sessionUserId: null })).toEqual({ kind: "sign_in" });
     expect(readRelease).not.toHaveBeenCalled();
   });
 

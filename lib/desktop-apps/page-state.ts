@@ -49,11 +49,27 @@ export type DesktopPageState =
        *  another person's: it is what keeps one person's «yes» from being read as another's on a shared device. */
       personId: string;
       /** What the installed version's shell declares (`notifications`, …), read from the release this window frames. `[]` for an
-       *  app that declares nothing, whose manifest is broken, or whose shell cannot be read. Declared, not granted. */
+       *  app that declares nothing, whose manifest is broken, or whose shell cannot be read. Declared, not granted.
+       *  ⚠️ Read only when the caller asks (`withDeclaredPermissions`: the page) and the notifications are on; otherwise `[]`
+       *  because it was NOT READ, not because the app declares nothing — the manifest and icon routes never use it. */
       declaredPermissions: DesktopPermission[];
+      /** Why a manifest that is there declared nothing (invalid JSON, over its limits…), for the app's builder — never for the
+       *  person: the window logs it to the page's console (Claude logs its EINVAL there the same way). Null when the manifest is
+       *  fine or absent, when the shell could not be read (that is a fault of ours, logged by the server), and whenever
+       *  `declaredPermissions` was not read. */
+      manifestWarning: string | null;
       /** `OPENLEN_DESKTOP_NOTIFICATIONS` is not `0`: off, the window's API still exists and every permission is «unavailable». */
       notificationsOn: boolean;
     };
+
+/** What a caller asks the window for. `withDeclaredPermissions` is the PAGE's opt-in to the one expensive part: the release is
+ *  the whole `files` of a version, so the manifest and the icon — which only need the row — do not read it. */
+export interface DesktopWindowRequest {
+  readonly id: string;
+  readonly sessionUserId: string | null;
+  readonly requestHost: string | null;
+  readonly withDeclaredPermissions?: boolean;
+}
 
 export interface PageStateDeps {
   enabled(): boolean;
@@ -88,26 +104,30 @@ async function realDeps(): Promise<PageStateDeps> {
   };
 }
 
+const NOT_DECLARED = { permissions: [] as DesktopPermission[], warning: null as string | null };
+
 /** What the shell of the installed version —its `/index.html`, the file the frame is served— declares. Failing closed: a
  *  release that is not there, a shell that is not there or is a blob pointer (a file kept in object storage, never the
  *  shell of an app), a manifest that is invalid or a read that throws all declare nothing, and the window still opens — an
- *  app without notifications is an app that works, and the person is not told about an app's broken manifest (whoever built
- *  the app finds out from the page's console). A failed read is logged, so a database that is down is not silent. */
-async function declaredPermissionsOf(releaseSha: string, d: PageStateDeps): Promise<DesktopPermission[]> {
+ *  app without notifications is an app that works. A manifest that is there but invalid says why in `warning` (for the
+ *  page's console: whoever built the app finds out there, the person is never told). A failed read is logged here instead,
+ *  so a database that is down is not silent; it is a fault of ours, not of the app, and carries no warning. */
+async function declaredPermissionsOf(releaseSha: string, d: PageStateDeps): Promise<{ permissions: DesktopPermission[]; warning: string | null }> {
   try {
     const shell = (await d.readRelease(releaseSha))?.["/index.html"];
-    if (!shell || typeof shell.content !== "string" || isBlobPointer(shell.content)) return [];
-    return readDeclaredPermissions(shell.content).permissions;
+    if (!shell || typeof shell.content !== "string" || isBlobPointer(shell.content)) return NOT_DECLARED;
+    const { permissions, error } = readDeclaredPermissions(shell.content);
+    return { permissions, warning: error };
   } catch (err) {
     console.warn("[desktop-apps] could not read the installed version's shell, so its declared permissions are none:", err);
-    return [];
+    return NOT_DECLARED;
   }
 }
 
 /** The state, and — only when the window is there to be shown (`ready` or `plan_required`) — the row it comes from, for the
  *  manifest and the icon, which need its release and icon path. Never a row for any other state. */
 export async function desktopWindow(
-  i: { readonly id: string; readonly sessionUserId: string | null; readonly requestHost: string | null },
+  i: DesktopWindowRequest,
   deps?: PageStateDeps,
 ): Promise<{ state: DesktopPageState; row: DesktopAppRow | null }> {
   const d = deps ?? (await realDeps());
@@ -123,6 +143,11 @@ export async function desktopWindow(
   if ((await d.plan(row.personId)) === "free") return { state: { kind: "plan_required", name: row.name }, row };
   const frameUrl = toolFrameUrl({ hostLabel: row.hostLabel, releaseSha: row.releaseSha, requestHost: i.requestHost }, d.env);
   if (!frameUrl) return no({ kind: "gone", name: row.name });
+  // Only for the page, and only with the notifications on: off, every permission is «unavailable» and there is nothing to ask
+  // about or to warn about, so the release is not read. Never before `ready` is certain: nothing of a release for a row that
+  // is not shown.
+  const notificationsOn = d.notificationsEnabled();
+  const declared = i.withDeclaredPermissions && notificationsOn ? await declaredPermissionsOf(row.releaseSha, d) : NOT_DECLARED;
   return {
     state: {
       kind: "ready",
@@ -135,16 +160,14 @@ export async function desktopWindow(
       installedAt: row.installedAt.toISOString(),
       // The session's own id — `row.personId` was checked against it above.
       personId: i.sessionUserId,
-      declaredPermissions: await declaredPermissionsOf(row.releaseSha, d),
-      notificationsOn: d.notificationsEnabled(),
+      declaredPermissions: declared.permissions,
+      manifestWarning: declared.warning,
+      notificationsOn,
     },
     row,
   };
 }
 
-export async function desktopPageState(
-  i: { readonly id: string; readonly sessionUserId: string | null; readonly requestHost: string | null },
-  deps?: PageStateDeps,
-): Promise<DesktopPageState> {
+export async function desktopPageState(i: DesktopWindowRequest, deps?: PageStateDeps): Promise<DesktopPageState> {
   return (await desktopWindow(i, deps)).state;
 }
