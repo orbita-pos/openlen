@@ -199,8 +199,7 @@ function Instalar({ cliente, projectId, idioma, confirm, onInstalada }: { client
       projectId,
       { locale: idioma, waitWhenPending: true, ...todo },
       (v) => setRevisando(v.status === "running"),
-      async () => null,
-      (u, i) => cliente.pedir(u, i),
+      { wait: async () => null, send: (u, i) => cliente.pedir(u, i) },
     ).catch(() => ({ kind: "error", status: 0, error: "network" }) as PublishOutcome);
     setRevisando(false);
     if (r.kind === "published") {

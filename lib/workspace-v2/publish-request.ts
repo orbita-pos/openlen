@@ -110,12 +110,16 @@ export async function postInstallAfterSecurity(
   projectId: string,
   body: Record<string, unknown>,
   onView: (v: ReviewView) => void,
-  wait: (projectId: string, fingerprint: string) => Promise<ReviewView | null> = waitForSecurityReview,
-  /** The phone app's own client (its key, openlen.com's address; phase 5, §4.14); the browser's fetch otherwise. */
-  send?: Send,
-  /** Another route with the install's gates (the desktop's); the tool's by default. */
-  endpoint?: string,
+  options: {
+    /** How the end of a review still running is awaited; polls the review by default. */
+    readonly wait?: (projectId: string, fingerprint: string) => Promise<ReviewView | null>;
+    /** The phone app's own client (its key, openlen.com's address; phase 5, §4.14); the browser's fetch otherwise. */
+    readonly send?: Send;
+    /** Another route with the install's gates (the desktop's); the tool's by default. */
+    readonly endpoint?: string;
+  } = {},
 ): Promise<PublishOutcome> {
+  const { wait = waitForSecurityReview, send, endpoint } = options;
   return throughSecurity((b) => postInstall(projectId, b, send, endpoint), projectId, body, onView, wait);
 }
 

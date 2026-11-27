@@ -6,9 +6,8 @@
 // leaves the installed version exactly as it was (the window keeps running it).
 import "server-only";
 
-import type { Plan } from "@/lib/plan";
-import type { AccesoAlProyecto } from "@/lib/projects/acceso";
 import type { ProjectData } from "@/lib/projects/types";
+import type { InstallDeps } from "@/lib/tools/install";
 import { installThroughGates, type CoreDeps } from "@/lib/tools/install-core";
 
 import { filesFingerprint } from "./fingerprint";
@@ -19,13 +18,12 @@ const LOG_TAG = "[desktop-apps]";
 
 type Answer = { status: number; body: Record<string, unknown> };
 
-export interface DesktopDeps extends CoreDeps {
+/** The gates are `CoreDeps`; the plan, the access check and the files are a tool's install's own (`InstallDeps`, not restated:
+ *  a change there reaches both installs). The rest is the desktop's. */
+export interface DesktopDeps extends CoreDeps, Pick<InstallDeps, "plan" | "access" | "files"> {
   enabled(): boolean;
-  plan(userId: string): Promise<Plan>;
-  access(projectId: string, userId: string): Promise<AccesoAlProyecto | Response>;
   /** The project's name (the window's), whether it has a published site, and its shell and app. */
   loadProject(projectId: string): Promise<{ title: string; subdomain: string | null; data: ProjectData } | null>;
-  files(projectId: string): Promise<Record<string, string>>;
   /** Stripe lives in the project (spec §5): a frozen release would carry test ids against the live key. */
   usesStripe(projectId: string): Promise<boolean>;
   /** The person's installation of a TOOL project (the rail's), removed, switched off or not. */

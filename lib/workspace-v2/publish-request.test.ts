@@ -62,10 +62,34 @@ describe("postInstallAfterSecurity — with the caller's own send", () => {
     const global = vi.fn();
     vi.stubGlobal("fetch", global);
     const send = vi.fn(async () => new Response(JSON.stringify({ installation: { id: "i1" } }), { status: 200 }));
-    const outcome = await postInstallAfterSecurity("p1", { locale: "es", waitWhenPending: true }, () => {}, async () => null, send);
+    const outcome = await postInstallAfterSecurity("p1", { locale: "es", waitWhenPending: true }, () => {}, { wait: async () => null, send });
     expect(outcome.kind).toBe("published");
     expect(send).toHaveBeenCalledWith("/api/projects/p1/install", expect.objectContaining({ method: "POST", body: JSON.stringify({ locale: "es", waitWhenPending: true }) }));
     expect(global).not.toHaveBeenCalled();
+  });
+
+  it("the options are named: an endpoint of its own (the desktop's) and the wait for a review still running", async () => {
+    const send = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify({ desktopApp: { id: "d1" } }), { status: 200 }));
+    const outcome = await postInstallAfterSecurity("p1", { locale: "es" }, () => {}, { send, endpoint: "/api/projects/p1/desktop" });
+    expect(outcome.kind).toBe("published");
+    expect(send).toHaveBeenCalledWith("/api/projects/p1/desktop", expect.objectContaining({ method: "POST" }));
+
+    // A review still running: the caller's wait is the one that is called, and the POST is sent again.
+    const pending = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: "security_review_pending", fingerprint: "f".repeat(64) }), { status: 428 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ installation: { id: "i1" } }), { status: 200 }));
+    const wait = vi.fn(async () => null);
+    const waited = await postInstallAfterSecurity("p1", {}, () => {}, { wait, send: pending });
+    expect(waited.kind).toBe("published");
+    expect(wait).toHaveBeenCalledWith("p1", "f".repeat(64));
+    expect(pending).toHaveBeenCalledTimes(2);
+  });
+
+  it("without options it posts to the tool's route with the browser's fetch", async () => {
+    const global = vi.fn(async () => new Response(JSON.stringify({ installation: { id: "i1" } }), { status: 200 }));
+    vi.stubGlobal("fetch", global);
+    expect((await postInstallAfterSecurity("p1", {}, () => {})).kind).toBe("published");
+    expect(global).toHaveBeenCalledWith("/api/projects/p1/install", expect.objectContaining({ method: "POST" }));
   });
 });
 

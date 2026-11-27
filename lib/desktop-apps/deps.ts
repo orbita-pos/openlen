@@ -48,7 +48,9 @@ export async function realDesktopDeps(): Promise<DesktopDeps> {
         .limit(1);
       return row ?? null;
     },
-    // `stripeStateFor` is null for a project with no Stripe account in either mode and no webhook endpoint.
+    // `stripeStateFor` is null for a project with no Stripe account in either mode and no webhook endpoint. `stripe/state` is
+    // imported only here, when Stripe is on and someone asks (as Len's own read of it does): a server without Stripe, and every
+    // install that never asks, never loads the Stripe store behind it.
     usesStripe: async (projectId) => stripeOn.stripeEnabled() && (await (await import("@/lib/stripe/state")).stripeStateFor(projectId)) !== null,
     toolInstallation: (personId, projectId) => toolStore.installationOf(personId, projectId),
     releaseExists: toolStore.releaseExists,

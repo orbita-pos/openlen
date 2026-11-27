@@ -57,7 +57,7 @@ export function InstallConfirmCard({
   async function run(extra: { acceptSecurityFingerprint?: string; confirmFingerprint?: string } = {}) {
     accepted.current = { ...accepted.current, ...extra };
     setState({ kind: "installing" });
-    const outcome: PublishOutcome = await postInstallAfterSecurity(projectId, { locale, ...accepted.current }, () => {}, undefined, undefined, endpoint).catch(
+    const outcome: PublishOutcome = await postInstallAfterSecurity(projectId, { locale, ...accepted.current }, () => {}, { endpoint }).catch(
       () => ({ kind: "error", status: 0, error: "network" }) as PublishOutcome,
     );
     if (outcome.kind === "published") {
