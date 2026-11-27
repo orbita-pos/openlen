@@ -70,25 +70,48 @@ describe("desktopPageState", () => {
     expect(d.toolInstallation).not.toHaveBeenCalled();
   });
 
-  it("a removed row is gone, and says whose app it was (the person's own: its name is theirs to read)", async () => {
-    expect(await ask(deps({ row: { ...PLAIN, removedAt: new Date() } }))).toEqual({ kind: "gone", name: "Bookings" });
+  // The window says why, like Claude's «Can't open the app…»: only for the person's own row.
+  it("a removed row is gone, and says whose app it was and why (the person's own: its name is theirs to read)", async () => {
+    expect(await ask(deps({ row: { ...PLAIN, removedAt: new Date() } }))).toEqual({ kind: "gone", name: "Bookings", reason: "removed" });
   });
 
-  it("🔴 a tool whose rail installation was removed is gone", async () => {
+  it("🔴 a tool whose rail installation was removed is gone: removed", async () => {
     const d = deps({ row: TOOL, toolInstallation: vi.fn(async () => ({ ...RAIL_ON, removedAt: new Date() })) });
-    expect(await ask(d)).toEqual({ kind: "gone", name: "Bookings" });
+    expect(await ask(d)).toEqual({ kind: "gone", name: "Bookings", reason: "removed" });
     expect(d.toolInstallation).toHaveBeenCalledWith("ti1");
   });
 
-  it("a tool whose installation is switched off, is of another project, or is missing is gone", async () => {
-    for (const installation of [{ ...RAIL_ON, enabled: false }, { ...RAIL_ON, projectId: "p2" }, { ...RAIL_ON, personId: "u2" }, null]) {
+  it("a tool whose installation is switched off is gone: tool_off", async () => {
+    expect(await ask(deps({ row: TOOL, toolInstallation: vi.fn(async () => ({ ...RAIL_ON, enabled: false })) }))).toEqual({
+      kind: "gone",
+      name: "Bookings",
+      reason: "tool_off",
+    });
+  });
+
+  it("a tool whose installation is missing is gone: removed; one of another project or person is gone with no reason", async () => {
+    expect(await ask(deps({ row: TOOL, toolInstallation: vi.fn(async () => null) }))).toEqual({ kind: "gone", name: "Bookings", reason: "removed" });
+    for (const installation of [{ ...RAIL_ON, projectId: "p2" }, { ...RAIL_ON, personId: "u2" }]) {
       expect(await ask(deps({ row: TOOL, toolInstallation: vi.fn(async () => installation) }))).toEqual({ kind: "gone", name: "Bookings" });
     }
   });
 
-  it("a tool with OPENLEN_TOOLS=0 is gone, an ordinary app is not", async () => {
-    expect(await ask(deps({ row: TOOL, toolsEnabled: () => false }))).toEqual({ kind: "gone", name: "Bookings" });
+  it("a tool with OPENLEN_TOOLS=0 is gone: tool_off; an ordinary app is not gone", async () => {
+    expect(await ask(deps({ row: TOOL, toolsEnabled: () => false }))).toEqual({ kind: "gone", name: "Bookings", reason: "tool_off" });
     expect((await ask(deps({ row: PLAIN, toolsEnabled: () => false }))).kind).toBe("ready");
+  });
+
+  it("🔴 another person's row gives no reason either — not even for a removed one or a switched-off tool", async () => {
+    const strangers = [
+      { ...PLAIN, personId: "someone-else", removedAt: new Date() },
+      { ...TOOL, personId: "someone-else" },
+    ];
+    for (const row of strangers) {
+      const state = await ask(deps({ row, toolsEnabled: () => false, toolInstallation: vi.fn(async () => ({ ...RAIL_ON, enabled: false })) }));
+      expect(state).toEqual({ kind: "gone" });
+      expect(Object.keys(state)).toEqual(["kind"]);
+    }
+    expect(await ask(deps({ row: null }))).toEqual({ kind: "gone" });
   });
 
   it("🔴 a free owner is plan_required, with the name of their app", async () => {

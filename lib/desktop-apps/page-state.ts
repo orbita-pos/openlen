@@ -1,17 +1,19 @@
 // WHAT THE WINDOW OF AN APP ON THE DESKTOP SHOWS (spec local 2026-11-26-apps-en-el-escritorio, §4.3, §4.6, §6): one
 // decision for the page, its manifest and its icon, so the three never disagree about whether the app is there.
-// Liveness is `desktopAppIsLive` — the same test serving uses — so the window never frames an app the host would 404.
+// Liveness is `desktopAppStatus` — the same test serving uses (`desktopAppIsLive` is its yes/no) — so the window never frames
+// an app the host would 404.
 //
 // 🔴 What a person is told about a row that is not theirs is exactly what they are told about an id that was never one:
-// `gone`, with no name (not in the page, its title, the manifest or the icon). A row that IS theirs and is gone (removed,
-// its tool's installation removed or switched off) keeps its name, so the window can say «{app} ya no está disponible».
+// `gone`, with no name and no reason (not in the page, its title, the manifest or the icon). A row that IS theirs and is gone
+// (removed, its tool's installation removed or switched off) keeps its name and says why (`reason`), so the window can say
+// «{app} ya no está disponible» and what happened, as Claude's «Can't open the app…» does.
 // A lookup that FAILS is an error, never `gone`: that page tells a person to uninstall the app from their browser.
 import "server-only";
 
 import type { Plan } from "@/lib/plan";
 import { toolFrameUrl } from "@/lib/tools/host";
 
-import { desktopAppIsLive, type ToolInstallationState } from "./live";
+import { desktopAppStatus, type DesktopGoneReason, type ToolInstallationState } from "./live";
 import type { DesktopAppRow } from "./store";
 
 type Env = Readonly<Record<string, string | undefined>>;
@@ -21,9 +23,11 @@ export type DesktopPageState =
   | { kind: "off" }
   /** No session: to the login, which comes back here. */
   | { kind: "sign_in" }
-  /** No row, removed, another person's, its tool's installation gone, or no isolated host to frame. The name is there only
-   *  when the row is the person's own. */
-  | { kind: "gone"; name?: string }
+  /** No row, removed, another person's, its tool's installation gone, or no isolated host to frame. The name and the reason
+   *  are there only when the row is the person's own (like Claude's «Can't open the app…», the window can say why): `removed`
+   *  (the app, or the tool it is, was taken away) or `tool_off` (a tool switched off, or the tools are off). Another person's
+   *  row, an id that was never one and a lookup with nothing to say stay exactly `{ kind: "gone" }`. */
+  | { kind: "gone"; name?: string; reason?: DesktopGoneReason }
   | { kind: "plan_required"; name: string }
   | {
       kind: "ready";
@@ -78,12 +82,12 @@ export async function desktopWindow(
   if (!i.sessionUserId) return no({ kind: "sign_in" });
   const row = await d.row(i.id);
   if (!row || row.personId !== i.sessionUserId) return no({ kind: "gone" });
-  const gone = no({ kind: "gone", name: row.name });
-  if (!(await desktopAppIsLive(row, { toolsEnabled: d.toolsEnabled(), toolInstallation: d.toolInstallation }))) return gone;
+  const status = await desktopAppStatus(row, { toolsEnabled: d.toolsEnabled(), toolInstallation: d.toolInstallation });
+  if (!status.live) return no({ kind: "gone", name: row.name, ...(status.reason ? { reason: status.reason } : {}) });
   // The Free plan: the app and its data are kept, and it comes back with a paid plan (spec §6).
   if ((await d.plan(row.personId)) === "free") return { state: { kind: "plan_required", name: row.name }, row };
   const frameUrl = toolFrameUrl({ hostLabel: row.hostLabel, releaseSha: row.releaseSha, requestHost: i.requestHost }, d.env);
-  if (!frameUrl) return gone;
+  if (!frameUrl) return no({ kind: "gone", name: row.name });
   return {
     state: {
       kind: "ready",

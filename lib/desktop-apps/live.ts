@@ -14,13 +14,30 @@ export interface ToolInstallationState {
   readonly personId: string;
 }
 
-export async function desktopAppIsLive(
-  row: { readonly removedAt: Date | null; readonly toolInstallationId: string | null; readonly projectId: string; readonly personId: string },
-  check: { readonly toolsEnabled: boolean; toolInstallation(id: string): Promise<ToolInstallationState | null> },
-): Promise<boolean> {
-  if (row.removedAt) return false;
-  if (row.toolInstallationId === null) return true;
-  if (!check.toolsEnabled) return false;
+/** Why a row is not there, for the window of the person it belongs to (Claude's «Can't open the app…» says why too):
+ *  `removed` — the row, or the tool's installation it points at, was removed; `tool_off` — it is a tool and the tools are off
+ *  (`OPENLEN_TOOLS`) or its installation is switched off. No reason when none of these is the case (a tool installation of
+ *  another project or person: a row that should not exist). */
+export type DesktopGoneReason = "removed" | "tool_off";
+
+export type DesktopAppStatus = { readonly live: true } | { readonly live: false; readonly reason?: DesktopGoneReason };
+
+type Row = { readonly removedAt: Date | null; readonly toolInstallationId: string | null; readonly projectId: string; readonly personId: string };
+type Check = { readonly toolsEnabled: boolean; toolInstallation(id: string): Promise<ToolInstallationState | null> };
+
+/** The decision, with the reason that took it. The reason is for the person's own row only: whoever calls this for anyone
+ *  else's tells them nothing but «gone». */
+export async function desktopAppStatus(row: Row, check: Check): Promise<DesktopAppStatus> {
+  if (row.removedAt) return { live: false, reason: "removed" };
+  if (row.toolInstallationId === null) return { live: true };
+  if (!check.toolsEnabled) return { live: false, reason: "tool_off" };
   const tool = await check.toolInstallation(row.toolInstallationId);
-  return !!tool && tool.enabled && !tool.removedAt && tool.projectId === row.projectId && tool.personId === row.personId;
+  if (!tool || tool.removedAt) return { live: false, reason: "removed" };
+  if (tool.projectId !== row.projectId || tool.personId !== row.personId) return { live: false };
+  if (!tool.enabled) return { live: false, reason: "tool_off" };
+  return { live: true };
+}
+
+export async function desktopAppIsLive(row: Row, check: Check): Promise<boolean> {
+  return (await desktopAppStatus(row, check)).live;
 }
