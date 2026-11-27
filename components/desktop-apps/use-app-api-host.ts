@@ -8,8 +8,8 @@
 //     that origin, never «*»;
 //   · `request()` waits until the window is visible and focused, then draws OpenLen's dialog (`permission-dialog.tsx`), ONE
 //     at a time; at most 8 more wait behind it. «Allow» saves a «yes» for the CURRENT version and installation and asks the
-//     browser in that same click; «Don't allow» or Escape saves a «no» for good; the window hidden, or a new version landing,
-//     closes it saving nothing (Claude's `d = !l && s()`);
+//     browser in that same click; «Don't allow» saves a «no» for good; Escape, the window hidden, or a new version landing,
+//     closes it saving nothing (Claude's `d = !l && s()`) — Escape answers the request with the state unchanged («prompt»);
 //   · `manage()` opens «Permisos» only with a real gesture in the window (`navigator.userActivation.isActive`: a click in the
 //     child frame activates its ancestors) and the window visible;
 //   · `show()` never asks: without the effective permission it is EPERM. It is the window's `new Notification(appName, { body,
@@ -266,6 +266,13 @@ export function useAppApiHost(i: AppApiHostInput): { dialog: ReactNode; openPerm
     finish(ask);
   }, [finish, save]);
 
+  /** Escape: the dialog closes without an answer. Nothing is saved; the request answers with the state as it is. */
+  const dismiss = useCallback(() => {
+    const ask = active.current;
+    if (!ask || ask.answered) return;
+    finish(ask);
+  }, [finish]);
+
   const toggle = useCallback(
     (permission: DesktopPermission, on: boolean) => {
       save(permission, on ? "granted" : "denied");
@@ -369,7 +376,7 @@ export function useAppApiHost(i: AppApiHostInput): { dialog: ReactNode; openPerm
           covered: asking !== null,
         })
       : null,
-    asking ? createElement(PermissionDialog, { key: asking.serial, appName: i.appName, reask: asking.reask, onAllow: allow, onDeny: deny }) : null,
+    asking ? createElement(PermissionDialog, { key: asking.serial, appName: i.appName, reask: asking.reask, onAllow: allow, onDeny: deny, onDismiss: dismiss }) : null,
   );
   return { dialog, openPermissions };
 }

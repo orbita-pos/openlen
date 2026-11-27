@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 //
 // OPENLEN'S APPROVAL DIALOG (spec local 2026-11-27-notificaciones-del-escritorio, §4.3): Claude's copy, «Don't allow» the
-// default and the cancel. Real texts, in English and Spanish.
+// default; Escape closes it without an answer. Real texts, in English and Spanish.
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { NextIntlClientProvider } from "next-intl";
@@ -18,13 +18,14 @@ let host: HTMLDivElement;
 let missing: string[] = [];
 const onAllow = vi.fn();
 const onDeny = vi.fn();
+const onDismiss = vi.fn();
 
 async function render(locale: string, reask: boolean) {
   const messages = await windowMessages(locale, { tool: false });
   await act(async () => {
     root!.render(
       <NextIntlClientProvider locale={locale} messages={messages} onError={(e) => void missing.push(e.message)}>
-        <PermissionDialog appName="Bookings" reask={reask} onAllow={onAllow} onDeny={onDeny} />
+        <PermissionDialog appName="Bookings" reask={reask} onAllow={onAllow} onDeny={onDeny} onDismiss={onDismiss} />
       </NextIntlClientProvider>,
     );
   });
@@ -37,6 +38,7 @@ beforeEach(() => {
   missing = [];
   onAllow.mockClear();
   onDeny.mockClear();
+  onDismiss.mockClear();
   host = document.body.appendChild(document.createElement("div"));
   root = createRoot(host);
 });
@@ -88,7 +90,7 @@ describe("PermissionDialog", () => {
     expect(onAllow).toHaveBeenCalledTimes(1);
   });
 
-  it("the buttons answer, and Escape is the cancel: «Don't allow»", async () => {
+  it("the buttons answer; Escape closes it WITHOUT an answer (only «Don't allow» says no)", async () => {
     await render("en", false);
     vi.setSystemTime(Date.now() + 600);
     await act(async () => buttons()[1]!.click());
@@ -96,7 +98,8 @@ describe("PermissionDialog", () => {
     await act(async () => buttons()[0]!.click());
     expect(onDeny).toHaveBeenCalledTimes(1);
     await act(async () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })));
-    expect(onDeny).toHaveBeenCalledTimes(2);
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(onDeny).toHaveBeenCalledTimes(1);
     expect(onAllow).toHaveBeenCalledTimes(1);
   });
 });

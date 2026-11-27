@@ -307,7 +307,7 @@ describe("request", () => {
     await act(async () => api!.openPermissions());
     await send("permissions.request", undefined);
     await act(async () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })));
-    expect(localGrantStore().get(KEY)).toEqual({ answer: "denied" });
+    expect(stored()).toBeNull();
     expect(dialog()).toBeNull();
     expect(host.querySelector("[data-desktop-permissions]")).not.toBeNull();
     // Now on top, the panel closes on the next Escape.
@@ -315,10 +315,16 @@ describe("request", () => {
     expect(host.querySelector("[data-desktop-permissions]")).toBeNull();
   });
 
-  it("Escape is «Don't allow»", async () => {
-    await send("permissions.request", undefined);
+  it("Escape closes the dialog saving nothing: the request answers «prompt», and the next one asks again", async () => {
+    const id = await send("permissions.request", undefined);
     await act(async () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })));
-    expect(localGrantStore().get(KEY)).toEqual({ answer: "denied" });
+    await flush();
+    expect(dialog()).toBeNull();
+    expect(stored()).toBeNull();
+    expect(FakeNotification.requestPermission).not.toHaveBeenCalled();
+    expect(replyTo(id)).toMatchObject({ ok: true, value: { notifications: "prompt" } });
+    await send("permissions.request", undefined);
+    expect(dialog()).not.toBeNull();
   });
 
   it("closing without answering saves nothing", async () => {

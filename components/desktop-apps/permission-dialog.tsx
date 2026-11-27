@@ -1,8 +1,8 @@
 "use client";
 
 // OPENLEN'S APPROVAL DIALOG (spec local 2026-11-27-notificaciones-del-escritorio, §4.3): drawn by the WINDOW (openlen.com),
-// never by the app, with Claude's copy and Claude's buttons — «Don't allow» is the default (focused) and the cancel (Escape),
-// «Allow» the other. Asking again after the app changed says why. Only `notifications` can be granted, so the copy is its.
+// never by the app, with Claude's copy and Claude's buttons — «Don't allow» is the default (focused), «Allow» the other. Escape
+// closes it WITHOUT an answer, as closing Claude's does: only the «Don't allow» button saves a «no» (spec §4.3). Asking again after the app changed says why. Only `notifications` can be granted, so the copy is its.
 // What an answer DOES (saving, asking the browser) is the host's (`use-app-api-host.ts`); this only draws and reports.
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useRef } from "react";
@@ -14,6 +14,8 @@ export interface PermissionDialogProps {
   /** Called inside the click, so the browser's own prompt can follow in the same gesture. */
   onAllow(): void;
   onDeny(): void;
+  /** Escape: closed without an answer — nothing is saved. */
+  onDismiss(): void;
 }
 
 /** How long after OpenLen's dialog or «Permisos» appears a click that grants is ignored (a click the app timed). */
@@ -22,13 +24,13 @@ export const INPUT_GUARD_MS = 500;
 const BUTTON =
   "inline-flex h-8 items-center rounded-lg px-3 text-[12.5px] font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-ring)]";
 
-export function PermissionDialog({ appName, reask, onAllow, onDeny }: PermissionDialogProps) {
+export function PermissionDialog({ appName, reask, onAllow, onDeny, onDismiss }: PermissionDialogProps) {
   const t = useTranslations("wsChrome.desktop.permissions.dialog");
   const titleId = useId();
   const bodyId = useId();
   const deny = useRef<HTMLButtonElement>(null);
-  const denyNow = useRef(onDeny);
-  denyNow.current = onDeny;
+  const dismissNow = useRef(onDismiss);
+  dismissNow.current = onDismiss;
   // The app chooses the instant this appears and knows where «Allow» will be: a click it timed (a double click it asked
   // for, a «click fast here») must not land on it. «Allow» ignores clicks for a moment after it shows; «Don't allow» never does.
   const shownAt = useRef(Date.now());
@@ -42,7 +44,7 @@ export function PermissionDialog({ appName, reask, onAllow, onDeny }: Permission
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       e.preventDefault();
-      denyNow.current();
+      dismissNow.current();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
