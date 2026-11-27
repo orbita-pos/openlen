@@ -712,10 +712,21 @@
     "reasons": {
       "plan_required": "Las apps en el escritorio van con los planes de pago.",
       "uses_stripe": "Una app que cobra con Stripe todavía no se puede instalar en el escritorio.",
-      "tool_not_installed": "Instala primero esta herramienta en OpenLen y luego ponla en tu escritorio.",
+      "tool_not_installed": "Instala primero esta herramienta en Herramientas y luego ponla en tu escritorio.",
       "owner_only": "Sólo el dueño puede instalarla en el escritorio.",
       "not_an_app": "Sólo las apps se pueden instalar en el escritorio.",
-      "desktop_apps_off": "Las apps en el escritorio están apagadas ahora mismo."
+      "desktop_apps_off": "OpenLen ha apagado las apps en el escritorio por ahora.",
+      "securityPending": "La revisión de seguridad aún está en marcha. Prueba de nuevo en un minuto.",
+      "problem": "Tiene un problema y aún no se puede instalar. Pídele a Len que lo revise.",
+      "failed": "Inténtalo de nuevo en un momento."
+    },
+    "failed": {
+      "install": "No se pudo instalar «{title}»",
+      "update": "No se pudo actualizar «{title}»"
+    },
+    "actions": {
+      "pricing": "Ver planes",
+      "tools": "Abrir Herramientas"
     }
   },
   "toolCard": {

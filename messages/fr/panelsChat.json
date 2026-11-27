@@ -712,10 +712,21 @@
     "reasons": {
       "plan_required": "Les applications sur le bureau font partie des offres payantes.",
       "uses_stripe": "Une application qui encaisse avec Stripe ne peut pas encore être installée sur le bureau.",
-      "tool_not_installed": "Installez d'abord cet outil dans OpenLen, puis mettez-le sur votre bureau.",
+      "tool_not_installed": "Installez d’abord cet outil dans Outils, puis mettez-le sur votre bureau.",
       "owner_only": "Seul le propriétaire peut l'installer sur le bureau.",
       "not_an_app": "Seules les applications peuvent être installées sur le bureau.",
-      "desktop_apps_off": "Les applications sur le bureau sont désactivées pour le moment."
+      "desktop_apps_off": "OpenLen a désactivé les applications sur le bureau pour le moment.",
+      "securityPending": "La revue de sécurité est encore en cours. Réessayez dans une minute.",
+      "problem": "Elle a un problème et ne peut pas encore être installée. Demandez à Len de l’examiner.",
+      "failed": "Réessayez dans un instant."
+    },
+    "failed": {
+      "install": "Impossible d’installer « {title} »",
+      "update": "Impossible de mettre à jour « {title} »"
+    },
+    "actions": {
+      "pricing": "Voir les offres",
+      "tools": "Ouvrir les outils"
     }
   },
   "toolCard": {

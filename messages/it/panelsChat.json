@@ -712,10 +712,21 @@
     "reasons": {
       "plan_required": "Le app sul desktop sono incluse nei piani a pagamento.",
       "uses_stripe": "Un'app che incassa con Stripe non si può ancora installare sul desktop.",
-      "tool_not_installed": "Installa prima questo strumento in OpenLen, poi mettilo sul desktop.",
+      "tool_not_installed": "Installa prima questo strumento in Strumenti, poi mettilo sul desktop.",
       "owner_only": "Solo il proprietario può installarla sul desktop.",
       "not_an_app": "Sul desktop si possono installare solo le app.",
-      "desktop_apps_off": "Le app sul desktop sono disattivate al momento."
+      "desktop_apps_off": "OpenLen ha disattivato per ora le app sul desktop.",
+      "securityPending": "La revisione di sicurezza è ancora in corso. Riprova tra un minuto.",
+      "problem": "Ha un problema e non si può ancora installare. Chiedi a Len di dargli un’occhiata.",
+      "failed": "Riprova tra un attimo."
+    },
+    "failed": {
+      "install": "Impossibile installare «{title}»",
+      "update": "Impossibile aggiornare «{title}»"
+    },
+    "actions": {
+      "pricing": "Vedi i piani",
+      "tools": "Apri Strumenti"
     }
   },
   "toolCard": {

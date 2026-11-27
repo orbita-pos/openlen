@@ -712,10 +712,21 @@
     "reasons": {
       "plan_required": "Apps auf dem Desktop gehören zu den kostenpflichtigen Tarifen.",
       "uses_stripe": "Eine App, die mit Stripe kassiert, lässt sich noch nicht auf dem Desktop installieren.",
-      "tool_not_installed": "Installiere dieses Werkzeug zuerst in OpenLen und leg es dann auf deinen Desktop.",
+      "tool_not_installed": "Installiere dieses Tool zuerst unter „Tools“ und leg es dann auf deinen Desktop.",
       "owner_only": "Nur der Eigentümer kann sie auf dem Desktop installieren.",
       "not_an_app": "Nur Apps lassen sich auf dem Desktop installieren.",
-      "desktop_apps_off": "Apps auf dem Desktop sind gerade ausgeschaltet."
+      "desktop_apps_off": "OpenLen hat Apps auf dem Desktop vorerst ausgeschaltet.",
+      "securityPending": "Die Sicherheitsprüfung läuft noch. Versuche es in einer Minute erneut.",
+      "problem": "Sie hat ein Problem und kann noch nicht installiert werden. Bitte Len, sich das anzusehen.",
+      "failed": "Versuche es gleich noch einmal."
+    },
+    "failed": {
+      "install": "„{title}“ konnte nicht installiert werden",
+      "update": "„{title}“ konnte nicht aktualisiert werden"
+    },
+    "actions": {
+      "pricing": "Tarife ansehen",
+      "tools": "Tools öffnen"
     }
   },
   "toolCard": {

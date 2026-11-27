@@ -712,10 +712,21 @@
     "reasons": {
       "plan_required": "Apps on your desktop come with the paid plans.",
       "uses_stripe": "An app that takes payments with Stripe can't be installed on the desktop yet.",
-      "tool_not_installed": "Install this tool in OpenLen first, then put it on your desktop.",
+      "tool_not_installed": "Install this tool first in Tools, then put it on your desktop.",
       "owner_only": "Only the owner can install it on the desktop.",
       "not_an_app": "Only apps can be installed on the desktop.",
-      "desktop_apps_off": "Apps on the desktop are turned off right now."
+      "desktop_apps_off": "OpenLen has turned apps on the desktop off for now.",
+      "securityPending": "The security review is still running. Try again in a minute.",
+      "problem": "It has a problem and can’t be installed yet. Ask Len to take a look.",
+      "failed": "Try again in a moment."
+    },
+    "failed": {
+      "install": "Couldn’t install «{title}»",
+      "update": "Couldn’t update «{title}»"
+    },
+    "actions": {
+      "pricing": "See plans",
+      "tools": "Open Tools"
     }
   },
   "toolCard": {

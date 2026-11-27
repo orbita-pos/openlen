@@ -712,10 +712,21 @@
     "reasons": {
       "plan_required": "데스크톱 앱은 유료 요금제에 포함돼요.",
       "uses_stripe": "Stripe로 결제를 받는 앱은 아직 바탕 화면에 설치할 수 없어요.",
-      "tool_not_installed": "먼저 OpenLen에 이 도구를 설치한 다음 바탕 화면에 놓아 주세요.",
+      "tool_not_installed": "먼저 도구 페이지에서 이 도구를 설치한 다음 바탕 화면에 놓아 주세요.",
       "owner_only": "바탕 화면에 설치할 수 있는 사람은 소유자뿐이에요.",
       "not_an_app": "바탕 화면에는 앱만 설치할 수 있어요.",
-      "desktop_apps_off": "바탕 화면 앱은 지금 꺼져 있어요."
+      "desktop_apps_off": "OpenLen이 지금은 바탕 화면 앱을 꺼 두었어요.",
+      "securityPending": "보안 검토가 아직 진행 중이에요. 1분 뒤에 다시 시도해 주세요.",
+      "problem": "문제가 있어서 아직 설치할 수 없어요. Len에게 살펴봐 달라고 해 보세요.",
+      "failed": "잠시 후 다시 시도해 주세요."
+    },
+    "failed": {
+      "install": "「{title}」을(를) 설치하지 못했어요",
+      "update": "「{title}」을(를) 업데이트하지 못했어요"
+    },
+    "actions": {
+      "pricing": "요금제 보기",
+      "tools": "도구 열기"
     }
   },
   "toolCard": {

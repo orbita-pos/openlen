@@ -5,7 +5,7 @@
 // runs the same gates as publishing. Findings of the security review are the person's to accept («Instalar
 // igual»), as are destructive data changes; Len can accept neither.
 import { useLocale, useTranslations } from "next-intl";
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 
 import { postInstallAfterSecurity, type PublishOutcome } from "@/lib/workspace-v2/publish-request";
 import type { ToolInstallConfirm } from "@/lib/agent/tool-install";
@@ -19,7 +19,8 @@ type CardState =
   | { kind: "needs_confirmation"; fingerprint: string }
   | { kind: "installed" }
   | { kind: "cancelled" }
-  | { kind: "error"; text: string };
+  /** `code` is the route's own (or the gate's outcome); `status` its HTTP status, or null for an outcome that has none. */
+  | { kind: "error"; code: string; status: number | null };
 
 export function InstallConfirmCard({
   projectId,
@@ -29,7 +30,7 @@ export function InstallConfirmCard({
   endpoint,
   notice,
   labels,
-  reasons,
+  failure,
   onResult,
 }: {
   projectId: string;
@@ -44,8 +45,9 @@ export function InstallConfirmCard({
   notice?: string;
   /** The texts that are about the tool's install itself, when the card serves another install. */
   labels?: { title?: string; install?: string; installed?: string };
-  /** A readable text for the error codes of that other route: the code itself means nothing to the person. */
-  reasons?: Readonly<Record<string, string>>;
+  /** How that other route says no, in the person's terms (a headline and why, as Claude's «Couldn't install {app}.»): the
+   *  tool's own line, «It couldn't be installed ({code})», is for its own route. */
+  failure?: (f: { code: string; status: number | null }) => ReactNode;
   /** What the route answered when it went through (the desktop opens the window it names). */
   onResult?: (data: Record<string, unknown>) => void;
 }) {
@@ -71,7 +73,7 @@ export function InstallConfirmCard({
     } else if (outcome.kind === "needs_confirmation") {
       setState({ kind: "needs_confirmation", fingerprint: outcome.fingerprint });
     } else {
-      setState({ kind: "error", text: outcome.kind === "error" ? outcome.error : outcome.kind });
+      setState({ kind: "error", code: outcome.kind === "error" ? outcome.error : outcome.kind, status: outcome.kind === "error" ? outcome.status : null });
     }
   }
 
@@ -93,7 +95,13 @@ export function InstallConfirmCard({
         </div>
       ) : null}
       {state.kind === "needs_confirmation" ? <p className="mt-2 text-[12px] text-[var(--nc-warn)]">{t("installCard.destructive")}</p> : null}
-      {state.kind === "error" ? <p className="mt-2 text-[12px] text-[var(--nc-warn)]">{t("installCard.failed", { reason: reasons?.[state.text] ?? state.text })}</p> : null}
+      {state.kind === "error" ? (
+        failure ? (
+          failure({ code: state.code, status: state.status })
+        ) : (
+          <p className="mt-2 text-[12px] text-[var(--nc-warn)]">{t("installCard.failed", { reason: state.code })}</p>
+        )
+      ) : null}
       {state.kind === "installed" ? <p className="mt-2 text-[12px] text-[var(--nc-ok)]">{labels?.installed ?? t("installCard.installed")}</p> : null}
       {notice && !inert ? <p className="mt-2 text-[12px] fg-muted">{notice}</p> : null}
       {!inert ? (

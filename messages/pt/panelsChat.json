@@ -712,10 +712,21 @@
     "reasons": {
       "plan_required": "Os apps na área de trabalho vêm com os planos pagos.",
       "uses_stripe": "Um app que cobra com o Stripe ainda não pode ser instalado na área de trabalho.",
-      "tool_not_installed": "Instale primeiro esta ferramenta no OpenLen e depois coloque-a na sua área de trabalho.",
+      "tool_not_installed": "Instale primeiro esta ferramenta em Ferramentas e depois coloque-a na sua área de trabalho.",
       "owner_only": "Só o dono pode instalá-lo na área de trabalho.",
       "not_an_app": "Só apps podem ser instalados na área de trabalho.",
-      "desktop_apps_off": "Os apps na área de trabalho estão desligados no momento."
+      "desktop_apps_off": "O OpenLen desligou os apps na área de trabalho por enquanto.",
+      "securityPending": "A revisão de segurança ainda está em andamento. Tente de novo em um minuto.",
+      "problem": "Tem um problema e ainda não pode ser instalado. Peça ao Len para dar uma olhada.",
+      "failed": "Tente de novo em instantes."
+    },
+    "failed": {
+      "install": "Não foi possível instalar «{title}»",
+      "update": "Não foi possível atualizar «{title}»"
+    },
+    "actions": {
+      "pricing": "Ver planos",
+      "tools": "Abrir Ferramentas"
     }
   },
   "toolCard": {

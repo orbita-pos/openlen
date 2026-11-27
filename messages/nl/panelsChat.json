@@ -712,10 +712,21 @@
     "reasons": {
       "plan_required": "Apps op je bureaublad horen bij de betaalde abonnementen.",
       "uses_stripe": "Een app die betalingen via Stripe int, kun je nog niet op het bureaublad installeren.",
-      "tool_not_installed": "Installeer dit hulpmiddel eerst in OpenLen en zet het daarna op je bureaublad.",
+      "tool_not_installed": "Installeer dit hulpmiddel eerst via Tools en zet het daarna op je bureaublad.",
       "owner_only": "Alleen de eigenaar kan hem op het bureaublad installeren.",
       "not_an_app": "Alleen apps kun je op het bureaublad installeren.",
-      "desktop_apps_off": "Apps op het bureaublad staan op dit moment uit."
+      "desktop_apps_off": "OpenLen heeft apps op het bureaublad voorlopig uitgezet.",
+      "securityPending": "De beveiligingscontrole loopt nog. Probeer het over een minuut opnieuw.",
+      "problem": "Er zit een probleem in en hij kan nog niet worden geïnstalleerd. Vraag Len ernaar te kijken.",
+      "failed": "Probeer het zo meteen opnieuw."
+    },
+    "failed": {
+      "install": "«{title}» installeren is niet gelukt",
+      "update": "«{title}» bijwerken is niet gelukt"
+    },
+    "actions": {
+      "pricing": "Abonnementen bekijken",
+      "tools": "Tools openen"
     }
   },
   "toolCard": {

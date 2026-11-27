@@ -134,6 +134,66 @@ describe("DesktopInstallCard", () => {
     expect(document.body.textContent).toContain("desktopInstall.reasons.uses_stripe");
   });
 
+  // M14, M18 — as Claude's «Couldn't install {app}.»: the headline and the reason are two lines, never «(reason)»; a cause
+  // that is known has its own reason and the one action that fixes it; «try again» is only for what nobody understands.
+  describe("a refusal", () => {
+    const refuse = async (status: number, body: unknown, props: { update?: boolean } = {}) => {
+      fetchMock.mockResolvedValue(new Response(JSON.stringify(body), { status }));
+      await render(props);
+      await act(async () => button(props.update ? "desktopInstall.update" : "desktopInstall.install").click());
+    };
+    const headline = () => document.querySelector("[data-desktop-failure-title]");
+    const reason = () => document.querySelector("[data-desktop-failure-reason]");
+    const link = () => document.querySelector<HTMLAnchorElement>("[data-desktop-failure] a");
+
+    it("🔴 is two lines — «Couldn’t install «app»» and why — and never the tool's «(reason)»", async () => {
+      await refuse(409, { error: "uses_stripe" });
+      expect(headline()?.textContent).toBe('desktopInstall.failed.install {"title":"Reservas"}');
+      expect(reason()?.textContent).toBe("desktopInstall.reasons.uses_stripe");
+      expect(headline()).not.toBe(reason());
+      expect(document.body.textContent).not.toContain("installCard.failed");
+    });
+
+    it("an update says «couldn’t update», not «couldn’t install»", async () => {
+      await refuse(409, { error: "uses_stripe" }, { update: true });
+      expect(headline()?.textContent).toBe('desktopInstall.failed.update {"title":"Reservas"}');
+    });
+
+    it.each([
+      ["a lapsed plan", 402, "plan_required", "desktopInstall.reasons.plan_required", ["desktopInstall.actions.pricing", "/es/pricing"]],
+      ["not the owner", 403, "owner_only", "desktopInstall.reasons.owner_only", null],
+      ["a page that is not an app", 409, "not_an_app", "desktopInstall.reasons.not_an_app", null],
+      ["a tool that isn't installed", 409, "tool_not_installed", "desktopInstall.reasons.tool_not_installed", ["desktopInstall.actions.tools", "/es/new?view=tools"]],
+      ["the switch being off", 404, "desktop_apps_off", "desktopInstall.reasons.desktop_apps_off", null],
+      ["an app that doesn't compile", 422, "app_does_not_compile", "desktopInstall.reasons.problem", null],
+    ] as const)("%s has its own reason and, when something fixes it, the one link that does", async (_name, status, error, text, action) => {
+      await refuse(status, { error });
+      expect(reason()?.textContent).toBe(text);
+      if (action) {
+        expect(link()?.textContent).toBe(action[0]);
+        expect(link()?.getAttribute("href")).toBe(action[1]);
+        expect(link()?.target).toBe("_blank");
+        expect(link()?.rel).toContain("noopener");
+      } else {
+        expect(link()).toBeNull();
+      }
+    });
+
+    it("«try again» is only for the unknown: a server error and a network failure", async () => {
+      await refuse(500, { error: "install_failed" });
+      expect(reason()?.textContent).toBe("desktopInstall.reasons.failed");
+      expect(link()).toBeNull();
+    });
+
+    it("a network failure too, and the install button is there to try again", async () => {
+      fetchMock.mockRejectedValue(new TypeError("offline"));
+      await render();
+      await act(async () => button("desktopInstall.install").click());
+      expect(reason()?.textContent).toBe("desktopInstall.reasons.failed");
+      expect(button("desktopInstall.install")).toBeDefined();
+    });
+  });
+
   it("«Cancelar» turns it off without posting", async () => {
     const r = await render();
     await act(async () => button("installCard.cancel").click());

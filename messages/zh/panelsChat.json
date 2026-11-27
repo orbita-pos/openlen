@@ -712,10 +712,21 @@
     "reasons": {
       "plan_required": "桌面应用包含在付费套餐中。",
       "uses_stripe": "使用 Stripe 收款的应用暂时不能安装到桌面。",
-      "tool_not_installed": "请先在 OpenLen 中安装这个工具，再把它放到桌面上。",
+      "tool_not_installed": "请先在“工具”中安装这个工具，再把它放到桌面上。",
       "owner_only": "只有所有者可以把它安装到桌面。",
       "not_an_app": "只有应用可以安装到桌面。",
-      "desktop_apps_off": "桌面应用目前已关闭。"
+      "desktop_apps_off": "OpenLen 暂时关闭了桌面应用。",
+      "securityPending": "安全审查仍在进行中，请一分钟后再试。",
+      "problem": "它有问题，暂时无法安装。请让 Len 看一看。",
+      "failed": "请稍后再试。"
+    },
+    "failed": {
+      "install": "无法安装「{title}」",
+      "update": "无法更新「{title}」"
+    },
+    "actions": {
+      "pricing": "查看套餐",
+      "tools": "打开工具"
     }
   },
   "toolCard": {
