@@ -56,25 +56,12 @@ export interface ExecuteCodeModeResult {
   readonly formatted: string;
 }
 
-let cachedWasmModule: Promise<WebAssembly.Module> | null = null;
-
-async function getQuickJsWasmModule(): Promise<WebAssembly.Module> {
-  if (!cachedWasmModule) {
-    cachedWasmModule = (async () => {
-      const { readFile } = await import("node:fs/promises");
-      const { createRequire } = await import("node:module");
-      const req = createRequire(import.meta.url);
-      const pkgJsonPath = req.resolve("quickjs-wasi/package.json");
-      const { dirname, join } = await import("node:path");
-      const bytes = await readFile(join(dirname(pkgJsonPath), "quickjs.wasm"));
-      return WebAssembly.compile(bytes);
-    })().catch((err) => {
-      cachedWasmModule = null;
-      throw err;
-    });
-  }
-  return cachedWasmModule;
-}
+// THE WASM IS quickjs-wasi's OWN TO FIND (`QuickJS.create` without `wasm` reads `../quickjs.wasm` next to its own
+// `import.meta.url`). The package is in `serverExternalPackages`, so that path is real in dev, in tests and in the
+// standalone. Finding it from here broke under the Next server's webpack (measured 2026-11-26 through /api/agent):
+// a dynamic `import("node:module")` came back without `createRequire`, and a static one's `resolve` answered a
+// webpack module id (`(rsc)/node_modules/…`), not a path — every `run_code` failed while vitest and tsx passed. Not
+// caching the compiled module costs ~5 ms per call (measured; the first ~25 ms).
 
 /** Strips TypeScript syntax while preserving ES2023 async/await for QuickJS-NG. */
 export function stripTypeScriptForQuickJs(source: string): { ok: true; js: string } | { ok: false; error: string } {
@@ -243,27 +230,33 @@ export async function executeCodeMode(opts: ExecuteCodeModeOptions): Promise<Exe
     return true;
   };
 
-  const wasm = await getQuickJsWasmModule();
-  const vm = await QuickJS.create({
-    wasm,
-    memoryLimit,
-    interruptHandler: () => {
-      // QuickJS-NG already throttles `host_interrupt` internally (every ~10k ops);
-      // once interrupted, let QuickJS unwind and settle rejection jobs cleanly.
-      if (interruptedReason !== null) return false;
-      if (opts.signal?.aborted) {
-        return triggerInterrupt("Execution cancelled.");
-      }
-      const now = Date.now();
-      if (now > wallDeadline) {
-        return triggerInterrupt(`Execution exceeded wall-clock timeout (${maxWallMs} ms).`);
-      }
-      if (now > syncSliceDeadline) {
-        return triggerInterrupt(`Synchronous JS computation exceeded CPU slice limit (${maxSyncCpuMs} ms).`);
-      }
-      return false;
-    },
-  });
+  // An engine that can't start is THIS tool's error, never the step's: a throw here failed the whole tool step and
+  // ended the turn. The model gets a result it can act on and keeps working with the tools directly.
+  let vm: QuickJS;
+  try {
+    vm = await QuickJS.create({
+      memoryLimit,
+      interruptHandler: () => {
+        // QuickJS-NG already throttles `host_interrupt` internally (every ~10k ops);
+        // once interrupted, let QuickJS unwind and settle rejection jobs cleanly.
+        if (interruptedReason !== null) return false;
+        if (opts.signal?.aborted) {
+          return triggerInterrupt("Execution cancelled.");
+        }
+        const now = Date.now();
+        if (now > wallDeadline) {
+          return triggerInterrupt(`Execution exceeded wall-clock timeout (${maxWallMs} ms).`);
+        }
+        if (now > syncSliceDeadline) {
+          return triggerInterrupt(`Synchronous JS computation exceeded CPU slice limit (${maxSyncCpuMs} ms).`);
+        }
+        return false;
+      },
+    });
+  } catch (err) {
+    const error = `run_code is unavailable: its engine could not start (${err instanceof Error ? err.message : String(err)}). Call the tools directly instead.`;
+    return { ok: false, logs: [], calls: [], error, formatted: error };
+  }
 
   let closed = false;
   const inFlight = new Set<Promise<void>>();
