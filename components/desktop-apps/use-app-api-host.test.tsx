@@ -478,6 +478,42 @@ describe("manage", () => {
     expect(host.querySelector("[data-desktop-permissions]")).not.toBeNull();
   });
 
+  it("an accepted manage() uses up the gesture: another needs a new one (Claude consumes it once)", async () => {
+    activation(true); // still active: the browser's activation lasts seconds, and one click must not open it twice
+    const first = await send("permissions.manage", undefined);
+    expect(replyTo(first)).toMatchObject({ ok: true });
+    // Closing the panel is a click in OpenLen's own panel: not a gesture for the app.
+    later();
+    await act(async () => void button("Cancel")!.dispatchEvent(new Event("pointerdown", { bubbles: true })));
+    await act(async () => button("Cancel")!.click());
+    const second = await send("permissions.manage", undefined);
+    expect(replyTo(second)).toMatchObject({ ok: false, code: "EPERM" });
+    expect(host.querySelector("[data-desktop-permissions]")).toBeNull();
+
+    // A new click in the app: focus moves from the window into the app's frame.
+    vi.spyOn(document, "activeElement", "get").mockReturnValue(appFrame());
+    await act(async () => void window.dispatchEvent(new Event("blur")));
+    const third = await send("permissions.manage", undefined);
+    expect(replyTo(third)).toMatchObject({ ok: true });
+    later();
+    await act(async () => button("Cancel")!.click());
+
+    // Used up again; a key press in the window (outside OpenLen's panels) is a new gesture too.
+    expect(replyTo(await send("permissions.manage", undefined))).toMatchObject({ ok: false, code: "EPERM" });
+    await act(async () => void document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "a", bubbles: true })));
+    expect(replyTo(await send("permissions.manage", undefined))).toMatchObject({ ok: true });
+  });
+
+  it("focus leaving for anything but the app's frame is not a gesture", async () => {
+    activation(true);
+    await send("permissions.manage", undefined);
+    later();
+    await act(async () => button("Cancel")!.click());
+    vi.spyOn(document, "activeElement", "get").mockReturnValue(otherFrame());
+    await act(async () => void window.dispatchEvent(new Event("blur")));
+    expect(replyTo(await send("permissions.manage", undefined))).toMatchObject({ ok: false, code: "EPERM" });
+  });
+
   it("openPermissions opens it from the window", async () => {
     await act(async () => api!.openPermissions());
     expect(host.querySelector("[data-desktop-permissions]")).not.toBeNull();

@@ -11,7 +11,9 @@
 //     browser in that same click; «Don't allow» saves a «no» for good; Escape, the window hidden, or a new version landing,
 //     closes it saving nothing (Claude's `d = !l && s()`) — Escape answers the request with the state unchanged («prompt»);
 //   · `manage()` opens «Permisos» only with a real gesture in the window (`navigator.userActivation.isActive`: a click in the
-//     child frame activates its ancestors) and the window visible;
+//     child frame activates its ancestors) and the window visible — and, like Claude's, each gesture is used up once: after an
+//     accepted `manage()` another needs a NEW one seen since (focus moving from the window into the app's frame, which a
+//     click there does, or a click or key press in the window outside OpenLen's own panels);
 //   · `show()` never asks: without the effective permission it is EPERM. It is the window's `new Notification(appName, { body,
 //     icon, tag: installationId })` — one at a time per app, as Claude's — whose click focuses the window and tells the app
 //     nothing; at most one a second.
@@ -214,6 +216,30 @@ export function useAppApiHost(i: AppApiHostInput): { dialog: ReactNode; openPerm
     for (const ask of pending) ask.done();
   }, [marks]);
 
+  // A gesture seen since the last accepted `manage()` (the first needs only the browser's activation). The browser's activation
+  // lasts seconds and survives many calls, so this window keeps its own mark of a gesture used up, as Claude does.
+  const freshGesture = useRef(true);
+  useEffect(() => {
+    const inOurPanels = (target: EventTarget | null) =>
+      target instanceof Element && target.closest("[data-desktop-permissions-backdrop], [data-desktop-permission-dialog]") !== null;
+    const onInput = (e: Event) => {
+      if (!inOurPanels(e.target)) freshGesture.current = true;
+    };
+    // Focus moving out of this window into the app's own frame: what a click in the app does.
+    const onBlur = () => {
+      const frame = latest.current.frame.current;
+      if (frame && document.activeElement === frame) freshGesture.current = true;
+    };
+    window.addEventListener("pointerdown", onInput, true);
+    window.addEventListener("keydown", onInput, true);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("pointerdown", onInput, true);
+      window.removeEventListener("keydown", onInput, true);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, []);
+
   useEffect(() => {
     alive.current = true;
     return () => {
@@ -308,8 +334,11 @@ export function useAppApiHost(i: AppApiHostInput): { dialog: ReactNode; openPerm
         }
         case "permissions.manage": {
           const activation = (navigator as { userActivation?: { isActive?: boolean } }).userActivation;
-          if (activation?.isActive !== true) return appApiFail(id, "EPERM", "permissions.manage() needs a click or key press in the app first.");
+          if (activation?.isActive !== true || !freshGesture.current) {
+            return appApiFail(id, "EPERM", "permissions.manage() needs a click or key press in the app first.");
+          }
           if (document.visibilityState !== "visible") return appApiFail(id, "ENOTSUP", "The Permissions dialog can't open while the app's window is hidden.");
+          freshGesture.current = false;
           setPanelOpen(true);
           return appApiOk(id, undefined);
         }
