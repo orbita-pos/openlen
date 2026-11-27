@@ -707,7 +707,15 @@
       "upToDate": "Sie ist auf dem neuesten Stand",
       "remove": "Vom Desktop entfernen",
       "removeSubtitle": "Ihr Fenster öffnet sie nicht mehr",
-      "removeFailed": "Entfernen hat nicht geklappt. Versuch es noch einmal."
+      "removeFailed": "Entfernen hat nicht geklappt. Versuch es noch einmal.",
+      "open": "Auf dem Desktop öffnen",
+      "back": "Zurück",
+      "blocked": {
+        "plan_required": "Dafür braucht es einen kostenpflichtigen Tarif",
+        "uses_stripe": "Eine App, die mit Stripe kassiert, kann noch nicht auf den Desktop",
+        "not_an_app": "Nur Apps können auf den Desktop",
+        "tool_not_installed": "Installiere zuerst das Tool"
+      }
     },
     "reasons": {
       "plan_required": "Apps auf dem Desktop gehören zu den kostenpflichtigen Tarifen.",

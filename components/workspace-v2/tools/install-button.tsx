@@ -13,7 +13,14 @@ import { InstallConfirmCard } from "./install-confirm-card";
 export function ToolInstallButton({ projectId, title, desktop = false }: { projectId: string; title: string; desktop?: boolean }) {
   const t = useTranslations("panelsChat");
   const [open, setOpen] = useState(false);
+  // The desktop's install card is open: it takes the tool's card's place (Claude has at most one install entry per menu).
+  const [desktopCard, setDesktopCard] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
+
+  // A menu opened again starts with the tool's own card, not with the desktop's from last time.
+  useEffect(() => {
+    if (!open) setDesktopCard(false);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -39,10 +46,13 @@ export function ToolInstallButton({ projectId, title, desktop = false }: { proje
       </button>
       {open ? (
         <div className="absolute right-0 mt-2 w-80 rounded-xl bg-elev border bd shadow-elev p-1.5 z-50 slide-down">
-          <InstallConfirmCard projectId={projectId} install={{ title }} onInstalled={() => {}} onCancelled={() => setOpen(false)} />
+          {/* One install card at a time: the desktop's replaces the tool's while it is open, and has a way back. */}
+          {desktopCard ? null : <InstallConfirmCard projectId={projectId} install={{ title }} onInstalled={() => {}} onCancelled={() => setOpen(false)} />}
           {/* Also on the desktop, in a window of its own (spec local 2026-11-26-apps-en-el-escritorio, §4.3): the owner's, and
               only once the tool is installed for them — the route says it otherwise. */}
-          {desktop ? <DesktopMenuItems projectId={projectId} title={title} className="mt-1.5 border-t bd pt-1" /> : null}
+          {desktop ? (
+            <DesktopMenuItems projectId={projectId} title={title} className={desktopCard ? "" : "mt-1.5 border-t bd pt-1"} onCardChange={setDesktopCard} />
+          ) : null}
         </div>
       ) : null}
     </div>

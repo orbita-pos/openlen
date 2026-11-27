@@ -707,7 +707,15 @@
       "upToDate": "Elle est à jour",
       "remove": "Retirer du bureau",
       "removeSubtitle": "Sa fenêtre cesse de l'ouvrir",
-      "removeFailed": "Impossible de la retirer. Réessayez."
+      "removeFailed": "Impossible de la retirer. Réessayez.",
+      "open": "Ouvrir sur le bureau",
+      "back": "Retour",
+      "blocked": {
+        "plan_required": "Il faut une offre payante",
+        "uses_stripe": "Une application qui encaisse avec Stripe ne peut pas encore aller sur le bureau",
+        "not_an_app": "Seules les applications peuvent aller sur le bureau",
+        "tool_not_installed": "Installez d’abord l’outil"
+      }
     },
     "reasons": {
       "plan_required": "Les applications sur le bureau font partie des offres payantes.",

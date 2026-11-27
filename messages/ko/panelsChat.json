@@ -707,7 +707,15 @@
       "upToDate": "최신 버전이에요",
       "remove": "바탕 화면에서 제거",
       "removeSubtitle": "앱 창이 더 이상 열지 않아요",
-      "removeFailed": "제거하지 못했어요. 다시 시도해 주세요."
+      "removeFailed": "제거하지 못했어요. 다시 시도해 주세요.",
+      "open": "바탕 화면에서 열기",
+      "back": "뒤로",
+      "blocked": {
+        "plan_required": "유료 요금제가 필요해요",
+        "uses_stripe": "Stripe로 결제를 받는 앱은 아직 바탕 화면에 둘 수 없어요",
+        "not_an_app": "바탕 화면에는 앱만 둘 수 있어요",
+        "tool_not_installed": "먼저 도구를 설치해 주세요"
+      }
     },
     "reasons": {
       "plan_required": "데스크톱 앱은 유료 요금제에 포함돼요.",

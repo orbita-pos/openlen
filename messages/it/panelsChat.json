@@ -707,7 +707,15 @@
       "upToDate": "È aggiornata",
       "remove": "Rimuovi dal desktop",
       "removeSubtitle": "La sua finestra smette di aprirla",
-      "removeFailed": "Non è stato possibile rimuoverla. Riprova."
+      "removeFailed": "Non è stato possibile rimuoverla. Riprova.",
+      "open": "Apri sul desktop",
+      "back": "Indietro",
+      "blocked": {
+        "plan_required": "Serve un piano a pagamento",
+        "uses_stripe": "Un’app che incassa con Stripe non può ancora andare sul desktop",
+        "not_an_app": "Sul desktop possono andare solo le app",
+        "tool_not_installed": "Installa prima lo strumento"
+      }
     },
     "reasons": {
       "plan_required": "Le app sul desktop sono incluse nei piani a pagamento.",

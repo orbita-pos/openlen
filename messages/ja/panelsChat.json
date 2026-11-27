@@ -707,7 +707,15 @@
       "upToDate": "最新です",
       "remove": "デスクトップから削除",
       "removeSubtitle": "ウィンドウからは開かなくなります",
-      "removeFailed": "削除できませんでした。もう一度お試しください。"
+      "removeFailed": "削除できませんでした。もう一度お試しください。",
+      "open": "デスクトップで開く",
+      "back": "戻る",
+      "blocked": {
+        "plan_required": "有料プランが必要です",
+        "uses_stripe": "Stripeで決済を受けるアプリは、まだデスクトップに置けません",
+        "not_an_app": "デスクトップに置けるのはアプリだけです",
+        "tool_not_installed": "先にツールをインストールしてください"
+      }
     },
     "reasons": {
       "plan_required": "デスクトップのアプリは有料プランに含まれます。",

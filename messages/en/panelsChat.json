@@ -707,7 +707,15 @@
       "upToDate": "It's up to date",
       "remove": "Remove from desktop",
       "removeSubtitle": "Its window stops opening it",
-      "removeFailed": "Couldn't remove it. Try again."
+      "removeFailed": "Couldn't remove it. Try again.",
+      "open": "Open on desktop",
+      "back": "Back",
+      "blocked": {
+        "plan_required": "A paid plan is needed",
+        "uses_stripe": "An app that takes payments with Stripe can’t go on the desktop yet",
+        "not_an_app": "Only apps can go on the desktop",
+        "tool_not_installed": "Install the tool first"
+      }
     },
     "reasons": {
       "plan_required": "Apps on your desktop come with the paid plans.",

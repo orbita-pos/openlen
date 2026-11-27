@@ -6,7 +6,12 @@
 // the menus leave their entries out. Server modules stay on the server; this only types what the route answers.
 import { useCallback, useEffect, useState } from "react";
 
+import type { InstallBlock } from "@/lib/desktop-apps/install";
 import type { DesktopAppView } from "@/lib/desktop-apps/view";
+
+/** What the route can tell beforehand makes an install impossible (it answers the same to a POST): the reasons the menu shows
+ *  under a disabled entry. */
+const BLOCKS: ReadonlySet<string> = new Set<InstallBlock>(["plan_required", "uses_stripe", "not_an_app", "tool_not_installed"]);
 
 export interface DesktopAppState {
   /** The person's installation of this project (not a removed one), or none. */
@@ -15,6 +20,9 @@ export interface DesktopAppState {
   updateAvailable: boolean;
   /** The project also has a published site, which shares its production data (spec §5). */
   published: boolean;
+  /** Why an install or an update would be refused right now — the route's own answer to the question the POST would get, with
+   *  no gate run — or null when it can go ahead. The menu shows it before any tap (Claude offers install only where it can work). */
+  blockedBy: InstallBlock | null;
 }
 
 function parse(data: unknown): DesktopAppState | null {
@@ -26,6 +34,8 @@ function parse(data: unknown): DesktopAppState | null {
     desktopApp: app && typeof app === "object" ? (app as DesktopAppView) : null,
     updateAvailable: d.updateAvailable === true,
     published: d.published === true,
+    // A reason this client doesn't know is not a block it could say: the entry stays as it was and the POST answers for itself.
+    blockedBy: typeof d.blockedBy === "string" && BLOCKS.has(d.blockedBy) ? (d.blockedBy as InstallBlock) : null,
   };
 }
 

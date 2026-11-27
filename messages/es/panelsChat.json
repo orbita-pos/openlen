@@ -707,7 +707,15 @@
       "upToDate": "Está al día",
       "remove": "Quitar del escritorio",
       "removeSubtitle": "Su ventana deja de abrirla",
-      "removeFailed": "No se pudo quitar. Inténtalo otra vez."
+      "removeFailed": "No se pudo quitar. Inténtalo otra vez.",
+      "open": "Abrir en el escritorio",
+      "back": "Volver",
+      "blocked": {
+        "plan_required": "Hace falta un plan de pago",
+        "uses_stripe": "Una app que cobra con Stripe aún no puede ir al escritorio",
+        "not_an_app": "Sólo las apps pueden ir al escritorio",
+        "tool_not_installed": "Instala primero la herramienta"
+      }
     },
     "reasons": {
       "plan_required": "Las apps en el escritorio van con los planes de pago.",

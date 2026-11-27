@@ -49,6 +49,67 @@ describe("ToolInstallButton", () => {
     vi.unstubAllGlobals();
   });
 
+  // M20 — Claude shows at most one install entry per menu: one card at a time here, and a way back.
+  describe("one install card at a time", () => {
+    const desktopState = () =>
+      new Response(JSON.stringify({ desktopApp: null, updateAvailable: false, published: false, canInstall: true, blockedBy: null }));
+    const cards = () => [...document.querySelectorAll("[data-install-card]")];
+    const toolCard = () => cards().find((c) => c.textContent?.includes("installCard.title"));
+    const desktopCard = () => cards().find((c) => c.textContent?.includes("desktopInstall.title"));
+    const press = (text: string) => [...document.querySelectorAll("button")].find((b) => b.textContent?.includes(text))!;
+
+    async function open() {
+      vi.stubGlobal("fetch", vi.fn(async () => desktopState()));
+      root = createRoot(document.body.appendChild(document.createElement("div")));
+      await act(async () => root!.render(<ToolInstallButton projectId="p1" title="Reservas" desktop />));
+      await act(async () => document.querySelector<HTMLButtonElement>("button[data-tool-install]")!.click());
+    }
+    afterEach(() => void vi.unstubAllGlobals());
+
+    it("opens with the tool's own card and the desktop's entry — never two cards", async () => {
+      await open();
+      expect(cards()).toHaveLength(1);
+      expect(toolCard()).toBeDefined();
+      expect(press("desktopInstall.menu.install")).toBeDefined();
+    });
+
+    it("🔴 «Instalar en el escritorio» replaces the tool's card with the desktop's: one card on screen", async () => {
+      await open();
+      await act(async () => press("desktopInstall.menu.install").click());
+      expect(cards()).toHaveLength(1);
+      expect(desktopCard()).toBeDefined();
+      expect(toolCard()).toBeUndefined();
+    });
+
+    it("«Volver» goes back to the tool's card and closes the desktop's", async () => {
+      await open();
+      await act(async () => press("desktopInstall.menu.install").click());
+      await act(async () => press("desktopInstall.menu.back").click());
+      expect(cards()).toHaveLength(1);
+      expect(toolCard()).toBeDefined();
+      expect(desktopCard()).toBeUndefined();
+      expect(press("desktopInstall.menu.install")).toBeDefined();
+    });
+
+    it("the desktop card's own «Cancelar» is a way back too", async () => {
+      await open();
+      await act(async () => press("desktopInstall.menu.install").click());
+      await act(async () => press("installCard.cancel").click());
+      expect(toolCard()).toBeDefined();
+      expect(desktopCard()).toBeUndefined();
+    });
+
+    it("a menu that is closed and opened again starts with the tool's card, not the desktop's", async () => {
+      await open();
+      await act(async () => press("desktopInstall.menu.install").click());
+      const bar = document.querySelector<HTMLButtonElement>("button[data-tool-install]")!;
+      await act(async () => bar.click()); // closes
+      await act(async () => bar.click()); // opens
+      expect(cards()).toHaveLength(1);
+      expect(toolCard()).toBeDefined();
+    });
+  });
+
   it("with `desktop` but nothing from the route (not the owner, or the switch is off), the menu is the tool's alone", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: "not_found" }), { status: 404 })));
     root = createRoot(document.body.appendChild(document.createElement("div")));

@@ -707,7 +707,15 @@
       "upToDate": "Hij is up-to-date",
       "remove": "Van het bureaublad verwijderen",
       "removeSubtitle": "Het venster opent hem niet meer",
-      "removeFailed": "Verwijderen is niet gelukt. Probeer het opnieuw."
+      "removeFailed": "Verwijderen is niet gelukt. Probeer het opnieuw.",
+      "open": "Op het bureaublad openen",
+      "back": "Terug",
+      "blocked": {
+        "plan_required": "Hiervoor is een betaald abonnement nodig",
+        "uses_stripe": "Een app die betalingen via Stripe int, kan nog niet naar het bureaublad",
+        "not_an_app": "Alleen apps kunnen naar het bureaublad",
+        "tool_not_installed": "Installeer eerst het hulpmiddel"
+      }
     },
     "reasons": {
       "plan_required": "Apps op je bureaublad horen bij de betaalde abonnementen.",

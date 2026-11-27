@@ -707,7 +707,15 @@
       "upToDate": "已是最新",
       "remove": "从桌面移除",
       "removeSubtitle": "它的窗口将不再打开它",
-      "removeFailed": "无法移除，请重试。"
+      "removeFailed": "无法移除，请重试。",
+      "open": "在桌面上打开",
+      "back": "返回",
+      "blocked": {
+        "plan_required": "需要付费套餐",
+        "uses_stripe": "使用 Stripe 收款的应用暂时不能放到桌面",
+        "not_an_app": "只有应用可以放到桌面",
+        "tool_not_installed": "请先安装这个工具"
+      }
     },
     "reasons": {
       "plan_required": "桌面应用包含在付费套餐中。",

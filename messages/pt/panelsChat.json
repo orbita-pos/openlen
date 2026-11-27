@@ -707,7 +707,15 @@
       "upToDate": "Está em dia",
       "remove": "Remover da área de trabalho",
       "removeSubtitle": "A janela do app deixa de abri-lo",
-      "removeFailed": "Não foi possível remover. Tente de novo."
+      "removeFailed": "Não foi possível remover. Tente de novo.",
+      "open": "Abrir na área de trabalho",
+      "back": "Voltar",
+      "blocked": {
+        "plan_required": "É necessário um plano pago",
+        "uses_stripe": "Um app que cobra com o Stripe ainda não pode ir para a área de trabalho",
+        "not_an_app": "Só apps podem ir para a área de trabalho",
+        "tool_not_installed": "Instale primeiro a ferramenta"
+      }
     },
     "reasons": {
       "plan_required": "Os apps na área de trabalho vêm com os planos pagos.",
