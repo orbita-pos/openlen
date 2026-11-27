@@ -2870,13 +2870,17 @@ export const desktopApps = pgTable(
     personId: text("personId").notNull().references(() => users.id, { onDelete: "cascade" }),
     projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
     releaseSha: text("releaseSha").notNull(),
-    /** The project's name when it was installed (the window's title). */
+    /** The name the person saw for the project when it was installed (the window's title): the title, or the workspace's own
+     *  label — «Proyecto nuevo» in their language — for one that was never named; never the raw placeholder. */
     name: text("name").notNull(),
     /** A tool's own icon (its manifest's `iconPath`); null for an ordinary app, which gets one drawn from its name. */
     iconPath: text("iconPath"),
     /** The `toolInstallations` row it was installed from, when the project is a tool; null for an ordinary app. */
     toolInstallationId: text("toolInstallationId"),
-    /** A fingerprint of the files the release was built from: tells whether the project moved since. */
+    /** The installed VERSION's fingerprint (`versionFingerprint`, lib/desktop-apps/fingerprint.ts): the files the release was built
+     *  from, the production public environment it baked in and a keyed (HMAC) stamp of the production function secrets it deployed —
+     *  never a secret's value. Tells whether the project moved since. ⚠️ Named for the files it began as; the column is not renamed
+     *  so a database that already ran `desktop-apps:migrate` keeps working. */
     filesFingerprint: text("filesFingerprint").notNull(),
     /** The window's private host label (`desktopHostLabel`); fixed for the row's life. */
     hostLabel: text("hostLabel").notNull(),

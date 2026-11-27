@@ -22,6 +22,7 @@ export async function upsertDesktopApp(input: {
   readonly name: string;
   readonly iconPath: string | null;
   readonly toolInstallationId: string | null;
+  /** The installed version (`versionFingerprint`: files + production environment + keyed function secrets), under its first name. */
   readonly filesFingerprint: string;
   /** The private host's label for a new row's id; an update keeps the label it already has. */
   readonly hostLabelFor: (id: string) => string;

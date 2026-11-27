@@ -29,6 +29,8 @@ let row: DesktopAppRow | null;
 let gate: { stop: { status: number; body: Record<string, unknown> } } | { fingerprint: string | null };
 let sha: string;
 let plan: "free" | "pro";
+let title: string;
+let liveSecrets: Array<{ name: string; digest: string }>;
 
 function fakeDeps(): DesktopDeps {
   return {
@@ -41,8 +43,10 @@ function fakeDeps(): DesktopDeps {
         : rol === "lector"
           ? new Response(JSON.stringify({ error: "solo_lectura" }), { status: 403 })
           : { rol, duenoId: "u1" },
-    loadProject: async () => ({ title: "Reservas", subdomain: null, data: { html: "<div id=root></div>", app: { catalogo: "2026-11", entrada: "/src/main.tsx" } } as ProjectData }),
+    loadProject: async () => ({ title, subdomain: null, data: { html: "<div id=root></div>", app: { catalogo: "2026-11", entrada: "/src/main.tsx" } } as ProjectData }),
     files: async () => files,
+    liveSecrets: async () => liveSecrets,
+    versionKey: () => "test-version-key",
     usesStripe: async () => false,
     toolInstallation: async () => null,
     releaseExists: async () => true,
@@ -89,6 +93,8 @@ beforeEach(() => {
   gate = { fingerprint: "fp1" };
   sha = "sha1";
   plan = "pro";
+  title = "Reservas";
+  liveSecrets = [];
   vi.mocked(auth).mockResolvedValue({ user: { id: "u1" } } as never);
   vi.mocked(realDesktopDeps).mockImplementation(async () => fakeDeps());
 });
@@ -111,6 +117,22 @@ describe("POST /api/projects/[id]/desktop", () => {
       published: false,
     });
     expect(row?.personId).toBe("u1");
+  });
+
+  // The POST carries the person's locale: a project that was never named installs with the label the workspace shows for it.
+  it("the locale in the body names an untitled project the way the workspace does", async () => {
+    title = "Untitled page";
+    const res = await post({ locale: "es" });
+    expect(((await res.json()).desktopApp as { name: string }).name).toBe("Proyecto nuevo");
+    expect(row?.name).toBe("Proyecto nuevo");
+  });
+
+  it("a secret changed in production is an update the next install runs the gates for", async () => {
+    await post({});
+    liveSecrets = [{ name: "SENDGRID_API_KEY", digest: "d1" }];
+    expect((await (await get()).json()).updateAvailable).toBe(true);
+    gate = { stop: { status: 428, body: { error: "security_findings", fingerprint: "fp9" } } };
+    expect((await post({ fromWindow: true })).status).toBe(428);
   });
 
   it("answers a gate's status as it is, and leaves nothing installed", async () => {

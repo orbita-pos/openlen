@@ -1,7 +1,9 @@
-// «HAY UNA VERSIÓN NUEVA» (spec local 2026-11-26-apps-en-el-escritorio, §4.4): the project's files are no longer the ones
-// that were installed. A fingerprint of them is kept in the row at install and compared with the current one, so nobody
-// rebuilds anything to know. Pure and with no server imports: the install and the state both call it.
-import { createHash } from "node:crypto";
+// «HAY UNA VERSIÓN NUEVA» (spec local 2026-11-26-apps-en-el-escritorio, §4.4): what an install uses is no longer what was
+// installed. A fingerprint of it is kept in the row at install and compared with the current one, so nobody rebuilds anything to
+// know. Claude's version is the artifact's WHOLE server-side version (`ver`): any change to what the installed thing runs bumps
+// it — so here it is the files, the production public environment the build bakes in, and the production function secrets the
+// install deploys. Pure and with no server imports: the install and the state both call it.
+import { createHash, createHmac } from "node:crypto";
 
 import { isCompileInputPath } from "@/lib/agent/ficheros/folder";
 import { esFicheroDeSupabase } from "@/lib/agent/ficheros/supabase";
@@ -19,5 +21,43 @@ export function filesFingerprint(html: string, files: Record<string, string>): s
   const hash = createHash("sha256");
   hash.update(`${html}\0`);
   for (const path of Object.keys(files).filter(isInstallInput).sort()) hash.update(`${path}\0${files[path]}\0`);
+  return hash.digest("hex");
+}
+
+/** A production function secret as the store lists it: its name and its digest (what `supabase secrets list` shows). Never
+ *  its value — there is nowhere in the install's dependencies to ask for one. */
+export interface LiveSecret {
+  readonly name: string;
+  readonly digest: string;
+}
+
+const byName = (a: LiveSecret, b: LiveSecret): number => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+
+/** The secrets as ONE keyed digest: an HMAC-SHA256, with the server's own secret, over the names and digests in name order. 🔴
+ *  A secret's value is never an input and a plain hash of what is stored is never the output: a leaked database holds only
+ *  this, and without the server's key it cannot be used to guess a weak secret offline. A secret saved again with the same
+ *  value keeps its digest, so it is not a new version; a rotated, added or removed one is. */
+export function secretsStamp(secrets: readonly LiveSecret[], key: string): string {
+  const mac = createHmac("sha256", key);
+  mac.update("openlen-desktop-secrets\0");
+  mac.update(JSON.stringify([...secrets].sort(byName).map((s) => [s.name, s.digest])));
+  return mac.digest("hex");
+}
+
+/** The version an install stores and a read compares: the files (`filesFingerprint`), the production public environment
+ *  (`entornoPublicoDeLaApp(…, "production")`, which ends up in the JavaScript each visitor gets — public by contract, so
+ *  plain) and the keyed stamp of the production function secrets. Key order is irrelevant everywhere. */
+export function versionFingerprint(i: {
+  readonly html: string;
+  readonly files: Record<string, string>;
+  readonly env: Readonly<Record<string, string>>;
+  readonly secrets: readonly LiveSecret[];
+  /** The server's key for the stamp (`versionKeyOrNull`, `deps.ts`). */
+  readonly key: string;
+}): string {
+  const hash = createHash("sha256");
+  hash.update(`files\0${filesFingerprint(i.html, i.files)}\0env\0`);
+  hash.update(JSON.stringify(Object.keys(i.env).sort().map((name) => [name, i.env[name]])));
+  hash.update(`\0secrets\0${secretsStamp(i.secrets, i.key)}`);
   return hash.digest("hex");
 }

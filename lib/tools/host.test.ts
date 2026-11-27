@@ -3,10 +3,20 @@ import { describe, expect, it } from "vitest";
 
 import { etiquetaDeLienzo } from "@/lib/lienzo/host";
 
-import { toolFrameUrl, toolHostLabel, toolPhoneHostLabel } from "./host";
+import { serverSecret, toolFrameUrl, toolHostLabel, toolPhoneHostLabel } from "./host";
 
 const ID = "4f0c2a8e-1b3d-4c5e-9f7a-0b1c2d3e4f5a";
 const ENV = { AUTH_SECRET: "s3cret" };
+
+describe("serverSecret", () => {
+  it("is Auth.js's secret, then NextAuth's, trimmed — and null when neither is there or both are blank", () => {
+    expect(serverSecret({ AUTH_SECRET: " a ", NEXTAUTH_SECRET: "b" })).toBe("a");
+    expect(serverSecret({ NEXTAUTH_SECRET: "b" })).toBe("b");
+    expect(serverSecret({ AUTH_SECRET: "  ", NEXTAUTH_SECRET: "b" })).toBe("b");
+    expect(serverSecret({ AUTH_SECRET: "  " })).toBeNull();
+    expect(serverSecret({})).toBeNull();
+  });
+});
 
 describe("toolHostLabel", () => {
   it("has the canvas label's shape, so Caddy and the rewrites already route it", () => {

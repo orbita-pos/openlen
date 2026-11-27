@@ -6,11 +6,14 @@
 // leaves the installed version exactly as it was (the window keeps running it).
 import "server-only";
 
+import { randomUUID } from "node:crypto";
+
 import type { ProjectData } from "@/lib/projects/types";
 import type { InstallDeps } from "@/lib/tools/install";
 import { installThroughGates, type CoreDeps } from "@/lib/tools/install-core";
 
-import { filesFingerprint } from "./fingerprint";
+import { versionFingerprint, type LiveSecret } from "./fingerprint";
+import { desktopAppName } from "./name";
 import type { DesktopAppRow, upsertDesktopApp } from "./store";
 import { toDesktopAppView } from "./view";
 
@@ -31,6 +34,11 @@ export interface DesktopDeps extends CoreDeps, Pick<InstallDeps, "plan" | "acces
   desktopAppOf(personId: string, projectId: string): Promise<DesktopAppRow | null>;
   /** Whether a release is still there (it can be cleaned up once nobody uses it): an install with nothing new needs it. */
   releaseExists(sha: string): Promise<boolean>;
+  /** The production function secrets the install would deploy, as names and the digests the store keeps — part of the version
+   *  (a rotated secret is a new one). 🔴 Never a value: there is no way to ask for one here. */
+  liveSecrets(projectId: string): Promise<readonly LiveSecret[]>;
+  /** The key those secrets are folded into the version with (an HMAC); null when the server has no secret to make it from. */
+  versionKey(): string | null;
   /** Whether ANYONE has the project on their desktop, not removed (only the owner can, today): publishing warns. */
   hasActiveDesktopApp(projectId: string): Promise<boolean>;
   upsertDesktopApp(i: Parameters<typeof upsertDesktopApp>[0]): Promise<DesktopAppRow>;
@@ -77,6 +85,22 @@ async function checkProject(
   return { blockedBy: null, app, tool };
 }
 
+/** THE VERSION of what an install would use right now: the files, the production public environment the build bakes in (`entorno`,
+ *  what the gates give the build) and the production function secrets it deploys — Claude's `ver` bumps with ANY change to what
+ *  the installed thing runs. Never throws, and a read that fails is a version NOTHING matches (so the update is offered, and an
+ *  install never takes the «nothing new» shortcut), never a version that looks unchanged. */
+async function currentVersion(d: DesktopDeps, projectId: string, html: string, files: Record<string, string>): Promise<string> {
+  try {
+    const key = d.versionKey();
+    if (!key) throw new Error("the server has no secret to fold the function secrets into the version with");
+    const [env, secrets] = await Promise.all([d.entorno(projectId), d.liveSecrets(projectId)]);
+    return versionFingerprint({ html, files, env, secrets, key });
+  } catch (err) {
+    console.warn(`${LOG_TAG} could not read what an install uses, so its version is not told and an update is offered:`, err);
+    return `unreadable:${randomUUID()}`;
+  }
+}
+
 export async function installDesktopApp(
   i: {
     readonly projectId: string;
@@ -111,16 +135,19 @@ export async function installDesktopApp(
   const { app, tool } = checked;
 
   const files = await d.files(i.projectId);
-  const fingerprint = filesFingerprint(project.data.html, files);
+  const fingerprint = await currentVersion(d, i.projectId, project.data.html, files);
+  // What the person sees for the project, in their language (never the raw «Untitled page» of one that was never named).
+  const name = await desktopAppName(project.title, i.locale);
 
   // Claude has no «update» when nothing changed: its content is live and identical bytes are skipped. An install of an app
-  // that is on the desktop, whose files are the installed ones and whose release is still there, is that same row — there
-  // is nothing new to review, build or deploy. A new name or a different tool installation is something to update.
+  // that is on the desktop, whose version (files, production environment, function secrets) is the installed one and whose
+  // release is still there, is that same row — there is nothing new to review, build or deploy. A new name or a different
+  // tool installation is something to update.
   if (
     installed &&
     !installed.removedAt &&
     installed.filesFingerprint === fingerprint &&
-    installed.name === project.title &&
+    installed.name === name &&
     installed.toolInstallationId === (tool?.id ?? null) &&
     installed.iconPath === (tool?.iconPath ?? null) &&
     (await d.releaseExists(installed.releaseSha))
@@ -150,10 +177,10 @@ export async function installDesktopApp(
           personId: i.actorId,
           projectId: i.projectId,
           releaseSha: release.sha,
-          name: project.title,
+          name,
           iconPath: tool?.iconPath ?? null,
           toolInstallationId: tool?.id ?? null,
-          // Of what was BUILT, not of what is there now: a file saved during the build is an update waiting.
+          // Of what was BUILT, not of what is there now: a file, a variable or a secret saved during the build is an update waiting.
           filesFingerprint: fingerprint,
           hostLabelFor: d.hostLabelFor,
         }),
@@ -180,7 +207,7 @@ export async function desktopAppState(i: { readonly projectId: string; readonly 
   const verdict = { canInstall: blockedBy === null, blockedBy };
   const row = await d.desktopAppOf(i.actorId, i.projectId);
   if (!row || row.removedAt) return { status: 200, body: { desktopApp: null, updateAvailable: false, published, ...verdict } };
-  const current = filesFingerprint(project.data.html, await d.files(i.projectId));
+  const current = await currentVersion(d, i.projectId, project.data.html, await d.files(i.projectId));
   return { status: 200, body: { desktopApp: toDesktopAppView(row), updateAvailable: current !== row.filesFingerprint, published, ...verdict } };
 }
 

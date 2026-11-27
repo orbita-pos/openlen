@@ -10,11 +10,17 @@ import { esPeticionLocal, esProduccion, lienzoApagado, lienzoBaseHost, LIENZO_PR
 
 type Env = Readonly<Record<string, string | undefined>>;
 
+/** The server's own secret (Auth.js's, then NextAuth's), trimmed; null when it has none. What every HMAC of this server is
+ *  keyed with: a private host label (below), the version of an app on the desktop (`lib/desktop-apps/deps.ts`). */
+export function serverSecret(env: Env = process.env): string | null {
+  return env.AUTH_SECRET?.trim() || env.NEXTAUTH_SECRET?.trim() || null;
+}
+
 /** A private host label: `lienzo-` + 32 hex of an HMAC with Auth.js's secret over `domain` + the id (lowercase). One
  *  domain per kind of host — an installed tool's, its phone's, an agent's tool's, its phone's — so two kinds never meet.
  *  Null when the server has no secret. */
 export function hmacHostLabel(domain: string, id: string, env: Env = process.env): string | null {
-  const secret = env.AUTH_SECRET?.trim() || env.NEXTAUTH_SECRET?.trim();
+  const secret = serverSecret(env);
   if (!secret) return null;
   const mark = createHmac("sha256", secret).update(`${domain}${id.toLowerCase()}`).digest("hex");
   return LIENZO_PREFIJO + mark.slice(0, 32);

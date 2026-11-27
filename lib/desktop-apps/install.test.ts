@@ -5,9 +5,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import { AppNoCompilaError } from "@/lib/apps/compilador";
 import { DataChangesNeedConfirmationError } from "@/lib/backend/data-changes";
+import { memorySecretStore, type SecretStore } from "@/lib/functions/secret-store";
+import { secretDigest } from "@/lib/functions/secrets";
 import type { ProjectData } from "@/lib/projects/types";
+import { UNTITLED_PROJECT_TITLE } from "@/lib/projects/titulo-del-html";
 
-import { filesFingerprint } from "./fingerprint";
+import { versionFingerprint } from "./fingerprint";
 import { desktopAppState, desktopInstalledForPublish, installDesktopApp, removeDesktopApp, type DesktopDeps } from "./install";
 import type { DesktopAppRow } from "./store";
 
@@ -15,6 +18,13 @@ const HTML = '<div id="root"></div>';
 const FILES: Record<string, string> = { "/src/main.tsx": "x", "/src/App.tsx": "y", "/tests/App.test.tsx": "t" };
 const RELEASE = { sha: "sha1", files: { "/index.html": { content: "x", contentType: "text/html" } }, jobFiles: {} };
 const APP = { catalogo: "2026-11", entrada: "/src/main.tsx" };
+const KEY = "test-server-secret";
+
+/** The version an install stores: the files, the production public environment and the function secrets (names and digests). */
+const versionOf = (
+  files: Record<string, string> = FILES,
+  o: { html?: string; env?: Record<string, string>; secrets?: Array<{ name: string; digest: string }> } = {},
+): string => versionFingerprint({ html: o.html ?? HTML, files, env: o.env ?? {}, secrets: o.secrets ?? [], key: KEY });
 
 type Project = { title: string; subdomain: string | null; data: ProjectData };
 const project = (over: Partial<Project> = {}, data: Partial<ProjectData> = {}): Project => ({
@@ -73,6 +83,8 @@ const deps = (over: Partial<DesktopDeps> = {}, store = fakeStore()): DesktopDeps
   releaseExists: vi.fn(async () => true),
   securityGate: vi.fn(async () => ({ fingerprint: "fp1" })),
   entorno: vi.fn(async () => ({})),
+  liveSecrets: vi.fn(async () => []),
+  versionKey: () => KEY,
   build: vi.fn(async () => RELEASE),
   prepareFunctions: vi.fn(async () => null),
   dataChanges: vi.fn(async () => {}),
@@ -195,7 +207,7 @@ describe("installDesktopApp: through the gates, then the row", () => {
         name: "Mis reservas",
         iconPath: null,
         toolInstallationId: null,
-        filesFingerprint: filesFingerprint(HTML, FILES),
+        filesFingerprint: versionOf(FILES),
       }),
     );
   });
@@ -253,7 +265,7 @@ describe("installDesktopApp: through the gates, then the row", () => {
     expect(r.status).toBe(200);
     const after = d.store.rows.get("u1/p1")!;
     expect(after.releaseSha).toBe("sha2");
-    expect(after.filesFingerprint).toBe(filesFingerprint(HTML, files));
+    expect(after.filesFingerprint).toBe(versionOf(files));
     expect(after.filesFingerprint).not.toBe(before.filesFingerprint);
     expect(after.id).toBe(before.id);
     expect(after.hostLabel).toBe(before.hostLabel);
@@ -262,8 +274,10 @@ describe("installDesktopApp: through the gates, then the row", () => {
   // Claude has no «update» when nothing changed (its content is live and identical bytes are skipped): an install of an
   // app whose files are the installed ones, whose release is still there, is the same row — no review, no build, no deploy.
   describe("nothing changed since the installed version", () => {
+    // `entorno` is not here: it is how the version is KNOWN (the production environment is part of it), read to compare before
+    // any gate; the gates are the review, the build, the functions, the data changes and the saves.
     const gatesRan = (d: DesktopDeps) =>
-      [d.securityGate, d.entorno, d.build, d.prepareFunctions, d.dataChanges, d.saveRelease, d.markPublished].some((g) => vi.mocked(g).mock.calls.length > 0);
+      [d.securityGate, d.build, d.prepareFunctions, d.dataChanges, d.saveRelease, d.markPublished].some((g) => vi.mocked(g).mock.calls.length > 0);
 
     it("🔴 the same row comes back and the gates do not run", async () => {
       const d = deps();
@@ -618,7 +632,7 @@ describe("desktopAppState (the GET)", () => {
     it("🔴 no gate runs for a read: nothing is reviewed, built, deployed or saved", async () => {
       const d = deps();
       await state(d);
-      for (const gate of [d.securityGate, d.entorno, d.build, d.prepareFunctions, d.dataChanges, d.saveRelease, d.markPublished, d.upsertDesktopApp]) {
+      for (const gate of [d.securityGate, d.build, d.prepareFunctions, d.dataChanges, d.saveRelease, d.markPublished, d.upsertDesktopApp]) {
         expect(gate).not.toHaveBeenCalled();
       }
     });
@@ -781,5 +795,239 @@ describe("removeDesktopApp (the DELETE)", () => {
 
   it("OPENLEN_DESKTOP_APPS=0: 404", async () => {
     expect(await removeDesktopApp({ projectId: "p1", actorId: "u1" }, deps({ enabled: () => false }))).toEqual({ status: 404, body: { error: "desktop_apps_off" } });
+  });
+});
+
+// Claude's version is the artifact's whole server-side version (`ver`): ANY change to what the installed thing runs bumps it.
+// Here that is the files, the production public environment the build bakes in, and the production function secrets the
+// install deploys — so changing only a secret or a variable offers «Hay una versión nueva», and the «nothing new» shortcut
+// does not skip the gates for it.
+describe("the installed version is the files, the production environment and the function secrets", () => {
+  const SECRET = "sk_live_hunter2-this-must-never-be-stored";
+  /** What the real dependency reads: the names and digests of the production secrets, never a value. */
+  const liveOf = (store: SecretStore) => async () => (await store.list("p1")).filter((r) => r.environment === "live").map(({ name, digest }) => ({ name, digest }));
+  const stateOf = async (d: DesktopDeps) => (await desktopAppState({ projectId: "p1", actorId: "u1" }, d)).body;
+  /** How many times the review, the build, the functions, the data changes, the release save and the row save ran. */
+  const ran = (d: DesktopDeps) => [d.securityGate, d.build, d.prepareFunctions, d.dataChanges, d.saveRelease, d.upsertDesktopApp].map((g) => vi.mocked(g).mock.calls.length);
+  const withSecrets = async () => {
+    const secrets = memorySecretStore();
+    await secrets.set("p1", "live", { SENDGRID_API_KEY: SECRET }, "u1");
+    return secrets;
+  };
+
+  it("a secret-only change is an update", async () => {
+    const secrets = await withSecrets();
+    const d = deps({ liveSecrets: liveOf(secrets) });
+    await install(d);
+    expect((await stateOf(d)).updateAvailable).toBe(false);
+
+    await secrets.set("p1", "live", { SENDGRID_API_KEY: "a rotated value" }, "u1");
+    expect((await stateOf(d)).updateAvailable).toBe(true);
+    // Back to the installed value, and the same value saved again: not new.
+    await secrets.set("p1", "live", { SENDGRID_API_KEY: SECRET }, "u1");
+    expect((await stateOf(d)).updateAvailable).toBe(false);
+    // A secret added is new; taken away again, not.
+    await secrets.set("p1", "live", { WEBHOOK_TOKEN: "whsec_abc" }, "u1");
+    expect((await stateOf(d)).updateAvailable).toBe(true);
+    await secrets.unset("p1", "live", ["WEBHOOK_TOKEN"]);
+    expect((await stateOf(d)).updateAvailable).toBe(false);
+    // The installed one taken away is new.
+    await secrets.unset("p1", "live", ["SENDGRID_API_KEY"]);
+    expect((await stateOf(d)).updateAvailable).toBe(true);
+  });
+
+  it("an env-only change is an update", async () => {
+    const installedEnv = { VITE_API_BASE: "https://api.example.com" };
+    let env: Record<string, string> = installedEnv;
+    const d = deps({ entorno: vi.fn(async () => env) });
+    await install(d);
+    expect((await stateOf(d)).updateAvailable).toBe(false);
+
+    env = { VITE_API_BASE: "https://api2.example.com" };
+    expect((await stateOf(d)).updateAvailable).toBe(true);
+    env = { ...installedEnv, VITE_NEW: "1" };
+    expect((await stateOf(d)).updateAvailable).toBe(true);
+    env = {};
+    expect((await stateOf(d)).updateAvailable).toBe(true);
+    env = { ...installedEnv };
+    expect((await stateOf(d)).updateAvailable).toBe(false);
+  });
+
+  it("a secret-only change runs the gates", async () => {
+    const secrets = await withSecrets();
+    const d = deps({ liveSecrets: liveOf(secrets) });
+    await install(d);
+    vi.clearAllMocks();
+    // Nothing changed: the shortcut, as before.
+    expect((await install(d)).status).toBe(200);
+    expect(ran(d)).toEqual([0, 0, 0, 0, 0, 0]);
+
+    await secrets.set("p1", "live", { SENDGRID_API_KEY: "a rotated value" }, "u1");
+    vi.clearAllMocks();
+    expect((await install(d)).status).toBe(200);
+    expect(ran(d)).toEqual([1, 1, 1, 1, 1, 1]);
+    expect(d.store.rows.get("u1/p1")!.filesFingerprint).toBe(versionOf(FILES, { secrets: await liveOf(secrets)() }));
+    expect((await stateOf(d)).updateAvailable).toBe(false);
+  });
+
+  it("an env-only change runs the gates", async () => {
+    let env: Record<string, string> = { VITE_API_BASE: "https://api.example.com" };
+    const d = deps({ entorno: vi.fn(async () => env) });
+    await install(d);
+    vi.clearAllMocks();
+    expect((await install(d)).status).toBe(200);
+    expect(ran(d)).toEqual([0, 0, 0, 0, 0, 0]);
+
+    env = { VITE_API_BASE: "https://api2.example.com" };
+    vi.clearAllMocks();
+    expect((await install(d)).status).toBe(200);
+    expect(ran(d)).toEqual([1, 1, 1, 1, 1, 1]);
+    // What was fingerprinted is what the build was given.
+    expect(d.build).toHaveBeenCalledWith(expect.objectContaining({ entorno: env }));
+    expect(d.store.rows.get("u1/p1")!.filesFingerprint).toBe(versionOf(FILES, { env }));
+  });
+
+  it("🔴 the fingerprint never contains a secret value: not in the row, the answers, the saves or the log", async () => {
+    const logs = (["log", "info", "warn", "error", "debug"] as const).map((method) => vi.spyOn(console, method).mockImplementation(() => undefined));
+    try {
+      const secrets = await withSecrets();
+      const d = deps({ liveSecrets: liveOf(secrets) });
+      const installed = await install(d);
+      await secrets.set("p1", "live", { SENDGRID_API_KEY: `${SECRET}-rotated` }, "u1");
+      const state = await stateOf(d);
+      const seen = JSON.stringify([installed, state, [...d.store.rows.values()], vi.mocked(d.upsertDesktopApp).mock.calls, logs.map((log) => log.mock.calls)]);
+      for (const secret of [SECRET, `${SECRET}-rotated`]) {
+        expect(seen).not.toContain(secret);
+        expect(seen).not.toContain(secretDigest(secret));
+      }
+      // And what is stored is the keyed version of the digests: it can only be made with the server's secret.
+      expect(d.store.rows.get("u1/p1")!.filesFingerprint).toBe(versionOf(FILES, { secrets: [{ name: "SENDGRID_API_KEY", digest: secretDigest(SECRET) }] }));
+    } finally {
+      for (const log of logs) log.mockRestore();
+    }
+  });
+
+  // A read that fails must never look like «nothing changed»: the GET answers (no 500) and offers the update.
+  describe("a failure reading the secrets or the environment offers the update instead of hiding it", () => {
+    const boom = () => {
+      throw new Error("db down");
+    };
+    const breakages: Array<[string, Partial<DesktopDeps>]> = [
+      ["the secrets cannot be read", { liveSecrets: vi.fn(async () => boom()) }],
+      ["the environment cannot be read", { entorno: vi.fn(async () => boom()) }],
+      ["the server has no secret to fold them with", { versionKey: () => null }],
+    ];
+
+    it("the GET answers 200 with the update on offer, never a 500", async () => {
+      for (const [what, broken] of breakages) {
+        const d = deps();
+        await install(d);
+        expect((await stateOf(d)).updateAvailable, what).toBe(false);
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        try {
+          Object.assign(d, broken);
+          const r = await desktopAppState({ projectId: "p1", actorId: "u1" }, d);
+          expect(r.status, what).toBe(200);
+          expect(r.body.updateAvailable, what).toBe(true);
+          expect(r.body.desktopApp, what).toMatchObject({ id: "d1" });
+        } finally {
+          warn.mockRestore();
+        }
+      }
+    });
+
+    it("an install that cannot read them is never «nothing new»: the gates run", async () => {
+      for (const [what, broken] of breakages.filter(([, b]) => !("entorno" in b))) {
+        const d = deps();
+        await install(d);
+        vi.clearAllMocks();
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        try {
+          Object.assign(d, broken);
+          expect((await install(d)).status, what).toBe(200);
+          expect(ran(d), what).toEqual([1, 1, 1, 1, 1, 1]);
+        } finally {
+          warn.mockRestore();
+        }
+      }
+    });
+
+    it("what such an install stores never matches a healthy read later: the update stays on offer", async () => {
+      const d = deps({ liveSecrets: vi.fn(async () => boom()) });
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      try {
+        expect((await install(d)).status).toBe(200);
+        expect(d.store.rows.get("u1/p1")!.filesFingerprint).not.toBe(versionOf(FILES));
+        d.liveSecrets = vi.fn(async () => []);
+        expect((await stateOf(d)).updateAvailable).toBe(true);
+        // Once it has been installed with everything readable, it settles.
+        expect((await install(d)).status).toBe(200);
+        expect((await stateOf(d)).updateAvailable).toBe(false);
+      } finally {
+        warn.mockRestore();
+      }
+    });
+  });
+});
+
+// Claude takes the installed name from what the person sees (the page title) at install time, never a raw placeholder: the
+// workspace shows «Proyecto nuevo» for a project that was never named, and the window must say the same, in the same language.
+describe("the name of the app on the desktop", () => {
+  const installTitled = async (title: string, locale: string) => {
+    const d = deps({ loadProject: vi.fn(async () => project({ title })) });
+    const r = await install(d, { locale });
+    return { d, r, name: (r.body.desktopApp as { name: string }).name };
+  };
+
+  it("an untitled project installs with the workspace's label in the person's locale", async () => {
+    for (const [locale, label] of [
+      ["es", "Proyecto nuevo"],
+      ["en", "New project"],
+      ["pt", "Projeto novo"],
+      ["ja", "新しいプロジェクト"],
+    ] as const) {
+      const { d, r, name } = await installTitled(UNTITLED_PROJECT_TITLE, locale);
+      expect(r.status, locale).toBe(200);
+      expect(name, locale).toBe(label);
+      expect(d.upsertDesktopApp, locale).toHaveBeenCalledWith(expect.objectContaining({ name: label }));
+      expect(d.store.rows.get("u1/p1")!.name, locale).toBe(label);
+    }
+  });
+
+  it("an empty title is a placeholder too, never an empty name", async () => {
+    expect((await installTitled("", "es")).name).toBe("Proyecto nuevo");
+    expect((await installTitled("   ", "en")).name).toBe("New project");
+  });
+
+  it("a locale the app doesn't have falls back to English", async () => {
+    expect((await installTitled(UNTITLED_PROJECT_TITLE, "xx")).name).toBe("New project");
+    expect((await installTitled(UNTITLED_PROJECT_TITLE, "")).name).toBe("New project");
+  });
+
+  it("a named project keeps its name", async () => {
+    expect((await installTitled("Mis reservas", "en")).name).toBe("Mis reservas");
+    expect((await installTitled("Mis reservas", "ja")).name).toBe("Mis reservas");
+    // Only the placeholder itself is replaced, not a name that happens to contain it.
+    expect((await installTitled(`${UNTITLED_PROJECT_TITLE} 2`, "es")).name).toBe(`${UNTITLED_PROJECT_TITLE} 2`);
+  });
+
+  it("an untitled project installed again in the same language is nothing new: the gates do not run", async () => {
+    const d = deps({ loadProject: vi.fn(async () => project({ title: UNTITLED_PROJECT_TITLE })) });
+    const first = await install(d, { locale: "es" });
+    vi.clearAllMocks();
+    const again = await install(d, { locale: "es" });
+    expect(again).toEqual(first);
+    expect(d.securityGate).not.toHaveBeenCalled();
+    expect(d.upsertDesktopApp).not.toHaveBeenCalled();
+  });
+
+  it("naming the project later is an update: the window takes the real name", async () => {
+    let title = UNTITLED_PROJECT_TITLE;
+    const d = deps({ loadProject: vi.fn(async () => project({ title })) });
+    await install(d, { locale: "es" });
+    title = "Mis reservas";
+    const r = await install(d, { locale: "es" });
+    expect((r.body.desktopApp as { name: string }).name).toBe("Mis reservas");
+    expect(d.build).toHaveBeenCalledTimes(2);
   });
 });
