@@ -45,8 +45,15 @@ async function render(over: Partial<PermissionsPanelProps> = {}) {
 }
 const panel = () => host.querySelector("[data-desktop-permissions]")!;
 const toggle = () => host.querySelector<HTMLButtonElement>("[role=switch]");
+/** The person reads the panel first: the switch ignores clicks for a moment after it shows (a click the app timed). */
+async function clickToggle(after = 600) {
+  vi.setSystemTime(Date.now() + after);
+  await act(async () => toggle()!.click());
+}
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-11-27T09:00:00.000Z"));
   missing = [];
   onToggle.mockClear();
   onClose.mockClear();
@@ -58,6 +65,7 @@ afterEach(() => {
   act(() => root?.unmount());
   root = null;
   document.body.innerHTML = "";
+  vi.useRealTimers();
 });
 
 describe("PermissionsPanel", () => {
@@ -69,15 +77,29 @@ describe("PermissionsPanel", () => {
     expect(panel().textContent).toContain("Not available in the browser");
     expect(host.querySelectorAll("[role=switch]")).toHaveLength(1);
     expect(toggle()!.getAttribute("aria-checked")).toBe("false");
-    await act(async () => toggle()!.click());
+    await clickToggle();
     expect(onToggle).toHaveBeenCalledWith("notifications", true);
   });
 
   it("a granted one is on, and switching it off says no", async () => {
     await render({ rows: [{ permission: "notifications", state: "granted" }] });
     expect(toggle()!.getAttribute("aria-checked")).toBe("true");
-    await act(async () => toggle()!.click());
+    await clickToggle();
     expect(onToggle).toHaveBeenCalledWith("notifications", false);
+  });
+
+  it("a click on the switch in the first 500 ms does nothing; after, it switches", async () => {
+    await render();
+    await clickToggle(499);
+    expect(onToggle).not.toHaveBeenCalled();
+    await clickToggle(2);
+    expect(onToggle).toHaveBeenCalledWith("notifications", true);
+  });
+
+  it("with OpenLen's dialog on top, Escape is not the panel's", async () => {
+    await render({ covered: true });
+    await act(async () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })));
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it("browser-blocked explains how to re-enable", async () => {

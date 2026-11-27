@@ -58,7 +58,8 @@ export const SHOW_INTERVAL_MS = 1000;
 /** While a dialog waits for the window to be in front, how often it looks (focus moving into the frame fires nothing here). */
 const ATTENDED_POLL_MS = 500;
 
-type Ask = { permission: DesktopPermission; done: () => void };
+/** `answered`: the person said «Allow» and the browser's own prompt may be up — the dialog never shows again for it. */
+type Ask = { permission: DesktopPermission; done: () => void; answered?: boolean };
 
 const attended = () => document.visibilityState === "visible" && document.hasFocus();
 
@@ -79,7 +80,9 @@ export function useAppApiHost(i: AppApiHostInput): { dialog: ReactNode; openPerm
 
   const [, setTick] = useState(0);
   const refresh = useCallback(() => setTick((n) => n + 1), []);
-  const [asking, setAsking] = useState<{ permission: DesktopPermission; reask: boolean } | null>(null);
+  // `serial`: every showing is a new dialog (its own key), so its input guard starts again even when one ask follows another.
+  const [asking, setAsking] = useState<{ permission: DesktopPermission; reask: boolean; serial: number } | null>(null);
+  const shown = useRef(0);
   const [panelOpen, setPanelOpen] = useState(false);
 
   const queue = useRef<Ask[]>([]);
@@ -159,10 +162,11 @@ export function useAppApiHost(i: AppApiHostInput): { dialog: ReactNode; openPerm
   const present = useCallback(
     (ask: Ask) => {
       whenAttended(() => {
-        if (!alive.current || active.current !== ask) return;
+        if (!alive.current || active.current !== ask || ask.answered) return;
         if (stateOf(ask.permission) !== "prompt") return finish(ask);
         const cur = latest.current;
-        setAsking({ permission: ask.permission, reask: isReask(rowOf(ask.permission), cur.releaseSha, cur.installedAt) });
+        shown.current += 1;
+        setAsking({ permission: ask.permission, reask: isReask(rowOf(ask.permission), cur.releaseSha, cur.installedAt), serial: shown.current });
       });
     },
     [finish, rowOf, stateOf, whenAttended],
@@ -183,7 +187,7 @@ export function useAppApiHost(i: AppApiHostInput): { dialog: ReactNode; openPerm
     const onVisibility = () => {
       refresh(); // the browser's permission may have changed in its settings meanwhile
       const ask = active.current;
-      if (!ask || document.visibilityState === "visible") return;
+      if (!ask || ask.answered || document.visibilityState === "visible") return;
       setAsking(null);
       present(ask);
     };
@@ -244,7 +248,8 @@ export function useAppApiHost(i: AppApiHostInput): { dialog: ReactNode; openPerm
 
   const allow = useCallback(() => {
     const ask = active.current;
-    if (!ask) return;
+    if (!ask || ask.answered) return;
+    ask.answered = true;
     save(ask.permission, "granted");
     const asked = askBrowser(ask.permission);
     setAsking(null);
@@ -256,7 +261,7 @@ export function useAppApiHost(i: AppApiHostInput): { dialog: ReactNode; openPerm
 
   const deny = useCallback(() => {
     const ask = active.current;
-    if (!ask) return;
+    if (!ask || ask.answered) return;
     save(ask.permission, "denied");
     finish(ask);
   }, [finish, save]);
@@ -361,9 +366,10 @@ export function useAppApiHost(i: AppApiHostInput): { dialog: ReactNode; openPerm
           browserBlocked: browser() === "denied",
           onToggle: toggle,
           onClose: closePermissions,
+          covered: asking !== null,
         })
       : null,
-    asking ? createElement(PermissionDialog, { appName: i.appName, reask: asking.reask, onAllow: allow, onDeny: deny }) : null,
+    asking ? createElement(PermissionDialog, { key: asking.serial, appName: i.appName, reask: asking.reask, onAllow: allow, onDeny: deny }) : null,
   );
   return { dialog, openPermissions };
 }

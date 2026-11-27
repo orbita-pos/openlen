@@ -239,7 +239,7 @@ describe("permissions and notifications (spec local 2026-11-27-notificaciones-de
     expect(host.textContent).not.toContain("not valid JSON");
   });
 
-  it("after an in-window update, an old yes is asked again (Review Focus 3)", async () => {
+  it("after an in-window update every permission is unavailable until reload", async () => {
     vi.useRealTimers();
     localStorage.setItem(
       "openlen:desktop-permissions",
@@ -259,6 +259,25 @@ describe("permissions and notifications (spec local 2026-11-27-notificaciones-de
     await act(async () => button("Update")!.click());
     await act(async () => void (await new Promise((r) => setTimeout(r, 0))));
     expect(frame().getAttribute("src")).toContain("v=sha2");
+    // The window now holds two versions (it read the declaration of the first): like Claude's, no permissions until it reloads.
+    const answers: unknown[] = [];
+    vi.spyOn(frame().contentWindow!, "postMessage").mockImplementation(((m: unknown) => void answers.push(m)) as never);
+    const before = localStorage.getItem("openlen:desktop-permissions");
+    await ask("permissions.request", undefined);
+    expect(dialog()).toBeNull();
+    expect(answers).toEqual([
+      { channel: "openlen-app/1", id: "r1", ok: true, value: { notifications: "unavailable", shortcuts: "unavailable", overlay: "unavailable", "menu-bar": "unavailable", "full-access": "unavailable" } },
+    ]);
+    // Nothing was written: the saved answer is there after the reload.
+    expect(localStorage.getItem("openlen:desktop-permissions")).toBe(before);
+  });
+
+  it("before any update the old yes of another version is asked again (the window's own version is the one compared)", async () => {
+    localStorage.setItem(
+      "openlen:desktop-permissions",
+      JSON.stringify({ "u1|d1|notifications": { answer: "granted", releaseSha: "sha0", installedAt: APP.installedAt } }),
+    );
+    await render();
     await ask("permissions.request", undefined);
     expect(dialog()!.textContent).toContain("Keep allowing Bookings to show notifications?");
   });

@@ -111,6 +111,12 @@ const replyTo = (id: string) => replies.find((r) => r.message.id === id)?.messag
 const dialog = () => host.querySelector("[data-desktop-permission-dialog]");
 const button = (text: string) => [...host.querySelectorAll("button")].find((b) => b.textContent === text);
 const stored = () => localStorage.getItem(GRANTS_STORAGE_KEY);
+/** The person reads the dialog first: «Allow» ignores clicks for a moment after it shows (a click the app timed). */
+const later = (ms = 600) => vi.setSystemTime(Date.now() + ms);
+async function clickAllow() {
+  later();
+  await act(async () => button("Allow")!.click());
+}
 
 async function setAttended(v: boolean) {
   visible = v ? "visible" : "hidden";
@@ -123,6 +129,8 @@ async function setAttended(v: boolean) {
 
 beforeEach(async () => {
   messages = await windowMessages("en", { tool: false });
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-11-27T09:00:00.000Z"));
   localStorage.clear();
   visible = "visible";
   focused = true;
@@ -228,7 +236,7 @@ describe("request", () => {
 
   it("Allow saves granted with releaseSha and installedAt and asks the browser", async () => {
     const id = await send("permissions.request", { names: ["notifications"] });
-    await act(async () => button("Allow")!.click());
+    await clickAllow();
     await flush();
     expect(localGrantStore().get(KEY)).toEqual({ answer: "granted", releaseSha: "sha1", installedAt: INSTALLED });
     expect(FakeNotification.requestPermission).toHaveBeenCalledTimes(1);
@@ -248,6 +256,63 @@ describe("request", () => {
     const again = await send("permissions.request", undefined);
     expect(dialog()).toBeNull();
     expect(replyTo(again)).toMatchObject({ ok: true, value: { notifications: "denied" } });
+  });
+
+  it("a click on Allow in the first 500 ms does nothing", async () => {
+    await send("permissions.request", undefined);
+    later(499);
+    await act(async () => button("Allow")!.click());
+    expect(dialog()).not.toBeNull();
+    expect(stored()).toBeNull();
+    expect(FakeNotification.requestPermission).not.toHaveBeenCalled();
+  });
+
+  it("a click after 500 ms grants", async () => {
+    await send("permissions.request", undefined);
+    later(499);
+    await act(async () => button("Allow")!.click());
+    later(2);
+    await act(async () => button("Allow")!.click());
+    expect(localGrantStore().get(KEY)).toMatchObject({ answer: "granted" });
+  });
+
+  it("the guard starts again for every dialog that shows", async () => {
+    await send("permissions.request", undefined);
+    await act(async () => button("Don’t allow")!.click());
+    // A «no» is for good, so the next one to ask needs a fresh permission: a re-asked «yes» of another version.
+    localStorage.clear();
+    localGrantStore().set(KEY, { answer: "granted", releaseSha: "old", installedAt: INSTALLED });
+    await send("permissions.request", undefined);
+    await act(async () => button("Allow")!.click());
+    expect(localGrantStore().get(KEY)).toMatchObject({ releaseSha: "old" });
+  });
+
+  it("while the browser's own prompt is up, the dialog does not come back", async () => {
+    let answer: (p: NotificationPermission) => void = () => {};
+    FakeNotification.requestPermission.mockImplementationOnce(() => new Promise<NotificationPermission>((r) => (answer = r)));
+    const id = await send("permissions.request", undefined);
+    await clickAllow();
+    // The browser's prompt takes the focus away and gives it back.
+    await setAttended(false);
+    await setAttended(true);
+    expect(dialog()).toBeNull();
+    FakeNotification.permission = "granted";
+    await act(async () => answer("granted"));
+    await flush();
+    expect(dialog()).toBeNull();
+    expect(replyTo(id)).toMatchObject({ ok: true, value: { notifications: "granted" } });
+  });
+
+  it("Escape with Permissions and the dialog open answers only the dialog", async () => {
+    await act(async () => api!.openPermissions());
+    await send("permissions.request", undefined);
+    await act(async () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })));
+    expect(localGrantStore().get(KEY)).toEqual({ answer: "denied" });
+    expect(dialog()).toBeNull();
+    expect(host.querySelector("[data-desktop-permissions]")).not.toBeNull();
+    // Now on top, the panel closes on the next Escape.
+    await act(async () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })));
+    expect(host.querySelector("[data-desktop-permissions]")).toBeNull();
   });
 
   it("Escape is «Don't allow»", async () => {
@@ -280,7 +345,7 @@ describe("request", () => {
     const a = await send("permissions.request", undefined);
     const b = await send("permissions.request", undefined);
     expect(host.querySelectorAll("[data-desktop-permission-dialog]")).toHaveLength(1);
-    await act(async () => button("Allow")!.click());
+    await clickAllow();
     await flush();
     expect(dialog()).toBeNull();
     expect(replyTo(a)).toMatchObject({ ok: true, value: { notifications: "granted" } });
@@ -305,7 +370,7 @@ describe("request", () => {
     await send("permissions.request", undefined);
     expect(dialog()!.textContent).toContain("Keep allowing Bookings to show notifications?");
     expect(dialog()!.textContent).toContain("This app changed since you allowed it, so we’re asking again.");
-    await act(async () => button("Allow")!.click());
+    await clickAllow();
     await flush();
     expect(localGrantStore().get(KEY)).toEqual({ answer: "granted", releaseSha: "sha2", installedAt: INSTALLED });
   });

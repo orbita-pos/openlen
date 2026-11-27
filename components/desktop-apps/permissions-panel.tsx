@@ -12,6 +12,8 @@ import { useEffect, useRef } from "react";
 import { GRANTABLE, type DesktopPermission } from "@/lib/desktop-apps/permissions/declared";
 import type { PermissionState } from "@/lib/desktop-apps/permissions/grants";
 
+import { INPUT_GUARD_MS } from "./permission-dialog";
+
 export interface PermissionsPanelProps {
   appName: string;
   notificationsOn: boolean;
@@ -23,15 +25,25 @@ export interface PermissionsPanelProps {
   browserBlocked: boolean;
   onToggle(permission: DesktopPermission, on: boolean): void;
   onClose(): void;
+  /** OpenLen's approval dialog is on top: Escape is its answer, not this panel's. */
+  covered?: boolean;
 }
 
 export function PermissionsPanel(p: PermissionsPanelProps) {
   const t = useTranslations("wsChrome.desktop.permissions");
   const close = useRef(p.onClose);
   close.current = p.onClose;
+  const covered = useRef(p.covered === true);
+  covered.current = p.covered === true;
+  // `manage()` opens this at a moment the app chose: a click it timed must not land on the switch (as on the dialog's «Allow»).
+  const shownAt = useRef(Date.now());
+  const toggle = (permission: DesktopPermission, on: boolean) => {
+    if (Date.now() - shownAt.current < INPUT_GUARD_MS) return;
+    p.onToggle(permission, on);
+  };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close.current();
+      if (e.key === "Escape" && !covered.current) close.current();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -68,7 +80,7 @@ export function PermissionsPanel(p: PermissionsPanelProps) {
                   role="switch"
                   aria-checked={state === "granted"}
                   aria-label={t(`names.${permission}`)}
-                  onClick={() => p.onToggle(permission, state !== "granted")}
+                  onClick={() => toggle(permission, state !== "granted")}
                   className={`relative mt-0.5 inline-flex h-5 w-9 shrink-0 items-center rounded-full transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent-ring)] ${
                     state === "granted" ? "bg-[var(--accent-strong)]" : "bg-hover"
                   }`}

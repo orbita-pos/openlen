@@ -16,6 +16,9 @@ export interface PermissionDialogProps {
   onDeny(): void;
 }
 
+/** How long after OpenLen's dialog or «Permisos» appears a click that grants is ignored (a click the app timed). */
+export const INPUT_GUARD_MS = 500;
+
 const BUTTON =
   "inline-flex h-8 items-center rounded-lg px-3 text-[12.5px] font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-ring)]";
 
@@ -26,6 +29,13 @@ export function PermissionDialog({ appName, reask, onAllow, onDeny }: Permission
   const deny = useRef<HTMLButtonElement>(null);
   const denyNow = useRef(onDeny);
   denyNow.current = onDeny;
+  // The app chooses the instant this appears and knows where «Allow» will be: a click it timed (a double click it asked
+  // for, a «click fast here») must not land on it. «Allow» ignores clicks for a moment after it shows; «Don't allow» never does.
+  const shownAt = useRef(Date.now());
+  const allow = () => {
+    if (Date.now() - shownAt.current < INPUT_GUARD_MS) return;
+    onAllow();
+  };
 
   useEffect(() => {
     deny.current?.focus();
@@ -58,7 +68,7 @@ export function PermissionDialog({ appName, reask, onAllow, onDeny }: Permission
           <button ref={deny} type="button" className={`${BUTTON} bd fg border hover:bg-hover`} onClick={onDeny}>
             {t("deny")}
           </button>
-          <button type="button" className={`${BUTTON} bg-[var(--accent-strong)] text-white hover:opacity-90`} onClick={onAllow}>
+          <button type="button" className={`${BUTTON} bg-[var(--accent-strong)] text-white hover:opacity-90`} onClick={allow}>
             {t("allow")}
           </button>
         </div>

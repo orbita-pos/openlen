@@ -32,6 +32,8 @@ async function render(locale: string, reask: boolean) {
 const buttons = () => [...host.querySelectorAll("button")];
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-11-27T09:00:00.000Z"));
   missing = [];
   onAllow.mockClear();
   onDeny.mockClear();
@@ -43,6 +45,7 @@ afterEach(() => {
   act(() => root?.unmount());
   root = null;
   document.body.innerHTML = "";
+  vi.useRealTimers();
 });
 
 describe("PermissionDialog", () => {
@@ -69,8 +72,25 @@ describe("PermissionDialog", () => {
     expect(host.textContent).toContain("Esta app cambió desde que lo permitiste, así que volvemos a preguntar.");
   });
 
+  it("a click on Allow in the first 500 ms does nothing", async () => {
+    await render("en", false);
+    vi.setSystemTime(Date.now() + 499);
+    await act(async () => buttons()[1]!.click());
+    expect(onAllow).not.toHaveBeenCalled();
+  });
+
+  it("a click after 500 ms grants; «Don't allow» is never held back", async () => {
+    await render("en", false);
+    await act(async () => buttons()[0]!.click());
+    expect(onDeny).toHaveBeenCalledTimes(1);
+    vi.setSystemTime(Date.now() + 500);
+    await act(async () => buttons()[1]!.click());
+    expect(onAllow).toHaveBeenCalledTimes(1);
+  });
+
   it("the buttons answer, and Escape is the cancel: «Don't allow»", async () => {
     await render("en", false);
+    vi.setSystemTime(Date.now() + 600);
     await act(async () => buttons()[1]!.click());
     expect(onAllow).toHaveBeenCalledTimes(1);
     await act(async () => buttons()[0]!.click());

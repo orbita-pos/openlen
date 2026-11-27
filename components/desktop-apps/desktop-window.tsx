@@ -73,6 +73,8 @@ function desktopToolTheme(): ToolContext["theme"] {
   return { mode, tokens: { ...WORKSPACE_TOOL_THEME[mode], ...(font ? { "--font-sans": font } : {}) } };
 }
 
+const NOTHING_DECLARED: DesktopPermission[] = [];
+
 const BUTTON =
   "inline-flex h-8 items-center rounded-lg px-3 text-[12.5px] font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-ring)]";
 
@@ -195,8 +197,11 @@ export function DesktopWindow(p: DesktopWindowProps) {
   }, [name, p.name]);
   const links = { project: openInOpenLenHref(p), pricing: `/${p.locale}/pricing`, tools: `/${p.locale}/new?view=tools` };
   // `window.openlenApp` in the frame asks; this window answers (spec local 2026-11-27-notificaciones-del-escritorio): with the
-  // version the frame shows NOW, so an in-window update makes an old «yes» a question again.
+  // version the frame shows NOW. What the app declares was read for the version the page loaded with, so once another
+  // version runs here the window holds two versions and, like Claude's, has no permissions until it reloads: `[]` makes
+  // every one «unavailable» (it writes nothing — a saved answer stays for after the reload).
   const frame = useRef<HTMLIFrameElement>(null);
+  const declared = version.releaseSha === p.releaseSha ? p.declaredPermissions : NOTHING_DECLARED;
   const appApi = useAppApiHost({
     frame,
     frameOrigin: p.frameOrigin,
@@ -204,7 +209,7 @@ export function DesktopWindow(p: DesktopWindowProps) {
     installationId: p.desktopId,
     releaseSha: version.releaseSha,
     installedAt: p.installedAt,
-    declared: p.declaredPermissions,
+    declared,
     notificationsOn: p.notificationsOn,
     appName: name,
     iconUrl: `/desktop/${encodeURIComponent(p.desktopId)}/icon`,
