@@ -5,14 +5,12 @@
 // never migrates anything. Only the tool project's owner installs it, for themself (§4.12); paid plans only (§4.13).
 import "server-only";
 
-import { AppNoCompilaError, textoDeDiagnostico } from "@/lib/apps/compilador";
-import { dataChangesErrorBody } from "@/lib/backend/data-changes";
-import { functionsPublishErrorBody } from "@/lib/functions/publish-errors";
 import type { Plan } from "@/lib/plan";
 import type { AccesoAlProyecto } from "@/lib/projects/acceso";
 import type { GatedPublishResult } from "@/lib/projects/publish-through-gates";
 import type { ProjectData } from "@/lib/projects/types";
 
+import { installErrorResult, installThroughGates } from "./install-core";
 import { readToolManifest, type ToolMcpDeclaration } from "./manifest";
 import type { ReleaseMcp } from "./mcp/discover";
 import { PLACEHOLDER_ICON_SHA } from "./skeleton";
@@ -132,61 +130,57 @@ export async function installTool(
   const manifest = readToolManifest(files, { personLocale: i.locale, placeholderIconSha: PLACEHOLDER_ICON_SHA });
   if (!manifest.ok) return { status: 422, body: { error: "tool_manifest_invalid", problems: manifest.problems } };
 
-  const gate = await d.securityGate({
-    projectId: i.projectId,
-    actorId: i.actorId,
-    locale: i.locale,
-    ...(i.acceptSecurityFingerprint ? { accept: i.acceptSecurityFingerprint } : {}),
-    ...(i.waitWhenPending ? { waitWhenPending: true } : {}),
-  });
-  if ("stop" in gate) return gate.stop;
+  // Phase 4 (§4.7): with its functions deployed, the operations its MCP server lists, once — what Len is declared.
+  // With the functions off there is nothing deployed to ask: installed as an app with functions publishes today.
+  let operationsLeftOut: string[] = [];
+  const mcpDeclaration = manifest.manifest.mcp;
+  const discoverOperations = async (deployed: boolean): Promise<ReleaseMcp | null> => {
+    if (!deployed || !mcpDeclaration || !d.discover) return null;
+    const found = await d.discover({ projectId: i.projectId, actorId: i.actorId, mcp: mcpDeclaration });
+    // Production is migrated and the functions deployed by now: refusing would leave the old version installed over
+    // the new functions. The install completes WITHOUT operations and says why — installed, deployed and declared agree.
+    if (!found.ok) {
+      operationsLeftOut = [`mcp_failed: ${found.error} — the tool is installed without operations; fix its MCP server and install again`];
+      return null;
+    }
+    operationsLeftOut = found.problems;
+    return found.mcp;
+  };
 
-  try {
-    const release = await d.build({ projectId: i.projectId, html: project.data.html, files, app, entorno: await d.entorno(i.projectId), iconPath: manifest.manifest.iconPath });
-    const functions = await d.prepareFunctions(i.projectId, { skipMissingSecrets: i.skipMissingSecrets === true });
-    await d.dataChanges({
+  const core = await installThroughGates(
+    {
       projectId: i.projectId,
+      actorId: i.actorId,
+      locale: i.locale,
+      html: project.data.html,
+      files,
+      app,
+      iconPath: manifest.manifest.iconPath,
+      ...(i.acceptSecurityFingerprint ? { acceptSecurityFingerprint: i.acceptSecurityFingerprint } : {}),
       ...(i.confirmFingerprint ? { confirmFingerprint: i.confirmFingerprint } : {}),
       ...(i.copyDraftData !== undefined ? { copyDraftData: i.copyDraftData } : {}),
-    });
-    await functions?.deploy();
-    // Phase 4 (§4.7): with its functions deployed, the operations its MCP server lists, once — what Len is declared.
-    // With the functions off there is nothing deployed to ask: installed as an app with functions publishes today.
-    let mcp: ReleaseMcp | null = null;
-    let operationsLeftOut: string[] = [];
-    if (functions && manifest.manifest.mcp && d.discover) {
-      const found = await d.discover({ projectId: i.projectId, actorId: i.actorId, mcp: manifest.manifest.mcp });
-      // Production is migrated and the functions deployed by now: refusing would leave the old version installed over
-      // the new functions. The install completes WITHOUT operations and says why — installed, deployed and declared agree.
-      if (!found.ok) operationsLeftOut = [`mcp_failed: ${found.error} — the tool is installed without operations; fix its MCP server and install again`];
-      else {
-        mcp = found.mcp;
-        operationsLeftOut = found.problems;
-      }
-    }
-    await d.saveRelease(release.sha, i.projectId, release.files, release.jobFiles ?? {}, mcp);
+      ...(i.skipMissingSecrets !== undefined ? { skipMissingSecrets: i.skipMissingSecrets } : {}),
+      ...(i.waitWhenPending ? { waitWhenPending: true } : {}),
+      afterDeploy: discoverOperations,
+    },
+    d,
+  );
+  if (!core.ok) return { status: core.status, body: core.body };
+
+  try {
     const row = await d.upsertInstallation({
       personId: i.actorId,
       projectId: i.projectId,
-      releaseSha: release.sha,
+      releaseSha: core.releaseSha,
       placement: manifest.manifest.placement,
       titles: manifest.manifest.titles,
       descriptions: manifest.manifest.descriptions,
       iconPath: manifest.manifest.iconPath,
       hostLabelFor: d.hostLabelFor ?? ((id) => id),
     });
-    if (gate.fingerprint) {
-      await d.markPublished(i.projectId, gate.fingerprint).catch((err: unknown) => console.warn("[tools] could not keep the installed version as the security review's base", err));
-    }
     const installation = toInstalledToolView(row, { locale: i.locale, requestHost: i.requestHost, plan: "pro", releaseExists: true });
     return { status: 200, body: { installation, ...(operationsLeftOut.length > 0 ? { operationsLeftOut } : {}) } };
   } catch (err) {
-    if (err instanceof AppNoCompilaError) return { status: 422, body: { error: "app_does_not_compile", errors: err.errores.map(textoDeDiagnostico) } };
-    const dataError = dataChangesErrorBody(err);
-    if (dataError) return dataError;
-    const fnError = functionsPublishErrorBody(err);
-    if (fnError) return fnError;
-    console.error("[tools] install failed:", err);
-    return { status: 500, body: { error: "install_failed" } };
+    return installErrorResult(err);
   }
 }
