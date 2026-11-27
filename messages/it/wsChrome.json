@@ -927,6 +927,33 @@
       "title": "{name} richiede un piano a pagamento",
       "body": "Le app sul desktop sono incluse nei piani a pagamento. Non è stato eliminato nulla: quando avrai di nuovo un piano a pagamento, l’app tornerà com’era.",
       "plans": "Vedi i piani"
+    },
+    "permissions": {
+      "button": "Autorizzazioni",
+      "title": "Autorizzazioni di {app}",
+      "empty": "Questa app non ha chiesto nessuna autorizzazione.",
+      "off": "OpenLen ha disattivato per ora le notifiche delle app sul desktop.",
+      "notInBrowser": "Non disponibile nel browser",
+      "browserBlocked": "Il tuo browser sta bloccando le notifiche di OpenLen. Per riattivarle, fai clic sull’icona a sinistra della barra degli indirizzi, apri le impostazioni del sito e consenti le notifiche.",
+      "close": "Chiudi",
+      "names": {
+        "notifications": "Notifiche",
+        "shortcuts": "Scorciatoie da tastiera",
+        "overlay": "Fluttuare sopra le altre finestre",
+        "menu-bar": "Icona nella barra dei menu",
+        "full-access": "Accesso completo a questo computer"
+      },
+      "detail": {
+        "notifications": "Può mostrare notifiche mentre usi altre app."
+      },
+      "dialog": {
+        "title": "Consentire a {app} di mostrare notifiche?",
+        "body": "Può mostrare notifiche mentre usi altre app. Puoi cambiarlo quando vuoi in Autorizzazioni.",
+        "reaskTitle": "Continuare a consentire a {app} di mostrare notifiche?",
+        "reaskBody": "Questa app è cambiata da quando l’hai consentito, quindi te lo chiediamo di nuovo.",
+        "deny": "Non consentire",
+        "allow": "Consenti"
+      }
     }
   }
 }

@@ -12,6 +12,8 @@ import { ChevronRight, MonitorDown, MonitorUp, MonitorX } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
+import { forgetGrantedOf } from "@/lib/desktop-apps/permissions/grants";
+
 import { DesktopInstallCard } from "./desktop-install-card";
 import { desktopRoute, useDesktopApp } from "./use-desktop-app";
 
@@ -56,6 +58,9 @@ export function DesktopMenuItems({
     try {
       const res = await fetch(desktopRoute(projectId), { method: "DELETE" });
       if (res.ok) {
+        // Its «yes» answers in this browser go with it, its «no» stay (spec local 2026-11-27-notificaciones-del-escritorio,
+        // §4.4, like Claude); a reinstall's new `installedAt` voids the «yes» on every other device.
+        if (desktopApp) forgetGrantedOf(desktopApp.id);
         setCard(null);
         reload();
       } else {

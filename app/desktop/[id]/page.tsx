@@ -51,6 +51,10 @@ export default async function DesktopPage({ params }: { params: Promise<{ id: st
           installedAt={state.installedAt}
           locale={locale}
           personName={personName}
+          personId={state.personId}
+          declaredPermissions={state.declaredPermissions}
+          manifestWarning={state.manifestWarning}
+          notificationsOn={state.notificationsOn}
         />
       ) : state.kind === "plan_required" ? (
         <DesktopNotice kind="plan_required" name={state.name} locale={locale} />

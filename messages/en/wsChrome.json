@@ -927,6 +927,33 @@
       "title": "{name} needs a paid plan",
       "body": "Apps on your desktop come with the paid plans. Nothing was deleted: when you are on a paid plan again, the app comes back as you left it.",
       "plans": "See plans"
+    },
+    "permissions": {
+      "button": "Permissions",
+      "title": "Permissions for {app}",
+      "empty": "This app hasn’t asked for any permissions.",
+      "off": "OpenLen has turned notifications from apps on the desktop off for now.",
+      "notInBrowser": "Not available in the browser",
+      "browserBlocked": "Your browser is blocking notifications from OpenLen. To turn them back on, click the icon at the left of the address bar, open the site settings and allow notifications.",
+      "close": "Close",
+      "names": {
+        "notifications": "Notifications",
+        "shortcuts": "Keyboard shortcuts",
+        "overlay": "Float over other windows",
+        "menu-bar": "Menu bar item",
+        "full-access": "Full access to this computer"
+      },
+      "detail": {
+        "notifications": "It can show notifications while you use other apps."
+      },
+      "dialog": {
+        "title": "Allow {app} to show notifications?",
+        "body": "It can show notifications while you use other apps. You can change this any time in Permissions.",
+        "reaskTitle": "Keep allowing {app} to show notifications?",
+        "reaskBody": "This app changed since you allowed it, so we’re asking again.",
+        "deny": "Don’t allow",
+        "allow": "Allow"
+      }
     }
   }
 }

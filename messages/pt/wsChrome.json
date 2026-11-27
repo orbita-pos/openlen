@@ -927,6 +927,33 @@
       "title": "{name} precisa de um plano pago",
       "body": "Os apps na área de trabalho vêm com os planos pagos. Nada foi apagado: quando você voltar a ter um plano pago, o app volta como você o deixou.",
       "plans": "Ver planos"
+    },
+    "permissions": {
+      "button": "Permissões",
+      "title": "Permissões de {app}",
+      "empty": "Este app não pediu nenhuma permissão.",
+      "off": "O OpenLen desativou por enquanto as notificações dos apps da área de trabalho.",
+      "notInBrowser": "Não disponível no navegador",
+      "browserBlocked": "Seu navegador está bloqueando as notificações do OpenLen. Para reativá-las, clique no ícone à esquerda da barra de endereços, abra as configurações do site e permita as notificações.",
+      "close": "Fechar",
+      "names": {
+        "notifications": "Notificações",
+        "shortcuts": "Atalhos de teclado",
+        "overlay": "Flutuar sobre outras janelas",
+        "menu-bar": "Ícone na barra de menus",
+        "full-access": "Acesso total a este computador"
+      },
+      "detail": {
+        "notifications": "Pode mostrar notificações enquanto você usa outros apps."
+      },
+      "dialog": {
+        "title": "Permitir que {app} mostre notificações?",
+        "body": "Pode mostrar notificações enquanto você usa outros apps. Você pode mudar isso quando quiser em Permissões.",
+        "reaskTitle": "Continuar permitindo que {app} mostre notificações?",
+        "reaskBody": "Este app mudou desde que você permitiu, por isso estamos perguntando de novo.",
+        "deny": "Não permitir",
+        "allow": "Permitir"
+      }
     }
   }
 }

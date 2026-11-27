@@ -10,7 +10,7 @@ describe("windowMessages — what travels to the window's browser", () => {
     const sent = (await windowMessages("en", { tool: false })) as Sent;
     expect(Object.keys(sent)).toEqual(["wsChrome"]);
     expect(Object.keys(sent.wsChrome)).toEqual(["desktop"]);
-    expect(Object.keys(sent.wsChrome.desktop)).toEqual(["install", "about", "update", "gone", "planRequired"]);
+    expect(Object.keys(sent.wsChrome.desktop)).toEqual(["install", "about", "update", "gone", "planRequired", "permissions"]);
   });
 
   it("🔴 a tool also gets the texts of the dialogs OpenLen draws around its frame: the data change, the job confirmation and its line, the file picker", async () => {

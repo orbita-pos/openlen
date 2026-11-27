@@ -927,6 +927,33 @@
       "title": "{name} heeft een betaald abonnement nodig",
       "body": "Apps op je bureaublad horen bij de betaalde abonnementen. Er is niets verwijderd: zodra je weer een betaald abonnement hebt, is de app terug zoals je hem achterliet.",
       "plans": "Abonnementen bekijken"
+    },
+    "permissions": {
+      "button": "Machtigingen",
+      "title": "Machtigingen voor {app}",
+      "empty": "Deze app heeft geen machtigingen gevraagd.",
+      "off": "OpenLen heeft meldingen van apps op het bureaublad voorlopig uitgezet.",
+      "notInBrowser": "Niet beschikbaar in de browser",
+      "browserBlocked": "Je browser blokkeert meldingen van OpenLen. Om ze weer aan te zetten, klik je op het pictogram links in de adresbalk, open je de site-instellingen en sta je meldingen toe.",
+      "close": "Sluiten",
+      "names": {
+        "notifications": "Meldingen",
+        "shortcuts": "Sneltoetsen",
+        "overlay": "Boven andere vensters zweven",
+        "menu-bar": "Pictogram in de menubalk",
+        "full-access": "Volledige toegang tot deze computer"
+      },
+      "detail": {
+        "notifications": "Ze kan meldingen tonen terwijl je andere apps gebruikt."
+      },
+      "dialog": {
+        "title": "{app} toestaan meldingen te tonen?",
+        "body": "Ze kan meldingen tonen terwijl je andere apps gebruikt. Je kunt dit altijd wijzigen in Machtigingen.",
+        "reaskTitle": "{app} blijven toestaan meldingen te tonen?",
+        "reaskBody": "Deze app is veranderd sinds je het toestond, dus we vragen het opnieuw.",
+        "deny": "Niet toestaan",
+        "allow": "Toestaan"
+      }
     }
   }
 }

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { grantKey, isReask, localGrantStore, permissionState, type GrantRow } from "./grants";
+import { forgetGrantedOf, grantKey, isReask, localGrantStore, permissionState, type GrantRow } from "./grants";
 import type { DesktopPermission } from "./declared";
 
 const RELEASE = "sha-this";
@@ -267,5 +267,34 @@ describe("localGrantStore", () => {
     localGrantStore().set("k", denied);
     expect(localGrantStore().get("k")).toEqual(denied);
     expect(storage.data.has(STORAGE_KEY)).toBe(true);
+  });
+});
+
+describe("forgetGrantedOf", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("deletes every «yes» of one installation, whoever gave it, and keeps its «no» and the other installations", () => {
+    const storage = fakeStorage();
+    const store = localGrantStore(storage);
+    store.set(grantKey("U1", "D1", "notifications"), granted());
+    store.set(grantKey("u2", "d1", "notifications"), granted());
+    store.set(grantKey("u1", "d1", "shortcuts"), denied);
+    store.set(grantKey("u1", "d2", "notifications"), granted());
+    forgetGrantedOf("D1", storage);
+    expect(JSON.parse(storage.data.get(STORAGE_KEY)!)).toEqual({
+      "u1|d1|shortcuts": denied,
+      "u1|d2|notifications": granted(),
+    });
+  });
+
+  it("removes the key when nothing is left, and never throws without storage", () => {
+    const storage = fakeStorage();
+    localGrantStore(storage).set(grantKey("u1", "d1", "notifications"), granted());
+    forgetGrantedOf("d1", storage);
+    expect(storage.data.has(STORAGE_KEY)).toBe(false);
+    vi.stubGlobal("localStorage", undefined);
+    expect(() => forgetGrantedOf("d1")).not.toThrow();
   });
 });

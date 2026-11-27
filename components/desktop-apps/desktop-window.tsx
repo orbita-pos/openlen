@@ -9,6 +9,10 @@
 // desktop does — its caller is the person's installation of it — through the same `ToolFrame` the workspace frames a tool in
 // (OpenLen's own confirmations, file picker and job lines included), with the workspace's colours as its theme, light or dark
 // as this window's.
+//
+// Both kinds get `window.openlenApp` (spec local 2026-11-27-notificaciones-del-escritorio), which carries nothing of OpenLen:
+// the frame asks for permissions and shows notifications, and THIS window decides (`use-app-api-host.ts`), draws OpenLen's
+// dialog, keeps the answers on the device and offers «Permisos» in the strip, next to «Acerca de».
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -17,9 +21,11 @@ import { ToolFrame } from "@/components/workspace-v2/tools/tool-frame";
 import { installBrowser } from "@/lib/desktop-apps/browser";
 import { EARLY_INSTALL_PROMPT_KEY } from "@/lib/desktop-apps/early-install-prompt";
 import { dismissInstallCard, installCardDismissed } from "@/lib/desktop-apps/install-later";
+import type { DesktopPermission } from "@/lib/desktop-apps/permissions/declared";
 import type { ToolContext } from "@/lib/tools/bridge/protocol";
 import { WORKSPACE_TOOL_THEME } from "@/lib/tools/bridge/workspace-theme";
 
+import { useAppApiHost } from "./use-app-api-host";
 import { UpdateNotice, useDesktopUpdate } from "./use-desktop-update";
 
 export interface DesktopWindowProps {
@@ -37,6 +43,14 @@ export interface DesktopWindowProps {
   locale: string;
   /** For a tool's context (`person.name`). */
   personName: string;
+  /** The session's own id: the key its permission answers are saved under on this device. */
+  personId: string;
+  /** What the installed version's shell declares (`[]` may mean «not read»: it never deletes a saved answer). */
+  declaredPermissions: DesktopPermission[];
+  /** Why the app's manifest declared nothing, for its builder: the page's console, never the screen. */
+  manifestWarning: string | null;
+  /** `OPENLEN_DESKTOP_NOTIFICATIONS` is not `0`. */
+  notificationsOn: boolean;
 }
 
 type InstallPromptEvent = Event & { prompt(): Promise<void> };
@@ -180,6 +194,28 @@ export function DesktopWindow(p: DesktopWindowProps) {
     if (name !== p.name) document.title = name;
   }, [name, p.name]);
   const links = { project: openInOpenLenHref(p), pricing: `/${p.locale}/pricing`, tools: `/${p.locale}/new?view=tools` };
+  // `window.openlenApp` in the frame asks; this window answers (spec local 2026-11-27-notificaciones-del-escritorio): with the
+  // version the frame shows NOW, so an in-window update makes an old «yes» a question again.
+  const frame = useRef<HTMLIFrameElement>(null);
+  const appApi = useAppApiHost({
+    frame,
+    frameOrigin: p.frameOrigin,
+    personId: p.personId,
+    installationId: p.desktopId,
+    releaseSha: version.releaseSha,
+    installedAt: p.installedAt,
+    declared: p.declaredPermissions,
+    notificationsOn: p.notificationsOn,
+    appName: name,
+    iconUrl: `/desktop/${encodeURIComponent(p.desktopId)}/icon`,
+  });
+  // For the app's builder, once per window, like Claude's `console.warn("claude-artifacts-manifest:", …)`.
+  const warned = useRef(false);
+  useEffect(() => {
+    if (!p.manifestWarning || warned.current) return;
+    warned.current = true;
+    console.warn("openlen-app-manifest:", p.manifestWarning);
+  }, [p.manifestWarning]);
   return (
     <div className="workspace-v2 flex h-dvh w-full flex-col overflow-hidden" data-desktop-window>
       {/* At least thin: a refusal says two lines (the headline and why), and the strip grows to hold them. */}
@@ -190,6 +226,16 @@ export function DesktopWindow(p: DesktopWindowProps) {
         <div className="flex min-w-0 flex-1 items-center gap-2" data-desktop-notice-slot role="status">
           {version.available ? <UpdateNotice phase={version.phase} shared={version.published} onUpdate={() => void version.update()} links={links} /> : null}
         </div>
+        <button
+          type="button"
+          className="fg-muted hover:fg rounded px-1.5 py-0.5 text-[12px] hover:bg-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent-ring)]"
+          onClick={() => {
+            setAboutOpen(false);
+            appApi.openPermissions();
+          }}
+        >
+          {t("permissions.button")}
+        </button>
         <button
           type="button"
           className="fg-muted hover:fg rounded px-1.5 py-0.5 text-[12px] hover:bg-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent-ring)]"
@@ -216,9 +262,11 @@ export function DesktopWindow(p: DesktopWindowProps) {
             onPrompt={null}
             title={name}
             theme={desktopToolTheme}
+            frameRef={frame}
           />
         ) : (
           <iframe
+            ref={frame}
             key={version.frameUrl}
             src={version.frameUrl}
             title={name}
@@ -230,6 +278,7 @@ export function DesktopWindow(p: DesktopWindowProps) {
         )}
         <InstallCard name={name} desktopId={p.desktopId} />
       </div>
+      {appApi.dialog}
     </div>
   );
 }

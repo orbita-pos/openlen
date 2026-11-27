@@ -927,6 +927,33 @@
       "title": "{name} necesita un plan de pago",
       "body": "Las apps en el escritorio van con los planes de pago. No se borró nada: cuando vuelvas a tener un plan de pago, la app vuelve como la dejaste.",
       "plans": "Ver planes"
+    },
+    "permissions": {
+      "button": "Permisos",
+      "title": "Permisos de {app}",
+      "empty": "Esta app no ha pedido ningún permiso.",
+      "off": "OpenLen ha apagado por ahora las notificaciones de las apps del escritorio.",
+      "notInBrowser": "No disponible en el navegador",
+      "browserBlocked": "Tu navegador está bloqueando las notificaciones de OpenLen. Para volver a activarlas, pulsa el icono a la izquierda de la barra de direcciones, abre la configuración del sitio y permite las notificaciones.",
+      "close": "Cerrar",
+      "names": {
+        "notifications": "Notificaciones",
+        "shortcuts": "Atajos de teclado",
+        "overlay": "Flotar sobre otras ventanas",
+        "menu-bar": "Icono en la barra de menús",
+        "full-access": "Acceso completo a este ordenador"
+      },
+      "detail": {
+        "notifications": "Puede mostrar notificaciones mientras usas otras apps."
+      },
+      "dialog": {
+        "title": "¿Permitir que {app} muestre notificaciones?",
+        "body": "Puede mostrar notificaciones mientras usas otras apps. Puedes cambiarlo cuando quieras en Permisos.",
+        "reaskTitle": "¿Seguir permitiendo que {app} muestre notificaciones?",
+        "reaskBody": "Esta app cambió desde que lo permitiste, así que volvemos a preguntar.",
+        "deny": "No permitir",
+        "allow": "Permitir"
+      }
     }
   }
 }

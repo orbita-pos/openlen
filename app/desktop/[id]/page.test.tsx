@@ -32,6 +32,10 @@ const READY = {
   releaseSha: "sha1",
   toolInstallationId: null,
   installedAt: "2026-11-20T12:00:00.000Z",
+  personId: "u1",
+  declaredPermissions: ["notifications"],
+  manifestWarning: "bad JSON",
+  notificationsOn: true,
 };
 const open = () => DesktopPage({ params: Promise.resolve({ id: ID }) });
 const meta = () => generateMetadata({ params: Promise.resolve({ id: ID }) });
@@ -75,6 +79,10 @@ describe("the page", () => {
       installedAt: READY.installedAt,
       locale: "es",
       personName: "Ana",
+      personId: "u1",
+      declaredPermissions: ["notifications"],
+      manifestWarning: "bad JSON",
+      notificationsOn: true,
     });
   });
 

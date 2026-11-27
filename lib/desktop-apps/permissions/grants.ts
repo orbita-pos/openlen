@@ -109,6 +109,24 @@ function writeTable(storage: Storage, table: Table): void {
   }
 }
 
+/** «Quitar del escritorio» (§4.4, Claude's `keepOnly(answer !== "granted")`): every «yes» of that installation in THIS browser
+ *  goes, whoever on this device gave it — on one device that is the same as only the remover's — and every «no» stays. */
+export function forgetGrantedOf(installationId: string, storage?: Storage): void {
+  const store = resolveStorage(storage);
+  if (!store) return;
+  const id = installationId.toLowerCase();
+  const table = readTable(store);
+  let changed = false;
+  for (const key of Object.keys(table)) {
+    const parts = key.split("|");
+    if (parts.length !== 3 || parts[1] !== id) continue;
+    if (toRow(table[key])?.answer === "denied") continue;
+    delete table[key];
+    changed = true;
+  }
+  if (changed) writeTable(store, table);
+}
+
 export function localGrantStore(storage?: Storage): GrantStore {
   return {
     get(key) {

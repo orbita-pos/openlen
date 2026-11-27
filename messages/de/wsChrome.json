@@ -927,6 +927,33 @@
       "title": "{name} braucht einen kostenpflichtigen Tarif",
       "body": "Apps auf dem Desktop gehören zu den kostenpflichtigen Tarifen. Nichts wurde gelöscht: Sobald du wieder einen kostenpflichtigen Tarif hast, ist die App so da, wie du sie verlassen hast.",
       "plans": "Tarife ansehen"
+    },
+    "permissions": {
+      "button": "Berechtigungen",
+      "title": "Berechtigungen für {app}",
+      "empty": "Diese App hat keine Berechtigungen angefragt.",
+      "off": "OpenLen hat Benachrichtigungen von Apps auf dem Desktop vorerst ausgeschaltet.",
+      "notInBrowser": "Im Browser nicht verfügbar",
+      "browserBlocked": "Dein Browser blockiert Benachrichtigungen von OpenLen. Um sie wieder einzuschalten, klicke auf das Symbol links in der Adressleiste, öffne die Website-Einstellungen und erlaube Benachrichtigungen.",
+      "close": "Schließen",
+      "names": {
+        "notifications": "Benachrichtigungen",
+        "shortcuts": "Tastenkürzel",
+        "overlay": "Über anderen Fenstern schweben",
+        "menu-bar": "Symbol in der Menüleiste",
+        "full-access": "Vollzugriff auf diesen Computer"
+      },
+      "detail": {
+        "notifications": "Sie kann Benachrichtigungen zeigen, während du andere Apps benutzt."
+      },
+      "dialog": {
+        "title": "{app} erlauben, Benachrichtigungen zu zeigen?",
+        "body": "Sie kann Benachrichtigungen zeigen, während du andere Apps benutzt. Du kannst das jederzeit unter Berechtigungen ändern.",
+        "reaskTitle": "{app} weiterhin erlauben, Benachrichtigungen zu zeigen?",
+        "reaskBody": "Diese App hat sich geändert, seit du es erlaubt hast, deshalb fragen wir noch einmal.",
+        "deny": "Nicht erlauben",
+        "allow": "Erlauben"
+      }
     }
   }
 }

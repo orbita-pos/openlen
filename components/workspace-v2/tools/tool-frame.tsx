@@ -4,7 +4,7 @@
 // host in an iframe — isolated like the canvas (`SANDBOX_REMOTO`), never on openlen.com — with the workspace
 // answering its bridge, and OpenLen's confirmation mounted when it asks to write production; and, for its jobs and
 // files (§4.6), OpenLen's confirmation, its file picker and the line of each running job.
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, type RefObject } from "react";
 
 import type { ToolContext } from "@/lib/tools/bridge/protocol";
 
@@ -22,6 +22,7 @@ export function ToolFrame({
   title,
   projectTitle,
   theme,
+  frameRef,
 }: {
   src: string;
   frameOrigin: string;
@@ -33,8 +34,11 @@ export function ToolFrame({
   projectTitle?: (projectId: string) => string;
   /** The colours the tool is given; the workspace's own tokens when absent (an app on the desktop gives its own). */
   theme?: () => ToolContext["theme"];
+  /** The frame's element, for whoever else answers it (the desktop window's `window.openlenApp` host). */
+  frameRef?: RefObject<HTMLIFrameElement | null>;
 }) {
-  const iframe = useRef<HTMLIFrameElement>(null);
+  const ownFrame = useRef<HTMLIFrameElement>(null);
+  const iframe = frameRef ?? ownFrame;
   const [asking, setAsking] = useState<{ change: ToolDataChange; resolve: (ok: boolean) => void } | null>(null);
 
   const onConfirmChange = useCallback(

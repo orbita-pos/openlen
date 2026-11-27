@@ -110,6 +110,38 @@ describe("DesktopMenuItems", () => {
     expect(openLink()).toBeUndefined();
   });
 
+  it("Quitar deletes this installation's granted rows and keeps denied", async () => {
+    localStorage.setItem(
+      "openlen:desktop-permissions",
+      JSON.stringify({
+        "u1|d1|notifications": { answer: "granted", releaseSha: "abc123", installedAt: DESKTOP_APP.installedAt },
+        "u1|d1|shortcuts": { answer: "denied" },
+        "u1|d2|notifications": { answer: "granted", releaseSha: "x", installedAt: DESKTOP_APP.installedAt },
+      }),
+    );
+    fetchMock.mockResolvedValueOnce(state({ desktopApp: DESKTOP_APP }));
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ removed: true })));
+    fetchMock.mockResolvedValueOnce(state());
+    await render();
+    await act(async () => entry("desktopInstall.menu.remove")!.click());
+    expect(JSON.parse(localStorage.getItem("openlen:desktop-permissions")!)).toEqual({
+      "u1|d1|shortcuts": { answer: "denied" },
+      "u1|d2|notifications": { answer: "granted", releaseSha: "x", installedAt: DESKTOP_APP.installedAt },
+    });
+    localStorage.clear();
+  });
+
+  it("a removal that fails keeps the answers", async () => {
+    const answers = JSON.stringify({ "u1|d1|notifications": { answer: "granted", releaseSha: "abc123", installedAt: DESKTOP_APP.installedAt } });
+    localStorage.setItem("openlen:desktop-permissions", answers);
+    fetchMock.mockResolvedValueOnce(state({ desktopApp: DESKTOP_APP }));
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: "boom" }), { status: 500 }));
+    await render();
+    await act(async () => entry("desktopInstall.menu.remove")!.click());
+    expect(localStorage.getItem("openlen:desktop-permissions")).toBe(answers);
+    localStorage.clear();
+  });
+
   it("a removal that fails says so and leaves the entries as they were", async () => {
     fetchMock.mockResolvedValueOnce(state({ desktopApp: DESKTOP_APP }));
     fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: "boom" }), { status: 500 }));

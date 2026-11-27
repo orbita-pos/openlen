@@ -927,6 +927,33 @@
       "title": "{name} 需要付费套餐",
       "body": "桌面应用包含在付费套餐中。没有删除任何内容：重新使用付费套餐后，应用会恢复原样。",
       "plans": "查看套餐"
+    },
+    "permissions": {
+      "button": "权限",
+      "title": "{app} 的权限",
+      "empty": "此应用没有请求任何权限。",
+      "off": "OpenLen 暂时关闭了桌面应用的通知。",
+      "notInBrowser": "在浏览器中不可用",
+      "browserBlocked": "你的浏览器正在阻止来自 OpenLen 的通知。要重新开启，请点击地址栏左侧的图标，打开网站设置并允许通知。",
+      "close": "关闭",
+      "names": {
+        "notifications": "通知",
+        "shortcuts": "键盘快捷键",
+        "overlay": "浮动在其他窗口之上",
+        "menu-bar": "菜单栏图标",
+        "full-access": "完全访问这台电脑"
+      },
+      "detail": {
+        "notifications": "它可以在你使用其他应用时显示通知。"
+      },
+      "dialog": {
+        "title": "允许 {app} 显示通知吗？",
+        "body": "它可以在你使用其他应用时显示通知。你可以随时在“权限”中更改。",
+        "reaskTitle": "继续允许 {app} 显示通知吗？",
+        "reaskBody": "自你允许以来，此应用已经更改，所以我们再问一次。",
+        "deny": "不允许",
+        "allow": "允许"
+      }
     }
   }
 }

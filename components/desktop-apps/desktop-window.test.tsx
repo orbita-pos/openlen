@@ -33,6 +33,10 @@ const APP: DesktopWindowProps = {
   installedAt: "2026-11-20T12:00:00.000Z",
   locale: "en",
   personName: "Ana",
+  personId: "u1",
+  declaredPermissions: ["notifications"],
+  manifestWarning: null,
+  notificationsOn: true,
 };
 
 let root: Root | null = null;
@@ -166,6 +170,97 @@ describe("the strip", () => {
     expect(link.getAttribute("rel")).toContain("noopener");
     await act(async () => button("Close")!.click());
     expect(host.querySelector("[data-desktop-about]")).toBeNull();
+  });
+});
+
+describe("permissions and notifications (spec local 2026-11-27-notificaciones-del-escritorio)", () => {
+  const ORIGIN = APP.frameOrigin;
+  class FakeNotification {
+    static permission: NotificationPermission = "granted";
+    static requestPermission = vi.fn(async () => "granted" as NotificationPermission);
+    constructor(
+      public title: string,
+      public options: NotificationOptions,
+    ) {}
+  }
+  beforeEach(() => {
+    vi.stubGlobal("Notification", FakeNotification);
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
+    vi.spyOn(document, "hasFocus").mockImplementation(() => true);
+  });
+  afterEach(() => {
+    delete (document as unknown as Record<string, unknown>).visibilityState;
+    vi.restoreAllMocks();
+  });
+  const frame = () => host.querySelector("iframe")!;
+  const ask = (method: string, args: unknown, source: Window | null = frame().contentWindow) =>
+    act(async () => {
+      window.dispatchEvent(new MessageEvent("message", { data: { channel: "openlen-app/1", id: "r1", method, args }, origin: ORIGIN, source }));
+      for (let i = 0; i < 5; i++) await Promise.resolve();
+    });
+  const dialog = () => host.querySelector("[data-desktop-permission-dialog]");
+
+  it("«Permissions» in the strip opens the panel, next to «About»", async () => {
+    await render();
+    const strip = host.querySelector("[data-desktop-strip]")!;
+    const labels = [...strip.querySelectorAll("button")].map((b) => b.textContent);
+    expect(labels.slice(-2)).toEqual(["Permissions", "About"]);
+    expect(host.querySelector("[data-desktop-permissions]")).toBeNull();
+    await act(async () => button("Permissions")!.click());
+    const panel = host.querySelector("[data-desktop-permissions]")!;
+    expect(panel.textContent).toContain("Permissions for Bookings");
+    expect(panel.textContent).toContain("Notifications");
+  });
+
+  it("the app's frame asks and the window draws OpenLen's dialog", async () => {
+    await render();
+    await ask("permissions.request", { names: ["notifications"] });
+    expect(dialog()!.textContent).toContain("Allow Bookings to show notifications?");
+  });
+
+  it("a tool's frame asks through the same window", async () => {
+    await render({ toolInstallationId: "ti1" });
+    await ask("permissions.request", undefined);
+    expect(dialog()).not.toBeNull();
+  });
+
+  it("a message from anything but the frame draws nothing", async () => {
+    await render();
+    await ask("permissions.request", undefined, window);
+    expect(dialog()).toBeNull();
+  });
+
+  it("the manifest's warning goes to the console once, never on screen", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await render({ manifestWarning: "The openlen-app-manifest tag is not valid JSON." });
+    await render({ manifestWarning: "The openlen-app-manifest tag is not valid JSON.", name: "Bookings" });
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0])).toContain("not valid JSON");
+    expect(host.textContent).not.toContain("not valid JSON");
+  });
+
+  it("after an in-window update, an old yes is asked again (Review Focus 3)", async () => {
+    vi.useRealTimers();
+    localStorage.setItem(
+      "openlen:desktop-permissions",
+      JSON.stringify({ "u1|d1|notifications": { answer: "granted", releaseSha: "sha1", installedAt: APP.installedAt } }),
+    );
+    const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_input: unknown, init?: RequestInit) =>
+        init?.method === "POST"
+          ? json({ desktopApp: { id: "d1", url: "/desktop/d1", name: "Bookings", releaseSha: "sha2", installedAt: APP.installedAt }, published: false })
+          : json({ desktopApp: { id: "d1", releaseSha: "sha1" }, updateAvailable: true, published: false }),
+      ),
+    );
+    await render();
+    await act(async () => void (await new Promise((r) => setTimeout(r, 0))));
+    await act(async () => button("Update")!.click());
+    await act(async () => void (await new Promise((r) => setTimeout(r, 0))));
+    expect(frame().getAttribute("src")).toContain("v=sha2");
+    await ask("permissions.request", undefined);
+    expect(dialog()!.textContent).toContain("Keep allowing Bookings to show notifications?");
   });
 });
 

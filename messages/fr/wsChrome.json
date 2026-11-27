@@ -927,6 +927,33 @@
       "title": "{name} nécessite une offre payante",
       "body": "Les applications sur le bureau font partie des offres payantes. Rien n’a été supprimé : dès que vous aurez de nouveau une offre payante, l’application revient comme vous l’avez laissée.",
       "plans": "Voir les offres"
+    },
+    "permissions": {
+      "button": "Autorisations",
+      "title": "Autorisations de {app}",
+      "empty": "Cette app n’a demandé aucune autorisation.",
+      "off": "OpenLen a désactivé pour l’instant les notifications des apps du bureau.",
+      "notInBrowser": "Non disponible dans le navigateur",
+      "browserBlocked": "Votre navigateur bloque les notifications d’OpenLen. Pour les réactiver, cliquez sur l’icône à gauche de la barre d’adresse, ouvrez les paramètres du site et autorisez les notifications.",
+      "close": "Fermer",
+      "names": {
+        "notifications": "Notifications",
+        "shortcuts": "Raccourcis clavier",
+        "overlay": "Flotter au-dessus des autres fenêtres",
+        "menu-bar": "Icône dans la barre des menus",
+        "full-access": "Accès complet à cet ordinateur"
+      },
+      "detail": {
+        "notifications": "Elle peut afficher des notifications pendant que vous utilisez d’autres apps."
+      },
+      "dialog": {
+        "title": "Autoriser {app} à afficher des notifications ?",
+        "body": "Elle peut afficher des notifications pendant que vous utilisez d’autres apps. Vous pouvez changer cela à tout moment dans Autorisations.",
+        "reaskTitle": "Continuer d’autoriser {app} à afficher des notifications ?",
+        "reaskBody": "Cette app a changé depuis que vous l’avez autorisée, nous vous redemandons donc.",
+        "deny": "Ne pas autoriser",
+        "allow": "Autoriser"
+      }
     }
   }
 }
