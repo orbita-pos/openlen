@@ -936,6 +936,8 @@
       "notInBrowser": "Niet beschikbaar in de browser",
       "browserBlocked": "Je browser blokkeert meldingen van OpenLen. Om ze weer aan te zetten, klik je op het pictogram links in de adresbalk, open je de site-instellingen en sta je meldingen toe.",
       "close": "Sluiten",
+      "cancel": "Annuleren",
+      "save": "Opslaan",
       "names": {
         "notifications": "Meldingen",
         "shortcuts": "Sneltoetsen",

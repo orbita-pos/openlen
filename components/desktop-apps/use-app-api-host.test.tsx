@@ -482,4 +482,26 @@ describe("manage", () => {
     await act(async () => api!.openPermissions());
     expect(host.querySelector("[data-desktop-permissions]")).not.toBeNull();
   });
+
+  it("Permissions stores nothing until «Save»: then the yes is saved and the browser asked in that click", async () => {
+    await act(async () => api!.openPermissions());
+    await act(async () => host.querySelector<HTMLButtonElement>("[role=switch]")!.click());
+    expect(stored()).toBeNull();
+    expect(FakeNotification.requestPermission).not.toHaveBeenCalled();
+    later();
+    await act(async () => button("Save")!.click());
+    await flush();
+    expect(localGrantStore().get(KEY)).toEqual({ answer: "granted", releaseSha: "sha1", installedAt: INSTALLED });
+    expect(FakeNotification.requestPermission).toHaveBeenCalledTimes(1);
+    expect(host.querySelector("[data-desktop-permissions]")).toBeNull();
+  });
+
+  it("Permissions «Cancel» stores nothing", async () => {
+    await act(async () => api!.openPermissions());
+    await act(async () => host.querySelector<HTMLButtonElement>("[role=switch]")!.click());
+    later();
+    await act(async () => button("Cancel")!.click());
+    expect(stored()).toBeNull();
+    expect(host.querySelector("[data-desktop-permissions]")).toBeNull();
+  });
 });

@@ -936,6 +936,8 @@
       "notInBrowser": "Im Browser nicht verfügbar",
       "browserBlocked": "Dein Browser blockiert Benachrichtigungen von OpenLen. Um sie wieder einzuschalten, klicke auf das Symbol links in der Adressleiste, öffne die Website-Einstellungen und erlaube Benachrichtigungen.",
       "close": "Schließen",
+      "cancel": "Abbrechen",
+      "save": "Speichern",
       "names": {
         "notifications": "Benachrichtigungen",
         "shortcuts": "Tastenkürzel",

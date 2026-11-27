@@ -936,6 +936,8 @@
       "notInBrowser": "No disponible en el navegador",
       "browserBlocked": "Tu navegador está bloqueando las notificaciones de OpenLen. Para volver a activarlas, pulsa el icono a la izquierda de la barra de direcciones, abre la configuración del sitio y permite las notificaciones.",
       "close": "Cerrar",
+      "cancel": "Cancelar",
+      "save": "Guardar",
       "names": {
         "notifications": "Notificaciones",
         "shortcuts": "Atajos de teclado",

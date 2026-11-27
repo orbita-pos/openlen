@@ -936,6 +936,8 @@
       "notInBrowser": "在浏览器中不可用",
       "browserBlocked": "你的浏览器正在阻止来自 OpenLen 的通知。要重新开启，请点击地址栏左侧的图标，打开网站设置并允许通知。",
       "close": "关闭",
+      "cancel": "取消",
+      "save": "保存",
       "names": {
         "notifications": "通知",
         "shortcuts": "键盘快捷键",

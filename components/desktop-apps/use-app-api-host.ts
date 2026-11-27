@@ -32,7 +32,7 @@ import { DESKTOP_PERMISSIONS, type DesktopPermission } from "@/lib/desktop-apps/
 import { grantKey, isReask, localGrantStore, permissionState, type GrantStore, type PermissionState } from "@/lib/desktop-apps/permissions/grants";
 
 import { PermissionDialog } from "./permission-dialog";
-import { PermissionsPanel } from "./permissions-panel";
+import { PermissionsPanel, type PermissionChange } from "./permissions-panel";
 
 export interface AppApiHostInput {
   frame: RefObject<HTMLIFrameElement | null>;
@@ -273,10 +273,13 @@ export function useAppApiHost(i: AppApiHostInput): { dialog: ReactNode; openPerm
     finish(ask);
   }, [finish]);
 
-  const toggle = useCallback(
-    (permission: DesktopPermission, on: boolean) => {
-      save(permission, on ? "granted" : "denied");
-      if (on) void askBrowser(permission).then(refresh);
+  /** «Permisos» → «Guardar», inside its click: what the person switched is stored, and a yes asks the browser then. */
+  const saveChanges = useCallback(
+    (changes: PermissionChange[]) => {
+      for (const { permission, on } of changes) {
+        save(permission, on ? "granted" : "denied");
+        if (on) void askBrowser(permission).then(refresh);
+      }
     },
     [askBrowser, refresh, save],
   );
@@ -371,7 +374,7 @@ export function useAppApiHost(i: AppApiHostInput): { dialog: ReactNode; openPerm
           rows: declaredRows,
           supported: ctor() !== undefined,
           browserBlocked: browser() === "denied",
-          onToggle: toggle,
+          onSave: saveChanges,
           onClose: closePermissions,
           covered: asking !== null,
         })

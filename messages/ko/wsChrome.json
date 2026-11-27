@@ -936,6 +936,8 @@
       "notInBrowser": "브라우저에서는 사용할 수 없음",
       "browserBlocked": "브라우저가 OpenLen의 알림을 차단하고 있어요. 다시 켜려면 주소 표시줄 왼쪽의 아이콘을 클릭하고 사이트 설정을 열어 알림을 허용하세요.",
       "close": "닫기",
+      "cancel": "취소",
+      "save": "저장",
       "names": {
         "notifications": "알림",
         "shortcuts": "키보드 단축키",

@@ -936,6 +936,8 @@
       "notInBrowser": "Not available in the browser",
       "browserBlocked": "Your browser is blocking notifications from OpenLen. To turn them back on, click the icon at the left of the address bar, open the site settings and allow notifications.",
       "close": "Close",
+      "cancel": "Cancel",
+      "save": "Save",
       "names": {
         "notifications": "Notifications",
         "shortcuts": "Keyboard shortcuts",
