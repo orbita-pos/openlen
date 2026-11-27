@@ -10,8 +10,10 @@ import { requestLocale } from "@/lib/desktop-apps/page-request";
 import "@/app/globals.css";
 import "@/app/[locale]/new/tokens.css";
 
-// The title bar of the installed window is the strip's colour, light or dark as the system is — as Claude's window follows
-// the OS theme (its background `#fcfcfb` / `#151515` by `nativeTheme`). The manifest can carry only one pair (the light one).
+// The title bar of the installed window follows the OS theme, light or dark as the system is — as Claude's window does (its
+// background `#fcfcfb` / `#151515` by `nativeTheme`); the manifest can carry only one pair (the light one). The page does NOT:
+// it follows OpenLen's saved theme (below), the system's only when none was ever chosen. So the title bar and the strip are the
+// same colour when the two agree, and two bands of the same family when the person chose a theme in OpenLen that the OS isn't in.
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: DESKTOP_COLORS.light.theme },
