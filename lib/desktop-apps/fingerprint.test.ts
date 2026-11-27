@@ -30,14 +30,13 @@ describe("filesFingerprint", () => {
     expect(filesFingerprint(`${HTML}<!-- v2 -->`, FILES)).not.toBe(filesFingerprint(HTML, FILES));
   });
 
-  // The rule is `isCompileInputPath`: what the release is built from. A test, Len's manual, the migrations and Len's
-  // artifacts are never in it, so editing them is not «a new version».
-  it("a file that is not a compile input (tests, LEN.md, migrations, artifacts) does not", () => {
+  // The rule is what the install READS: `isCompileInputPath` (what the release is built from) and `/supabase/**` (what the
+  // gates migrate and deploy). A test, Len's manual and Len's artifacts are in neither, so editing them is not «a new version».
+  it("a file that is not an install input (tests, LEN.md, artifacts) does not", () => {
     const before = filesFingerprint(HTML, FILES);
     const noise = {
       "/tests/App.test.tsx": "expect(1).toBe(1)",
       "/LEN.md": "# notes",
-      "/supabase/migrations/001.sql": "select 1",
       "/.artifacts/report/index.html": "<p>hi</p>",
     };
     expect(filesFingerprint(HTML, { ...FILES, ...noise })).toBe(before);
@@ -55,6 +54,24 @@ describe("filesFingerprint", () => {
     const before = filesFingerprint(HTML, FILES);
     expect(filesFingerprint(HTML, { ...FILES, "/package.json": "{}" })).not.toBe(before);
     expect(filesFingerprint(HTML, { ...FILES, "/.openlen/esm-lock.json": "{}" })).not.toBe(before);
+  });
+
+  // 🔴 The gates read the backend: the functions are bundled from `/supabase/functions/**` and `config.toml`, and the data
+  // changes follow the migrations. A desktop-only app has no other way to bring them to production, so a change there is an
+  // update even though none of it reaches the release.
+  it("a migration-only change is an update", () => {
+    const MIGRATION = "/supabase/migrations/20261126000000_init.sql";
+    const before = filesFingerprint(HTML, { ...FILES, [MIGRATION]: "create table a (id int);" });
+    expect(filesFingerprint(HTML, { ...FILES, [MIGRATION]: "create table a (id int, n int);" })).not.toBe(before);
+    expect(filesFingerprint(HTML, { ...FILES, [MIGRATION]: "create table a (id int);", "/supabase/migrations/20261127000000_more.sql": "select 1;" })).not.toBe(before);
+    expect(filesFingerprint(HTML, FILES)).not.toBe(before);
+  });
+
+  it("a function-only change is an update", () => {
+    const FUNCTION = "/supabase/functions/hello/index.ts";
+    const before = filesFingerprint(HTML, { ...FILES, [FUNCTION]: "Deno.serve(() => new Response('a'))" });
+    expect(filesFingerprint(HTML, { ...FILES, [FUNCTION]: "Deno.serve(() => new Response('b'))" })).not.toBe(before);
+    expect(filesFingerprint(HTML, { ...FILES, [FUNCTION]: "Deno.serve(() => new Response('a'))", "/supabase/config.toml": "[functions.hello]\nverify_jwt = false" })).not.toBe(before);
   });
 
   it("a path and a content never run together into another pair", () => {

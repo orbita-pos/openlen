@@ -330,6 +330,27 @@ describe("installDesktopApp: through the gates, then the row", () => {
       expect(d.upsertDesktopApp).toHaveBeenCalledTimes(1);
     });
 
+    // 🔴 The backend is brought to production by the install (functions deployed, data changes applied): a desktop-only app
+    // has nothing else that does. A migration or a function changing is an update even if no byte of the release moved.
+    it("a supabase-only change runs the gates", async () => {
+      let files: Record<string, string> = { ...FILES, "/supabase/migrations/20261126000000_init.sql": "create table a (id int);", "/supabase/functions/hello/index.ts": "a" };
+      const d = deps({ files: vi.fn(async () => files) });
+      await install(d);
+      for (const change of [
+        { "/supabase/migrations/20261126000000_init.sql": "create table a (id int, n int);" },
+        { "/supabase/functions/hello/index.ts": "b" },
+        { "/supabase/config.toml": "[functions.hello]\nverify_jwt = false" },
+        { "/supabase/migrations/20261127000000_more.sql": "select 1;" },
+      ]) {
+        vi.clearAllMocks();
+        files = { ...files, ...change };
+        expect((await install(d)).status, JSON.stringify(change)).toBe(200);
+        expect(d.prepareFunctions, JSON.stringify(change)).toHaveBeenCalledTimes(1);
+        expect(d.dataChanges, JSON.stringify(change)).toHaveBeenCalledTimes(1);
+        expect(d.upsertDesktopApp, JSON.stringify(change)).toHaveBeenCalledTimes(1);
+      }
+    });
+
     it("the checks before the gates still answer: a free plan, an app that now uses Stripe", async () => {
       const d = deps();
       await install(d);
@@ -640,6 +661,17 @@ describe("desktopAppState (the GET)", () => {
     files = { ...FILES, "/tests/App.test.tsx": "other", "/LEN.md": "notes" };
     expect((await desktopAppState({ projectId: "p1", actorId: "u1" }, d)).body.updateAvailable).toBe(false);
     files = { ...FILES, "/src/App.tsx": "changed" };
+    expect((await desktopAppState({ projectId: "p1", actorId: "u1" }, d)).body.updateAvailable).toBe(true);
+  });
+
+  it("a changed migration or function is an update too: the install is what brings the backend to production", async () => {
+    let files: Record<string, string> = { ...FILES, "/supabase/migrations/20261126000000_init.sql": "create table a (id int);" };
+    const d = deps({ files: vi.fn(async () => files) });
+    await install(d);
+    expect((await desktopAppState({ projectId: "p1", actorId: "u1" }, d)).body.updateAvailable).toBe(false);
+    files = { ...files, "/supabase/migrations/20261127000000_more.sql": "select 1;" };
+    expect((await desktopAppState({ projectId: "p1", actorId: "u1" }, d)).body.updateAvailable).toBe(true);
+    files = { ...FILES, "/supabase/functions/hello/index.ts": "a" };
     expect((await desktopAppState({ projectId: "p1", actorId: "u1" }, d)).body.updateAvailable).toBe(true);
   });
 
