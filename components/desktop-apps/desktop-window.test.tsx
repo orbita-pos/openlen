@@ -355,6 +355,39 @@ describe("the new-version notice (spec §4.4)", () => {
     expect(slot().textContent).toBe("");
   });
 
+  it("a release installed elsewhere shows the notice", async () => {
+    // The project is what was installed (`updateAvailable: false`), but the installed release is not the one this frame runs:
+    // the person updated from the workspace after a gate sent them there.
+    let installedSha = "sha9";
+    const calls = stubApi({
+      get: () => json({ desktopApp: { id: "d1", releaseSha: installedSha }, updateAvailable: false, published: false }),
+      post: () => installed("sha9"),
+    });
+    await render();
+    await settle();
+    expect(slot().textContent).toContain("There’s a new version");
+    expect(slot().querySelector("button")!.textContent).toBe("Update");
+    // Only the strip says so: nothing reloads by itself, nothing is asked of the server.
+    expect(frame().getAttribute("src")).toBe(APP.frameUrl);
+    expect(posts(calls)).toHaveLength(0);
+
+    // The button runs the same install and the frame lands on that release; asked again, it has nothing more to say.
+    await act(async () => void (slot().querySelector("button") as HTMLButtonElement).click());
+    await settle();
+    expect(posts(calls)).toEqual([{ method: "POST", body: JSON.stringify({ locale: "en" }) }]);
+    expect(frame().getAttribute("src")).toBe("https://lienzo-0123456789abcdef0123456789abcdef.openlen.app/?v=sha9");
+    expect(slot().textContent).toBe("");
+    await act(async () => void setVisibility("visible"));
+    await settle();
+    expect(slot().textContent).toBe("");
+
+    // And it goes on comparing with what the frame shows, not with what it opened with.
+    installedSha = "sha10";
+    await act(async () => void setVisibility("visible"));
+    await settle();
+    expect(slot().textContent).toContain("There’s a new version");
+  });
+
   it("Actualizar 200 reloads the frame with the new releaseSha", async () => {
     const calls = stubApi({ get: () => state(true), post: () => installed("sha2") });
     await render();

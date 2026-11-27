@@ -153,6 +153,8 @@ function useDesktopUpdate(p: DesktopWindowProps) {
   const updating = useRef(false);
   /** How many updates have landed: an answer to a question asked before the last one says nothing about now. */
   const landed = useRef(0);
+  /** The release the frame runs now (what an answer is compared with: it moves when an update lands). */
+  const running = useRef(p.releaseSha);
   const endpoint = `/api/projects/${encodeURIComponent(p.projectId)}/desktop`;
 
   const check = useCallback(async () => {
@@ -162,9 +164,12 @@ function useDesktopUpdate(p: DesktopWindowProps) {
     try {
       const res = await fetch(endpoint, { cache: "no-store" });
       if (!res.ok) return;
-      const body = (await res.json()) as { updateAvailable?: unknown } | null;
+      const body = (await res.json()) as { updateAvailable?: unknown; desktopApp?: { releaseSha?: unknown } | null } | null;
       if (!alive.current || updating.current || landed.current !== epoch) return;
-      const now = body?.updateAvailable === true;
+      // Two ways to be behind: the project moved on since the install, or the install moved on since this frame (the person
+      // updated from the workspace, where a gate that stopped «Actualizar» sent them). Either way only the strip says so.
+      const installed = body?.desktopApp?.releaseSha;
+      const now = body?.updateAvailable === true || (typeof installed === "string" && installed !== "" && installed !== running.current);
       setAvailable(now);
       // What had stopped an earlier press says nothing about a version that is no longer there.
       if (!now) setPhase({ kind: "idle" });
@@ -200,6 +205,7 @@ function useDesktopUpdate(p: DesktopWindowProps) {
       const releaseSha = body?.desktopApp?.releaseSha;
       if (res.ok && typeof releaseSha === "string" && releaseSha) {
         landed.current += 1;
+        running.current = releaseSha;
         // The frame is keyed by its address: a new one is a new document, the new release.
         setShown((prev) => ({ frameUrl: withRelease(prev.frameUrl, releaseSha), releaseSha }));
         setAvailable(false);
