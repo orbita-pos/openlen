@@ -279,6 +279,8 @@ describe("the new-version notice (spec §4.4)", () => {
   async function settle() {
     await act(async () => void (await vi.advanceTimersByTimeAsync(0)));
   }
+  /** The window is looked at again at least a minute after the last question: only then does it ask again (Claude's probe). */
+  const aMinuteLater = () => act(async () => void (await vi.advanceTimersByTimeAsync(60_000)));
   function setVisibility(visibility: "visible" | "hidden") {
     Object.defineProperty(document, "visibilityState", { configurable: true, get: () => visibility });
     document.dispatchEvent(new Event("visibilitychange"));
@@ -292,10 +294,14 @@ describe("the new-version notice (spec §4.4)", () => {
     expect(gets(calls)).toBe(1);
     expect(calls[0]).toEqual({ method: "GET", body: undefined });
 
-    // Leaving the window asks nothing; coming back does.
+    // Leaving the window asks nothing; coming back does — once a minute has gone by since the last question.
     await act(async () => void setVisibility("hidden"));
     await settle();
     expect(gets(calls)).toBe(1);
+    await act(async () => void setVisibility("visible"));
+    await settle();
+    expect(gets(calls)).toBe(1);
+    await aMinuteLater();
     await act(async () => void setVisibility("visible"));
     await settle();
     expect(gets(calls)).toBe(2);
@@ -373,6 +379,7 @@ describe("the new-version notice (spec §4.4)", () => {
     await settle();
     expect(slot().textContent).toContain("new version");
     available = false;
+    await aMinuteLater();
     await act(async () => void setVisibility("visible"));
     await settle();
     expect(slot().textContent).toBe("");
@@ -400,12 +407,14 @@ describe("the new-version notice (spec §4.4)", () => {
     expect(posts(calls)).toEqual([{ method: "POST", body: JSON.stringify({ locale: "en" }) }]);
     expect(frame().getAttribute("src")).toBe("https://lienzo-0123456789abcdef0123456789abcdef.openlen.app/?v=sha9");
     expect(slot().textContent).toBe("");
+    await aMinuteLater();
     await act(async () => void setVisibility("visible"));
     await settle();
     expect(slot().textContent).toBe("");
 
     // And it goes on comparing with what the frame shows, not with what it opened with.
     installedSha = "sha10";
+    await aMinuteLater();
     await act(async () => void setVisibility("visible"));
     await settle();
     expect(slot().textContent).toContain("There’s a new version");
@@ -465,6 +474,7 @@ describe("the new-version notice (spec §4.4)", () => {
     });
     await render();
     await settle();
+    await aMinuteLater();
     await act(async () => void setVisibility("visible")); // asks again; the answer is slow
     await act(async () => void (slot().querySelector("button") as HTMLButtonElement).click());
     await settle();

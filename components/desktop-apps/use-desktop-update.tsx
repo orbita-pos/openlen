@@ -10,7 +10,9 @@
 // It lives apart from the window so its guards (one update at a time, an answer to an old question says nothing about now)
 // can be driven directly, not only through a button.
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+import { createStateProbe } from "@/lib/desktop-apps/state-probe";
 
 export interface UpdateSource {
   frameUrl: string;
@@ -46,13 +48,14 @@ export interface DesktopUpdate {
   update: () => Promise<void>;
 }
 
+type StateBody = { updateAvailable?: unknown; published?: unknown; desktopApp?: { releaseSha?: unknown } | null } | null;
+
 export function useDesktopUpdate(p: UpdateSource): DesktopUpdate {
   const [shown, setShown] = useState({ frameUrl: p.frameUrl, releaseSha: p.releaseSha });
   const [available, setAvailable] = useState(false);
   const [published, setPublished] = useState(false);
   const [phase, setPhase] = useState<UpdatePhase>({ kind: "idle" });
   const alive = useRef(true);
-  const asking = useRef(false);
   const updating = useRef(false);
   /** How many updates have landed: an answer to a question asked before the last one says nothing about now. */
   const landed = useRef(0);
@@ -60,35 +63,47 @@ export function useDesktopUpdate(p: UpdateSource): DesktopUpdate {
   const running = useRef(p.releaseSha);
   const endpoint = `/api/projects/${encodeURIComponent(p.projectId)}/desktop`;
 
-  const check = useCallback(async () => {
-    if (asking.current || updating.current) return;
-    asking.current = true;
-    const epoch = landed.current;
-    try {
-      const res = await fetch(endpoint, { cache: "no-store" });
-      if (!res.ok) return;
-      const body = (await res.json()) as { updateAvailable?: unknown; published?: unknown; desktopApp?: { releaseSha?: unknown } | null } | null;
-      if (!alive.current || updating.current || landed.current !== epoch) return;
-      // Two ways to be behind: the project moved on since the install, or the install moved on since this frame (the person
-      // updated from the workspace, where a gate that stopped «Actualizar» sent them). Either way only the strip says so.
-      const installed = body?.desktopApp?.releaseSha;
-      const now = body?.updateAvailable === true || (typeof installed === "string" && installed !== "" && installed !== running.current);
-      setAvailable(now);
-      setPublished(body?.published === true);
-      // What had stopped an earlier press says nothing about a version that is no longer there.
-      if (!now) setPhase({ kind: "idle" });
-    } catch {
-      // No answer is no notice: the window works the same offline.
-    } finally {
-      asking.current = false;
-    }
-  }, [endpoint]);
+  // Claude's probe: a deadline on every question, one request in flight for whoever asks, and the window being looked at again
+  // asks at most once a minute (`lib/desktop-apps/state-probe.ts`). `null` is a question that was answered with no news.
+  const probe = useMemo(
+    () =>
+      createStateProbe<StateBody>(async (signal) => {
+        const res = await fetch(endpoint, { cache: "no-store", signal });
+        return res.ok ? ((await res.json()) as StateBody) : null;
+      }),
+    [endpoint],
+  );
+
+  const check = useCallback(
+    async (onFocus: boolean) => {
+      if (updating.current) return;
+      const epoch = landed.current;
+      const asked = onFocus ? probe.askOnFocus() : probe.ask();
+      if (!asked) return;
+      try {
+        const body = await asked;
+        // An answer with no news (the server's no, or no body) leaves what the strip says as it was.
+        if (!body || !alive.current || updating.current || landed.current !== epoch) return;
+        // Two ways to be behind: the project moved on since the install, or the install moved on since this frame (the person
+        // updated from the workspace, where a gate that stopped «Actualizar» sent them). Either way only the strip says so.
+        const installed = body.desktopApp?.releaseSha;
+        const now = body.updateAvailable === true || (typeof installed === "string" && installed !== "" && installed !== running.current);
+        setAvailable(now);
+        setPublished(body.published === true);
+        // What had stopped an earlier press says nothing about a version that is no longer there.
+        if (!now) setPhase({ kind: "idle" });
+      } catch {
+        // No answer — offline, or too slow — is no notice: the window works the same, and a notice already up stays up.
+      }
+    },
+    [probe],
+  );
 
   useEffect(() => {
     alive.current = true;
-    void check();
+    void check(false);
     const onVisible = () => {
-      if (document.visibilityState === "visible") void check();
+      if (document.visibilityState === "visible") void check(true);
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => {
