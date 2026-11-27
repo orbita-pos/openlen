@@ -66,6 +66,10 @@ function look() {
   Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
   document.dispatchEvent(new Event("visibilitychange"));
 }
+function hide() {
+  Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+  document.dispatchEvent(new Event("visibilitychange"));
+}
 /** A question that never answers, and does not hear it was told to stop either. */
 const hung: Handler = () => new Promise<Response>(() => {});
 
@@ -127,6 +131,93 @@ describe("the question (spec §4.4, as Claude's own probe asks)", () => {
     await act(async () => void look());
     await settle();
     expect(gets(calls)).toBe(2);
+  });
+
+  // A person who edits in the workspace and comes back inside the minute must hear about it when the minute ends, not only
+  // after leaving and coming back again: the focus is deferred, not dropped.
+  it("🔴 a focus inside the minute schedules one trailing check, at the end of that minute", async () => {
+    let answer: Handler = upToDate;
+    const calls = stubApi({ get: (call) => answer(call) });
+    await mount();
+    await settle();
+    expect(gets(calls)).toBe(1);
+    expect(current.available).toBe(false);
+
+    // The project moved on while the window was away; the person looks at the window again 20 s after the last question.
+    answer = behind;
+    await tick(20_000);
+    await act(async () => void look());
+    await settle();
+    expect(gets(calls)).toBe(1);
+    // More focuses inside the same minute do not add checks: still ONE trailing.
+    await tick(5_000);
+    await act(async () => void look());
+    await act(async () => void look());
+    await settle();
+    expect(gets(calls)).toBe(1);
+
+    await tick(FOCUS_PROBE_GAP_MS - 25_000 - 1);
+    expect(gets(calls)).toBe(1);
+    await tick(1);
+    await settle();
+    expect(gets(calls)).toBe(2);
+    expect(current.available).toBe(true);
+
+    // It is a deferral of a focus, not a timer: nothing more is asked on its own.
+    await tick(FOCUS_PROBE_GAP_MS * 3);
+    expect(gets(calls)).toBe(2);
+  });
+
+  it("🔴 no trailing check while the window is hidden: leaving cancels it, and a minute that ends hidden asks nothing", async () => {
+    const calls = stubApi({ get: upToDate });
+    await mount();
+    await settle();
+
+    // Looked at inside the minute, then left before it ended.
+    await tick(10_000);
+    await act(async () => void look());
+    await act(async () => void hide());
+    await tick(FOCUS_PROBE_GAP_MS * 2);
+    await settle();
+    expect(gets(calls)).toBe(1);
+
+    // Looked at again (past the minute): that goes out at once, as always; a focus right after it is inside the new minute
+    // and is deferred — and a window that is hidden when that minute ends asks nothing, even if no event said so.
+    await act(async () => void look());
+    await settle();
+    expect(gets(calls)).toBe(2);
+    await tick(10_000);
+    await act(async () => void look());
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+    await tick(FOCUS_PROBE_GAP_MS * 2);
+    await settle();
+    expect(gets(calls)).toBe(2);
+  });
+
+  it("a trailing check does not outlive the window", async () => {
+    const calls = stubApi({ get: upToDate });
+    await mount();
+    await settle();
+    await tick(10_000);
+    await act(async () => void look());
+    act(() => root?.unmount());
+    root = createRoot(host);
+    await tick(FOCUS_PROBE_GAP_MS * 2);
+    expect(gets(calls)).toBe(1);
+  });
+
+  it("a trailing check does not ask about an app that was removed elsewhere in the meantime", async () => {
+    const calls = stubApi({ get: behind, post: () => json({ error: "desktop_app_removed" }, 409) });
+    await mount();
+    await settle();
+    await tick(10_000);
+    await act(async () => void look());
+    await act(async () => void current.update());
+    expect(current.phase).toEqual({ kind: "stopped", reason: "removed" });
+    await tick(FOCUS_PROBE_GAP_MS * 2);
+    await settle();
+    expect(gets(calls)).toBe(1);
+    expect(current.phase).toEqual({ kind: "stopped", reason: "removed" });
   });
 
   it("a notice that was up stays up when a later question fails (500, offline or too slow)", async () => {

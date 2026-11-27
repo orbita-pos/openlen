@@ -1,7 +1,8 @@
 // HOW THE WINDOW OF AN APP ON THE DESKTOP ASKS ITS QUESTION (spec local 2026-11-26-apps-en-el-escritorio, §4.4), as Claude's
 // own app window asks whether its artifact is still there: every question has a deadline (8 s), callers that arrive while one
-// is out share it, and a check that only came from the window being looked at again goes out at most once a minute. The one
-// that opens the window always runs. Pure: the request is the caller's.
+// is out share it, and a check that only came from the window being looked at again goes out at most once a minute (the one
+// that is skipped is the caller's to defer to the end of that minute: `focusDelayMs`). The one that opens the window always
+// runs. Pure: the request is the caller's.
 
 /** How long a question has to answer before it is given up (Claude's probe: 8 s). */
 export const PROBE_TIMEOUT_MS = 8000;
@@ -13,6 +14,9 @@ export interface StateProbe<T> {
   ask(): Promise<T>;
   /** One that only came from the window being looked at again: null while the last went out less than a minute ago. */
   askOnFocus(): Promise<T> | null;
+  /** How long until `askOnFocus` would go out: what a check skipped inside the minute waits for, so it can be deferred to
+   *  then instead of dropped. 0 when it would go out now, and when a question is already out (a focus shares it). */
+  focusDelayMs(): number;
 }
 
 export function createStateProbe<T>(
@@ -57,6 +61,10 @@ export function createStateProbe<T>(
       if (inflight) return inflight;
       if (lastAt !== null && Date.now() - lastAt < focusGapMs) return null;
       return ask();
+    },
+    focusDelayMs() {
+      if (inflight || lastAt === null) return 0;
+      return Math.max(0, focusGapMs - (Date.now() - lastAt));
     },
   };
 }

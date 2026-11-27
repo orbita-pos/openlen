@@ -84,6 +84,32 @@ describe("createStateProbe", () => {
     expect(run).toHaveBeenCalledTimes(2);
   });
 
+  // What a check that was skipped waits for: the caller schedules ONE trailing check at that moment (a focus inside the
+  // minute is deferred, not dropped).
+  it("focusDelayMs: nothing to wait for before any question, the rest of the minute after one, nothing once it is over", async () => {
+    const run = vi.fn(async () => "ok");
+    const probe = createStateProbe(run);
+    expect(probe.focusDelayMs()).toBe(0);
+    await probe.ask();
+    expect(probe.focusDelayMs()).toBe(FOCUS_PROBE_GAP_MS);
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(probe.focusDelayMs()).toBe(FOCUS_PROBE_GAP_MS - 20_000);
+    await vi.advanceTimersByTimeAsync(FOCUS_PROBE_GAP_MS - 20_000);
+    expect(probe.focusDelayMs()).toBe(0);
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(probe.focusDelayMs()).toBe(0);
+  });
+
+  it("focusDelayMs counts from when the last question went out, and a question still out is nothing to wait for", async () => {
+    const { run } = hanging();
+    const probe = createStateProbe(run);
+    void probe.ask().catch(() => {});
+    // Out: a focus shares it, so nothing is deferred.
+    expect(probe.focusDelayMs()).toBe(0);
+    await vi.advanceTimersByTimeAsync(PROBE_TIMEOUT_MS);
+    expect(probe.focusDelayMs()).toBe(FOCUS_PROBE_GAP_MS - PROBE_TIMEOUT_MS);
+  });
+
   it("the check on opening always runs, whatever the minute says", async () => {
     const run = vi.fn(async () => "ok");
     const probe = createStateProbe(run);

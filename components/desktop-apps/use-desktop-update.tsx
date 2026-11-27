@@ -3,7 +3,8 @@
 // THE NEW-VERSION NOTICE (spec local 2026-11-26-apps-en-el-escritorio, §4.4). The window shows a FROZEN release; when the
 // project's files moved on since it was installed it says so, and the person updates it with one button — nothing changes on
 // its own. The question is asked on opening and whenever the window becomes visible again (never on a timer, and at most once a
-// minute: Claude's probe); «Actualizar» runs the install again through the same gates as the Publicar menu's. A gate that wants
+// minute: Claude's probe; a look inside the minute is deferred to its end, once and only while the window is visible, so
+// whoever edits in the workspace and comes back at once still hears about it); «Actualizar» runs the install again through the same gates as the Publicar menu's. A gate that wants
 // something (the security review's 428, a data change's, a build that doesn't compile) is NOT resolved here: the dialogs live
 // in the workspace, so the strip says what is going on and links to the project, and the version that was running keeps running.
 //
@@ -80,12 +81,29 @@ export function useDesktopUpdate(p: UpdateSource): DesktopUpdate {
     if (typeof reported === "string" && reported.trim() !== "") setName(reported);
   }, []);
 
+  /** The one check that a focus inside the minute is deferred to (at the end of that minute, while the window is visible):
+   *  a person who edits in the workspace and comes back within the minute hears about it then, not after leaving again. */
+  const trailing = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelTrailing = useCallback(() => {
+    if (trailing.current !== null) clearTimeout(trailing.current);
+    trailing.current = null;
+  }, []);
+
   const check = useCallback(
     async (onFocus: boolean) => {
       if (updating.current || removed.current) return;
       const epoch = landed.current;
       const asked = onFocus ? probe.askOnFocus() : probe.ask();
-      if (!asked) return;
+      if (!asked) {
+        // Skipped inside the minute: one trailing check, however many focuses came, and none while the window is hidden.
+        if (trailing.current === null) {
+          trailing.current = setTimeout(() => {
+            trailing.current = null;
+            if (alive.current && document.visibilityState === "visible") void check(true);
+          }, probe.focusDelayMs());
+        }
+        return;
+      }
       try {
         const body = await asked;
         // An answer with no news (the server's no, or no body) leaves what the strip says as it was.
@@ -111,13 +129,16 @@ export function useDesktopUpdate(p: UpdateSource): DesktopUpdate {
     void check(false);
     const onVisible = () => {
       if (document.visibilityState === "visible") void check(true);
+      // Leaving the window takes its deferred check with it: it asks again when the person comes back.
+      else cancelTrailing();
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       alive.current = false;
+      cancelTrailing();
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [check]);
+  }, [check, cancelTrailing]);
 
   const update = useCallback(async () => {
     if (updating.current || removed.current) return;

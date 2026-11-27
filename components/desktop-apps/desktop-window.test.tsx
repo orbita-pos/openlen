@@ -416,7 +416,8 @@ describe("the new-version notice (spec §4.4)", () => {
     expect(gets(calls)).toBe(1);
     expect(calls[0]).toEqual({ method: "GET", body: undefined });
 
-    // Leaving the window asks nothing; coming back does — once a minute has gone by since the last question.
+    // Leaving the window asks nothing; coming back does — once a minute has gone by since the last question. Coming back
+    // inside that minute is not forgotten: it is asked when the minute ends (once), not before.
     await act(async () => void setVisibility("hidden"));
     await settle();
     expect(gets(calls)).toBe(1);
@@ -424,8 +425,6 @@ describe("the new-version notice (spec §4.4)", () => {
     await settle();
     expect(gets(calls)).toBe(1);
     await aMinuteLater();
-    await act(async () => void setVisibility("visible"));
-    await settle();
     expect(gets(calls)).toBe(2);
 
     // And no clock asks: half an hour goes by.
@@ -433,11 +432,20 @@ describe("the new-version notice (spec §4.4)", () => {
     expect(gets(calls)).toBe(2);
     expect(posts(calls)).toHaveLength(0);
 
-    // A closed window asks nothing more.
+    // Looked at again after that, it goes out at once.
+    await act(async () => void setVisibility("hidden"));
+    await act(async () => void setVisibility("visible"));
+    await settle();
+    expect(gets(calls)).toBe(3);
+
+    // A closed window asks nothing more, not even what a look inside the minute had deferred.
+    await act(async () => void setVisibility("hidden"));
+    await act(async () => void setVisibility("visible"));
     await act(async () => root!.unmount());
     root = createRoot(host);
     await act(async () => void setVisibility("visible"));
-    expect(gets(calls)).toBe(2);
+    await aMinuteLater();
+    expect(gets(calls)).toBe(3);
   });
 
   it("updateAvailable shows the strip with Actualizar — and nothing changes on its own", async () => {
