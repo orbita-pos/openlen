@@ -44,6 +44,7 @@ function fakeDeps(): DesktopDeps {
     files: async () => files,
     usesStripe: async () => false,
     toolInstallation: async () => null,
+    releaseExists: async () => true,
     securityGate: async () => gate,
     entorno: async () => ({}),
     build: async () => ({ sha, files: { "/index.html": { content: "x", contentType: "text/html" } }, jobFiles: {} }),
@@ -137,6 +138,17 @@ describe("POST /api/projects/[id]/desktop", () => {
     expect((await post({ locale: "es" })).status).toBe(200);
     expect(row?.removedAt).toBeNull();
     expect((await post({ locale: "es", fromWindow: true })).status).toBe(200);
+  });
+
+  it("nothing changed since the install: the same row comes back without running the gates (a gate that would stop is never asked)", async () => {
+    const first = await (await post({})).json();
+    gate = { stop: { status: 428, body: { error: "security_findings", fingerprint: "fp9" } } };
+    const again = await post({ fromWindow: true });
+    expect(again.status).toBe(200);
+    expect(await again.json()).toEqual(first);
+    // The first thing that does change asks the gates again.
+    files = { ...files, "/src/App.tsx": "export default () => 3" };
+    expect((await post({ fromWindow: true })).status).toBe(428);
   });
 
   it("fromWindow must be a boolean", async () => {

@@ -25,7 +25,7 @@ vi.mock("@/lib/db", () => ({
   schema: { projects: { id: "id", title: "title", subdomain: "subdomain", data: "data" } },
 }));
 vi.mock("./store", () => ({ desktopAppOf: vi.fn(), hasActiveDesktopApp: vi.fn(), upsertDesktopApp: vi.fn(), markDesktopAppRemoved: vi.fn() }));
-vi.mock("@/lib/tools/store", () => ({ installationOf: vi.fn() }));
+vi.mock("@/lib/tools/store", () => ({ installationOf: vi.fn(), releaseExists: vi.fn() }));
 vi.mock("@/lib/stripe/enabled", () => ({ stripeEnabled: vi.fn() }));
 vi.mock("@/lib/stripe/state", () => ({ stripeStateFor: vi.fn() }));
 
@@ -33,6 +33,7 @@ const { hostLabelOrThrow, realDesktopDeps } = await import("./deps");
 const { stripeEnabled } = await import("@/lib/stripe/enabled");
 const { stripeStateFor } = await import("@/lib/stripe/state");
 const store = await import("./store");
+const toolStore = await import("@/lib/tools/store");
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -66,6 +67,8 @@ describe("realDesktopDeps", () => {
     expect(d.hasActiveDesktopApp).toBe(store.hasActiveDesktopApp);
     expect(d.upsertDesktopApp).toBe(store.upsertDesktopApp);
     expect(d.markRemoved).toBe(store.markDesktopAppRemoved);
+    // An install with nothing new asks whether the release is still there, as the tools' list does.
+    expect(d.releaseExists).toBe(toolStore.releaseExists);
   });
 
   it("is on by default and off with OPENLEN_DESKTOP_APPS=0", async () => {

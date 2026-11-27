@@ -31,6 +31,8 @@ export interface DesktopDeps extends CoreDeps {
   /** The person's installation of a TOOL project (the rail's), removed, switched off or not. */
   toolInstallation(personId: string, projectId: string): Promise<{ id: string; iconPath: string; enabled: boolean; removedAt: Date | null } | null>;
   desktopAppOf(personId: string, projectId: string): Promise<DesktopAppRow | null>;
+  /** Whether a release is still there (it can be cleaned up once nobody uses it): an install with nothing new needs it. */
+  releaseExists(sha: string): Promise<boolean>;
   /** Whether ANYONE has the project on their desktop, not removed (only the owner can, today): publishing warns. */
   hasActiveDesktopApp(projectId: string): Promise<boolean>;
   upsertDesktopApp(i: Parameters<typeof upsertDesktopApp>[0]): Promise<DesktopAppRow>;
@@ -69,12 +71,10 @@ export async function installDesktopApp(
   if (access instanceof Response) return { status: access.status, body: (await access.json().catch(() => ({}))) as Record<string, unknown> };
   if (access.rol !== "dueno") return { status: 403, body: { error: "owner_only" } };
 
+  const installed = await d.desktopAppOf(i.actorId, i.projectId);
   // Claude reconciles with what is installed before it acts and closes a window when its app is uninstalled, so a window
   // left open after a removal elsewhere cannot exist there. Here it can, and its button must not undo the removal.
-  if (i.fromWindow) {
-    const current = await d.desktopAppOf(i.actorId, i.projectId);
-    if (!current || current.removedAt) return { status: 409, body: { error: "desktop_app_removed" } };
-  }
+  if (i.fromWindow && (!installed || installed.removedAt)) return { status: 409, body: { error: "desktop_app_removed" } };
 
   const project = await d.loadProject(i.projectId);
   const app = project?.data.app;
@@ -91,6 +91,23 @@ export async function installDesktopApp(
   }
 
   const files = await d.files(i.projectId);
+  const fingerprint = filesFingerprint(project.data.html, files);
+
+  // Claude has no «update» when nothing changed: its content is live and identical bytes are skipped. An install of an app
+  // that is on the desktop, whose files are the installed ones and whose release is still there, is that same row — there
+  // is nothing new to review, build or deploy. A new name or a different tool installation is something to update.
+  if (
+    installed &&
+    !installed.removedAt &&
+    installed.filesFingerprint === fingerprint &&
+    installed.name === project.title &&
+    installed.toolInstallationId === (tool?.id ?? null) &&
+    installed.iconPath === (tool?.iconPath ?? null) &&
+    (await d.releaseExists(installed.releaseSha))
+  ) {
+    return { status: 200, body: { desktopApp: toDesktopAppView(installed), published: project.subdomain !== null } };
+  }
+
   const core = await installThroughGates(
     {
       projectId: i.projectId,
@@ -117,7 +134,7 @@ export async function installDesktopApp(
           iconPath: tool?.iconPath ?? null,
           toolInstallationId: tool?.id ?? null,
           // Of what was BUILT, not of what is there now: a file saved during the build is an update waiting.
-          filesFingerprint: filesFingerprint(project.data.html, files),
+          filesFingerprint: fingerprint,
           hostLabelFor: d.hostLabelFor,
         }),
     },

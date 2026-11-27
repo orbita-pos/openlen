@@ -51,6 +51,7 @@ export async function realDesktopDeps(): Promise<DesktopDeps> {
     // `stripeStateFor` is null for a project with no Stripe account in either mode and no webhook endpoint.
     usesStripe: async (projectId) => stripeOn.stripeEnabled() && (await (await import("@/lib/stripe/state")).stripeStateFor(projectId)) !== null,
     toolInstallation: (personId, projectId) => toolStore.installationOf(personId, projectId),
+    releaseExists: toolStore.releaseExists,
     desktopAppOf: store.desktopAppOf,
     hasActiveDesktopApp: store.hasActiveDesktopApp,
     upsertDesktopApp: store.upsertDesktopApp,

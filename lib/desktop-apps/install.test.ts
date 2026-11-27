@@ -70,6 +70,7 @@ const deps = (over: Partial<DesktopDeps> = {}, store = fakeStore()): DesktopDeps
   files: vi.fn(async () => FILES),
   usesStripe: vi.fn(async () => false),
   toolInstallation: vi.fn(async () => null),
+  releaseExists: vi.fn(async () => true),
   securityGate: vi.fn(async () => ({ fingerprint: "fp1" })),
   entorno: vi.fn(async () => ({})),
   build: vi.fn(async () => RELEASE),
@@ -224,8 +225,10 @@ describe("installDesktopApp: through the gates, then the row", () => {
   });
 
   it("reinstall keeps the same desktop id", async () => {
-    const d = deps();
+    let files = FILES;
+    const d = deps({ files: vi.fn(async () => files) });
     const first = await install(d);
+    files = { ...FILES, "/src/App.tsx": "changed" }; // something to update: with nothing changed the install does nothing
     const second = await install(d, { locale: "en" });
 
     expect(second.status).toBe(200);
@@ -254,6 +257,99 @@ describe("installDesktopApp: through the gates, then the row", () => {
     expect(after.filesFingerprint).not.toBe(before.filesFingerprint);
     expect(after.id).toBe(before.id);
     expect(after.hostLabel).toBe(before.hostLabel);
+  });
+
+  // Claude has no «update» when nothing changed (its content is live and identical bytes are skipped): an install of an
+  // app whose files are the installed ones, whose release is still there, is the same row — no review, no build, no deploy.
+  describe("nothing changed since the installed version", () => {
+    const gatesRan = (d: DesktopDeps) =>
+      [d.securityGate, d.entorno, d.build, d.prepareFunctions, d.dataChanges, d.saveRelease, d.markPublished].some((g) => vi.mocked(g).mock.calls.length > 0);
+
+    it("🔴 the same row comes back and the gates do not run", async () => {
+      const d = deps();
+      const first = await install(d);
+      vi.clearAllMocks();
+
+      const again = await install(d);
+
+      expect(again).toEqual(first);
+      expect(gatesRan(d)).toBe(false);
+      expect(d.upsertDesktopApp).not.toHaveBeenCalled();
+      expect(d.releaseExists).toHaveBeenCalledWith("sha1");
+      expect(d.store.rows.get("u1/p1")!.updatedAt).toEqual(new Date("2026-11-26T11:00:00Z"));
+    });
+
+    it("the window's own update does the same", async () => {
+      const d = deps();
+      await install(d);
+      vi.clearAllMocks();
+      expect((await install(d, { fromWindow: true })).status).toBe(200);
+      expect(gatesRan(d)).toBe(false);
+    });
+
+    it("a release that is gone is built again", async () => {
+      const d = deps();
+      await install(d);
+      vi.clearAllMocks();
+      d.releaseExists = vi.fn(async () => false);
+      expect((await install(d)).status).toBe(200);
+      expect(d.build).toHaveBeenCalled();
+      expect(d.saveRelease).toHaveBeenCalled();
+    });
+
+    it("a removed app is installed again whatever its files", async () => {
+      const d = deps();
+      await install(d);
+      await removeDesktopApp({ projectId: "p1", actorId: "u1" }, d);
+      vi.clearAllMocks();
+      expect((await install(d)).status).toBe(200);
+      expect(d.build).toHaveBeenCalled();
+      expect(d.store.rows.get("u1/p1")!.removedAt).toBeNull();
+    });
+
+    it("a renamed project is an update: the window takes the new name", async () => {
+      let p = project();
+      const d = deps({ loadProject: vi.fn(async () => p) });
+      await install(d);
+      vi.clearAllMocks();
+      p = project({ title: "Mis reservas 2" });
+      const r = await install(d);
+      expect(r.status).toBe(200);
+      expect((r.body.desktopApp as { name: string }).name).toBe("Mis reservas 2");
+      expect(d.build).toHaveBeenCalled();
+    });
+
+    it("a changed file, test or shell: the gates run, as for any update", async () => {
+      let files = FILES;
+      const d = deps({ files: vi.fn(async () => files) });
+      await install(d);
+      vi.clearAllMocks();
+      files = { ...FILES, "/src/App.tsx": "changed" };
+      expect((await install(d)).status).toBe(200);
+      expect(d.securityGate).toHaveBeenCalledTimes(1);
+      expect(d.upsertDesktopApp).toHaveBeenCalledTimes(1);
+    });
+
+    it("the checks before the gates still answer: a free plan, an app that now uses Stripe", async () => {
+      const d = deps();
+      await install(d);
+      d.plan = vi.fn(async () => "free" as const);
+      expect(await install(d)).toEqual({ status: 402, body: { error: "plan_required" } });
+      d.plan = vi.fn(async () => "pro" as const);
+      d.usesStripe = vi.fn(async () => true);
+      expect(await install(d)).toEqual({ status: 409, body: { error: "uses_stripe" } });
+    });
+
+    it("a tool whose rail installation moved is an update: the row points at the new one", async () => {
+      const tool = { loadProject: vi.fn(async () => project({}, { tool: { bornAt: "x" } })) };
+      let installation = { id: "ti1", iconPath: "/icon.svg", enabled: true, removedAt: null };
+      const d = deps({ ...tool, toolInstallation: vi.fn(async () => installation) });
+      await install(d);
+      vi.clearAllMocks();
+      installation = { ...installation, id: "ti2" };
+      expect((await install(d)).status).toBe(200);
+      expect(d.upsertDesktopApp).toHaveBeenCalledWith(expect.objectContaining({ toolInstallationId: "ti2" }));
+    });
   });
 
   it("a removed app comes back when it is installed again", async () => {
@@ -489,6 +585,7 @@ describe("desktopInstalledForPublish (the GET ?for=publish)", () => {
     const d = deps();
     await install(d); // the owner, u1
     const asEditor = deps({ access: vi.fn(async () => ({ rol: "editor" as const, duenoId: "u1" })) }, d.store);
+    vi.mocked(asEditor.desktopAppOf).mockClear(); // the store is shared with the owner's install, which read its row
     expect(await forPublish(asEditor, "u2")).toEqual({ status: 200, body: { installed: true } });
     expect(asEditor.access).toHaveBeenCalledWith("p1", "u2");
     expect(asEditor.hasActiveDesktopApp).toHaveBeenCalledWith("p1");
