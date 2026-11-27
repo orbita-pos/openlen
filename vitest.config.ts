@@ -683,6 +683,8 @@ export default defineConfig({
       "lib/event-tasks/**/*.test.ts",
       // Tools made by Len (spec local 2026-11-04-herramientas-hechas-por-len). LISTA BLANCA.
       "lib/tools/**/*.test.ts",
+      // The workspace's themes: a scene behind the glass, a palette, a font (spec local 2026-11-27-temas-del-workspace). LISTA BLANCA.
+      "lib/themes/**/*.test.ts",
       // An app installed on the desktop, as a PWA (spec local 2026-11-26-apps-en-el-escritorio). LISTA BLANCA.
       "lib/desktop-apps/**/*.test.ts",
       // The window of an app on the desktop: its page, manifest and icon routes, and its component. LISTA BLANCA.
