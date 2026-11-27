@@ -212,6 +212,18 @@ describe("desktopPageState", () => {
     expect(d.readRelease).not.toHaveBeenCalled();
   });
 
+  it("two answers that declare nothing never share one list: changing one changes nothing of the next", async () => {
+    const d = deps({ readRelease: vi.fn(async () => shell(["notifications"])) });
+    const first = await ask(d);
+    if (first.kind !== "ready") throw new Error("expected ready");
+    try {
+      first.declaredPermissions.push("notifications");
+    } catch {
+      // a frozen list is fine too
+    }
+    expect(await ask(d)).toMatchObject({ kind: "ready", declaredPermissions: [] });
+  });
+
   it("notifications off → no release read", async () => {
     // A release a read of which WOULD warn: with the switch off it is not even read.
     const d = deps({ notificationsEnabled: () => false, readRelease: vi.fn(async () => BROKEN) });

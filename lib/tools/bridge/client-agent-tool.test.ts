@@ -58,7 +58,7 @@ describe("the agent tool's script: the same default, byte for byte, when no vari
   // The installed tools' script is pinned: asking for no variant must give exactly what it gave before this variant existed.
   // The script is kept as text beside this test, so a difference shows as a diff; its hash pins the text itself. Change
   // the script on purpose and both with it (the fixture, then this hash).
-  const INSTALLED_SHA256 = "cc4d9300a2190e615571efc1941c570fbc6193b5735f86acf213ffab2dfb2f13";
+  const INSTALLED_SHA256 = "c12fc4ff15feaa17e9b2f18b6c17b689413d9a280728b678b22b52b06ccab91b";
   const sha = (s: string) => createHash("sha256").update(s).digest("hex");
   // Line endings as git may have checked them out on Windows: the script itself only has \n.
   const INSTALLED = readFileSync(join(__dirname, "__fixtures__", "installed-bridge-client.js.txt"), "utf8").replace(/\r\n/g, "\n");

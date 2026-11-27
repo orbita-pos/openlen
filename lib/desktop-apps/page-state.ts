@@ -104,7 +104,11 @@ async function realDeps(): Promise<PageStateDeps> {
   };
 }
 
-const NOT_DECLARED = { permissions: [] as DesktopPermission[], warning: null as string | null };
+/** Shared by every answer that declares nothing: frozen, so no caller can make it declare something for the next one. */
+const NOT_DECLARED: { readonly permissions: readonly DesktopPermission[]; readonly warning: string | null } = Object.freeze({
+  permissions: Object.freeze([] as DesktopPermission[]),
+  warning: null,
+});
 
 /** What the shell of the installed version —its `/index.html`, the file the frame is served— declares. Failing closed: a
  *  release that is not there, a shell that is not there or is a blob pointer (a file kept in object storage, never the
@@ -112,7 +116,7 @@ const NOT_DECLARED = { permissions: [] as DesktopPermission[], warning: null as 
  *  app without notifications is an app that works. A manifest that is there but invalid says why in `warning` (for the
  *  page's console: whoever built the app finds out there, the person is never told). A failed read is logged here instead,
  *  so a database that is down is not silent; it is a fault of ours, not of the app, and carries no warning. */
-async function declaredPermissionsOf(releaseSha: string, d: PageStateDeps): Promise<{ permissions: DesktopPermission[]; warning: string | null }> {
+async function declaredPermissionsOf(releaseSha: string, d: PageStateDeps): Promise<{ readonly permissions: readonly DesktopPermission[]; readonly warning: string | null }> {
   try {
     const shell = (await d.readRelease(releaseSha))?.["/index.html"];
     if (!shell || typeof shell.content !== "string" || isBlobPointer(shell.content)) return NOT_DECLARED;
@@ -160,7 +164,8 @@ export async function desktopWindow(
       installedAt: row.installedAt.toISOString(),
       // The session's own id — `row.personId` was checked against it above.
       personId: i.sessionUserId,
-      declaredPermissions: declared.permissions,
+      // A list of its own: the page may hold it, and the shared empty one is frozen.
+      declaredPermissions: [...declared.permissions],
       manifestWarning: declared.warning,
       notificationsOn,
     },

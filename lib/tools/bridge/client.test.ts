@@ -144,6 +144,21 @@ describe("jobs and files", () => {
   });
 });
 
+describe("loaded twice", () => {
+  it("a second copy of the script leaves the first window.openlen in place and listens to nothing more", () => {
+    for (const lenArtifact of [false, true]) {
+      const f = framed();
+      const first = f.win.openlen;
+      const listening = vi.fn();
+      const again: FakeWindow = { ...f.win, addEventListener: listening };
+      again.openlen = first;
+      new Function("window", toolBridgeClientSource([APP], { lenArtifact }))(again);
+      expect(again.openlen).toBe(first);
+      expect(listening).not.toHaveBeenCalled();
+    }
+  });
+});
+
 describe("window.openlen without a parent (Len's eyes)", () => {
   it("calls the exposed function with the request as JSON", async () => {
     const win: FakeWindow = { parent: null, addEventListener: () => {} };

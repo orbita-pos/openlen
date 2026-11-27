@@ -5,6 +5,8 @@
 // tool top-level), it calls `window.__openlenBridge`, which Puppeteer exposes. Plain ES5 on purpose: it runs
 // before the tool's bundle, in any browser. Keep the methods in step with `OPENLEN_TYPES` (lib/tools/skeleton.ts).
 //
+// Loaded twice, it leaves the first `window.openlen` in place and adds no second listener.
+//
 // Two variants of ONE script: an installed tool's (everything), and an AGENT's tool's (`{ lenArtifact: true }`, spec local
 // 2026-11-22-artifacts-de-len, §3–§4), which exposes only `context`, `onContext`, `sendPrompt` and `data`.
 // They share the channel, the origin checks, the timeouts and `call`; asking for no variant gives the installed tool's
@@ -216,6 +218,8 @@ export function toolBridgeClientSource(parentOrigins: readonly string[], options
   const lenArtifact = options.lenArtifact === true;
   return `(function () {
   "use strict";
+  // Loaded twice (the shell's own tag kept by a tool that also imports it): the first one stays, and nothing listens twice.
+  if (window.openlen) return;
   var PARENTS = ${JSON.stringify(parentOrigins)};
   var CHANNEL = ${JSON.stringify(BRIDGE_CHANNEL)};
   var TIMEOUT = ${BRIDGE_TIMEOUT_MS};

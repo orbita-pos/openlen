@@ -1,5 +1,7 @@
 (function () {
   "use strict";
+  // Loaded twice (the shell's own tag kept by a tool that also imports it): the first one stays, and nothing listens twice.
+  if (window.openlen) return;
   var PARENTS = ["https://openlen.com"];
   var CHANNEL = "openlen-tool";
   var TIMEOUT = 30000;
