@@ -223,6 +223,8 @@ export function DesktopWindow(p: DesktopWindowProps) {
     releaseSha: version.releaseSha,
     installedAt: p.installedAt,
     declared,
+    // A call at startup waits for the version check instead of hearing «unavailable» (Claude chains calls behind `declare`).
+    whenChecked: version.whenChecked,
     notificationsOn: p.notificationsOn,
     appName: name,
     iconUrl: `/desktop/${encodeURIComponent(p.desktopId)}/icon`,

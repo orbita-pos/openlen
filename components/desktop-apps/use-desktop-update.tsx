@@ -14,7 +14,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { failureAction, failureOf, type DesktopFailure } from "@/lib/desktop-apps/failure";
-import { createStateProbe } from "@/lib/desktop-apps/state-probe";
+import { createStateProbe, PROBE_TIMEOUT_MS } from "@/lib/desktop-apps/state-probe";
 
 export interface UpdateSource {
   /** The app's name as the window opened with it: it follows what the route reports (Claude's title follows its page). */
@@ -28,6 +28,9 @@ export interface UpdateSource {
 
 /** At most one fresh check of the installed release per this time, however fast the frame loads. */
 export const FRESH_CHECK_FLOOR_MS = 2000;
+
+/** The most a startup call waits for the version check: a question's deadline plus the floor between fresh checks. */
+export const WHEN_CHECKED_TIMEOUT_MS = PROBE_TIMEOUT_MS + FRESH_CHECK_FLOOR_MS;
 
 export type UpdatePhase = { kind: "idle" } | { kind: "updating" } | { kind: "stopped"; reason: DesktopFailure };
 
@@ -56,6 +59,12 @@ export interface DesktopUpdate {
   /** The frame's element fired `load` (any load: the first, the app reloading itself, a crash and back): it may have loaded
    *  the release installed NOW, which is not necessarily the window's. */
   frameLoaded: () => void;
+  /** Resolves once the window knows which release its frame runs — the check after the last load named it, or the window
+   *  holds two versions for good (another release installed, an in-window update) — or after `WHEN_CHECKED_TIMEOUT_MS`.
+   *  Like Claude's preload chaining every call behind the manifest's `declare`: an app that asks at startup waits for the
+   *  answer instead of hearing «unavailable». It resolves from an effect, after the render where `holdsTwoVersions` turned
+   *  false, so whoever resumes already reads the real declared list; on the timeout it is still closed (failing closed). */
+  whenChecked: () => Promise<void>;
 }
 
 type StateBody = { updateAvailable?: unknown; published?: unknown; desktopApp?: { releaseSha?: unknown; name?: unknown } | null } | null;
@@ -183,9 +192,41 @@ export function useDesktopUpdate(p: UpdateSource): DesktopUpdate {
     else freshTimer.current = setTimeout(go, wait);
   }, [confirmFrom, probe]);
 
+  /** Whether `whenChecked` may resolve now: set by the effect below after the render, cleared at once by a load. */
+  const settled = useRef(false);
+  const waiters = useRef(new Set<() => void>());
+  const whenChecked = useCallback(
+    () =>
+      new Promise<void>((resolve) => {
+        if (settled.current || !alive.current) return resolve();
+        const done = () => {
+          clearTimeout(timer);
+          waiters.current.delete(done);
+          resolve();
+        };
+        const timer = setTimeout(done, WHEN_CHECKED_TIMEOUT_MS);
+        waiters.current.add(done);
+      }),
+    [],
+  );
+  // Two versions for good (another release installed, or an update landed in the window) wait for nothing: they last
+  // until the window reloads, so the answer is «unavailable» now.
+  const twoForGood = otherInstalled || shown.releaseSha !== p.releaseSha;
+  const twoForGoodRef = useRef(twoForGood);
+  twoForGoodRef.current = twoForGood;
+  useEffect(() => {
+    settled.current = !loadUnchecked || twoForGood;
+    if (settled.current) [...waiters.current].forEach((done) => done());
+  }, [loadUnchecked, twoForGood]);
+  useEffect(() => {
+    const pending = waiters.current;
+    return () => [...pending].forEach((done) => done());
+  }, []);
+
   const frameLoaded = useCallback(() => {
     loadSerial.current += 1;
     unchecked.current = true;
+    if (!twoForGoodRef.current) settled.current = false;
     setLoadUnchecked(true);
     freshCheck();
   }, [freshCheck]);
@@ -256,7 +297,7 @@ export function useDesktopUpdate(p: UpdateSource): DesktopUpdate {
     }
   }, [endpoint, p.locale, adoptName]);
 
-  return { name, ...shown, available, published, phase, update, holdsTwoVersions: otherInstalled || loadUnchecked, frameLoaded };
+  return { name, ...shown, available, published, phase, update, holdsTwoVersions: otherInstalled || loadUnchecked, frameLoaded, whenChecked };
 }
 
 /** Where the strip's one action goes (`failureAction`): all in OpenLen, outside the window's own scope. */

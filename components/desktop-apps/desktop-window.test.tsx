@@ -19,7 +19,7 @@ import { WORKSPACE_TOOL_THEME } from "@/lib/tools/bridge/workspace-theme";
 import { EARLY_INSTALL_PROMPT_SCRIPT } from "@/lib/desktop-apps/early-install-prompt";
 import { windowMessages } from "@/lib/desktop-apps/window-messages";
 import { DesktopWindow, type DesktopWindowProps } from "./desktop-window";
-import { FRESH_CHECK_FLOOR_MS } from "./use-desktop-update";
+import { FRESH_CHECK_FLOOR_MS, WHEN_CHECKED_TIMEOUT_MS } from "./use-desktop-update";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -313,12 +313,28 @@ describe("permissions and notifications (spec local 2026-11-27-notificaciones-de
     const tick = () => act(async () => void (await vi.advanceTimersByTimeAsync(0)));
     const wait = (ms: number) => act(async () => void (await vi.advanceTimersByTimeAsync(ms)));
     const load = () => act(async () => void frame().dispatchEvent(new Event("load")));
+    /** Every answer the window posts to the frame from now on (a call that is waiting has none yet). */
+    let replies: Array<{ id?: string; ok?: boolean; code?: string; value?: unknown }> = [];
+    function capture() {
+      replies = [];
+      vi.spyOn(frame().contentWindow!, "postMessage").mockImplementation(((m: (typeof replies)[number]) => void replies.push(m)) as never);
+    }
+    let callSeq = 0;
+    async function call(method: string, args: unknown): Promise<string> {
+      const id = `c${++callSeq}`;
+      await act(async () => {
+        window.dispatchEvent(new MessageEvent("message", { data: { channel: "openlen-app/1", id, method, args }, origin: ORIGIN, source: frame().contentWindow }));
+        for (let i = 0; i < 5; i++) await Promise.resolve();
+      });
+      return id;
+    }
+    const replyTo = (id: string) => replies.find((r) => r.id === id);
+    /** The state the frame hears now, or undefined while its call waits for the version check. */
     async function stateNow(): Promise<unknown> {
-      const answers: Array<{ value?: unknown }> = [];
-      const spy = vi.spyOn(frame().contentWindow!, "postMessage").mockImplementation(((m: { value?: unknown }) => void answers.push(m)) as never);
-      await ask("permissions.state", undefined);
-      spy.mockRestore();
-      return answers.at(-1)?.value;
+      if (!vi.isMockFunction(frame().contentWindow!.postMessage)) capture();
+      const id = await call("permissions.state", undefined);
+      await tick();
+      return replyTo(id)?.value;
     }
     beforeEach(() => {
       localStorage.setItem(
@@ -327,16 +343,66 @@ describe("permissions and notifications (spec local 2026-11-27-notificaciones-de
       );
     });
 
-    it("permissions are unavailable until the first check after mount answers", async () => {
-      // The server-rendered frame may have loaded before hydration, where nothing heard it: the window starts closed.
+    it("a state() at startup answers the real state after the check", async () => {
+      // The server-rendered frame may have loaded before hydration, where nothing heard it: the window starts unchecked, and
+      // a call that comes meanwhile WAITS (Claude chains its calls behind `declare`) instead of hearing «unavailable».
       const route = stubState(() => "sha1");
       route.hold();
       await render();
+      capture();
+      const id = await call("permissions.state", undefined);
       await tick();
-      expect(await stateNow()).toEqual(ALL_UNAVAILABLE);
+      expect(replyTo(id)).toBeUndefined();
       route.release();
       await tick();
+      expect(replyTo(id)?.value).toMatchObject({ notifications: "granted" });
+    });
+
+    it("a request at startup waits for the opening check and then shows the dialog", async () => {
+      localStorage.clear();
+      const route = stubState(() => "sha1");
+      route.hold();
+      await render();
+      capture();
+      const id = await call("permissions.request", { names: ["notifications"] });
+      await tick();
+      expect(dialog()).toBeNull();
+      expect(replyTo(id)).toBeUndefined();
+      route.release();
+      await tick();
+      expect(dialog()!.textContent).toContain("Allow Bookings to show notifications?");
+    });
+
+    it("if the check never names the running release, startup calls answer unavailable after the bound", async () => {
+      stubState(() => ""); // answers, but names no release: never confirmed
+      await render();
+      capture();
+      const state = await call("permissions.state", undefined);
+      const show = await call("notification.show", { body: "hi" });
+      await tick();
+      expect(replyTo(state)).toBeUndefined();
+      await wait(WHEN_CHECKED_TIMEOUT_MS - 1);
+      expect(replyTo(state)).toBeUndefined();
+      await wait(1);
+      expect(replyTo(state)?.value).toEqual(ALL_UNAVAILABLE);
+      expect(replyTo(show)).toMatchObject({ ok: false, code: "EPERM" });
+    });
+
+    it("a window holding two versions answers unavailable at once", async () => {
+      let installed = "sha1";
+      const route = stubState(() => installed);
+      await render();
+      await tick();
       expect(await stateNow()).toMatchObject({ notifications: "granted" });
+      installed = "sha2";
+      await wait(FRESH_CHECK_FLOOR_MS);
+      await load();
+      await tick();
+      // Another load, its check held: nothing to wait for, two versions were here and that lasts until reload.
+      route.hold();
+      await load();
+      const id = await call("permissions.state", undefined);
+      expect(replyTo(id)?.value).toEqual(ALL_UNAVAILABLE);
     });
 
     it("every frame load closes permissions until a fresh check names the running release", async () => {
@@ -344,28 +410,33 @@ describe("permissions and notifications (spec local 2026-11-27-notificaciones-de
       await render();
       await tick();
       expect(await stateNow()).toMatchObject({ notifications: "granted" });
-      // The first load the window sees counts too.
+      // The first load the window sees counts too: a call waits for its check.
       await wait(FRESH_CHECK_FLOOR_MS);
       route.hold();
       await load();
-      expect(await stateNow()).toEqual(ALL_UNAVAILABLE);
+      const first = await call("permissions.state", undefined);
+      await tick();
+      expect(replyTo(first)).toBeUndefined();
       route.release();
       await tick();
-      expect(await stateNow()).toMatchObject({ notifications: "granted" });
+      expect(replyTo(first)?.value).toMatchObject({ notifications: "granted" });
       // And so does the next.
       await wait(FRESH_CHECK_FLOOR_MS);
       route.hold();
       await load();
-      expect(await stateNow()).toEqual(ALL_UNAVAILABLE);
+      const second = await call("permissions.state", undefined);
+      await tick();
+      expect(replyTo(second)).toBeUndefined();
       route.release();
       await tick();
-      expect(await stateNow()).toMatchObject({ notifications: "granted" });
+      expect(replyTo(second)?.value).toMatchObject({ notifications: "granted" });
     });
 
     it("loads faster than 2 s share one trailing check", async () => {
       const route = stubState(() => "sha1");
       await render();
       await tick();
+      capture();
       const before = route.gets();
       // Inside the floor of the check on opening: no check now, one at the floor's end, and closed until it answers.
       await load();
@@ -374,10 +445,12 @@ describe("permissions and notifications (spec local 2026-11-27-notificaciones-de
       await wait(500);
       await load();
       expect(route.gets()).toBe(before);
-      expect(await stateNow()).toEqual(ALL_UNAVAILABLE);
+      const id = await call("permissions.state", undefined);
+      await tick();
+      expect(replyTo(id)).toBeUndefined();
       await wait(FRESH_CHECK_FLOOR_MS);
       expect(route.gets()).toBe(before + 1);
-      expect(await stateNow()).toMatchObject({ notifications: "granted" });
+      expect(replyTo(id)?.value).toMatchObject({ notifications: "granted" });
     });
 
     it("a fresh check naming another release keeps them closed until reload", async () => {

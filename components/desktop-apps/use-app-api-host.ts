@@ -49,6 +49,9 @@ export interface AppApiHostInput {
   notificationsOn: boolean;
   appName: string;
   iconUrl: string;
+  /** Resolves when the window knows which release its frame runs (or gives up, still closed): `state`, `request` and
+   *  `show` wait for it, as Claude chains every call behind the manifest's `declare`. Never `manage`. */
+  whenChecked?: () => Promise<void>;
   store?: GrantStore;
   NotificationCtor?: typeof Notification;
 }
@@ -317,11 +320,13 @@ export function useAppApiHost(i: AppApiHostInput): { dialog: ReactNode; openPerm
         case "permissions.state": {
           const args = parseStateArgs(req.args);
           if ("code" in args) return appApiFail(id, args.code, args.message);
+          await latest.current.whenChecked?.();
           return appApiOk(id, args.name ? stateOf(args.name) : stateMap());
         }
         case "permissions.request": {
           const args = parseRequestArgs(req.args);
           if ("code" in args) return appApiFail(id, args.code, args.message);
+          await latest.current.whenChecked?.();
           for (const permission of args.names ?? [...latest.current.declared]) {
             if (stateOf(permission) !== "prompt") continue;
             if (queue.current.length >= MAX_WAITING_REQUESTS) return appApiFail(id, "EPERM", "too many pending requests");
@@ -345,6 +350,7 @@ export function useAppApiHost(i: AppApiHostInput): { dialog: ReactNode; openPerm
         case "notification.show": {
           const args = parseShowArgs(req.args);
           if ("code" in args) return appApiFail(id, args.code, args.message);
+          await latest.current.whenChecked?.();
           const state = stateOf("notifications");
           if (state === "unavailable") {
             return appApiFail(id, "EPERM", '"notifications" is not in this app\'s openlen-app-manifest, or is unavailable here.');
