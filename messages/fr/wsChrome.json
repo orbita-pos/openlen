@@ -873,7 +873,13 @@
       "body": "Ouvrez-la depuis votre bureau ou le menu Démarrer, dans sa propre fenêtre.",
       "button": "Installer",
       "later": "Pas maintenant",
-      "manual": "Votre navigateur n’a pas proposé de l’installer d’ici. Dans Chrome ou Edge, utilisez l’icône d’installation de la barre d’adresse, ou ouvrez le menu du navigateur et choisissez « Installer ». Firefox et Safari n’installent pas d’applications sur un ordinateur : ouvrez cette adresse dans Chrome ou Edge."
+      "manual": {
+        "other": "Votre navigateur n’a pas proposé de l’installer d’ici. Dans Chrome ou Edge, utilisez l’icône d’installation de la barre d’adresse, ou ouvrez le menu du navigateur et choisissez « Installer ». Firefox et Safari n’installent pas d’applications sur un ordinateur : ouvrez cette adresse dans Chrome ou Edge.",
+        "chrome": "Dans Chrome, cliquez sur l’icône d’installation à droite de la barre d’adresse, ou ouvrez le menu (les trois points) et cherchez « Installer la page en tant qu’application… ».",
+        "edge": "Dans Edge, cliquez sur l’icône d’installation à droite de la barre d’adresse, ou ouvrez le menu (les trois points) et choisissez « Applications » → « Installer ce site en tant qu’application ».",
+        "safari": "Dans Safari sur Mac, choisissez Fichier → « Ajouter au Dock… ».",
+        "firefox": "Firefox n’installe pas d’applications sur un ordinateur. Ouvrez cette adresse dans Chrome ou Edge pour l’installer."
+      }
     },
     "about": {
       "button": "À propos",

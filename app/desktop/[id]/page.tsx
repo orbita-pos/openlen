@@ -41,6 +41,7 @@ export default async function DesktopPage({ params }: { params: Promise<{ id: st
     <NextIntlClientProvider locale={locale} messages={messages}>
       {state.kind === "ready" ? (
         <DesktopWindow
+          desktopId={id}
           name={state.name}
           frameUrl={state.frameUrl}
           frameOrigin={state.frameOrigin}

@@ -873,7 +873,13 @@
       "body": "Open it from your desktop or start menu, in a window of its own.",
       "button": "Install",
       "later": "Not now",
-      "manual": "Your browser didn’t offer to install it from here. In Chrome or Edge, use the install icon in the address bar, or open the browser’s menu and choose “Install”. Firefox and Safari can’t install apps on a computer: open this address in Chrome or Edge."
+      "manual": {
+        "other": "Your browser didn’t offer to install it from here. In Chrome or Edge, use the install icon in the address bar, or open the browser’s menu and choose “Install”. Firefox and Safari can’t install apps on a computer: open this address in Chrome or Edge.",
+        "chrome": "In Chrome, click the install icon at the right end of the address bar, or open the menu (the three dots) and look for “Install page as app…”.",
+        "edge": "In Edge, click the install icon at the right end of the address bar, or open the menu (the three dots) and choose “Apps” → “Install this site as an app”.",
+        "safari": "In Safari on a Mac, choose File → “Add to Dock…”.",
+        "firefox": "Firefox can’t install apps on a computer. Open this address in Chrome or Edge to install it."
+      }
     },
     "about": {
       "button": "About",

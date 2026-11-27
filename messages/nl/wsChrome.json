@@ -873,7 +873,13 @@
       "body": "Open de app via je bureaublad of het startmenu, in een eigen venster.",
       "button": "Installeren",
       "later": "Niet nu",
-      "manual": "Je browser bood hier geen installatie aan. Gebruik in Chrome of Edge het installatiepictogram in de adresbalk, of open het browsermenu en kies ‘Installeren’. Firefox en Safari installeren geen apps op een computer: open dit adres in Chrome of Edge."
+      "manual": {
+        "other": "Je browser bood hier geen installatie aan. Gebruik in Chrome of Edge het installatiepictogram in de adresbalk, of open het browsermenu en kies ‘Installeren’. Firefox en Safari installeren geen apps op een computer: open dit adres in Chrome of Edge.",
+        "chrome": "Klik in Chrome op het installatiepictogram rechts in de adresbalk, of open het menu (de drie puntjes) en zoek ‘Pagina als app installeren…’.",
+        "edge": "Klik in Edge op het installatiepictogram rechts in de adresbalk, of open het menu (de drie puntjes) en kies ‘Apps’ → ‘Deze site als app installeren’.",
+        "safari": "Kies in Safari op de Mac Archief → ‘Voeg toe aan Dock…’.",
+        "firefox": "Firefox installeert geen apps op een computer. Open dit adres in Chrome of Edge om hem te installeren."
+      }
     },
     "about": {
       "button": "Info",

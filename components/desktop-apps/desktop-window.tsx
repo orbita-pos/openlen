@@ -14,13 +14,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ALLOW_REMOTO, SANDBOX_REMOTO } from "@/components/workspace-v2/sandbox-del-lienzo";
 import { ToolFrame } from "@/components/workspace-v2/tools/tool-frame";
+import { installBrowser } from "@/lib/desktop-apps/browser";
 import { EARLY_INSTALL_PROMPT_KEY } from "@/lib/desktop-apps/early-install-prompt";
+import { dismissInstallCard, installCardDismissed } from "@/lib/desktop-apps/install-later";
 import type { ToolContext } from "@/lib/tools/bridge/protocol";
 import { WORKSPACE_TOOL_THEME } from "@/lib/tools/bridge/workspace-theme";
 
 import { UpdateNotice, useDesktopUpdate } from "./use-desktop-update";
 
 export interface DesktopWindowProps {
+  /** The installation's id (the window's own address): what «Not now» on the install card is remembered under. */
+  desktopId: string;
   name: string;
   frameUrl: string;
   frameOrigin: string;
@@ -58,14 +62,15 @@ function desktopToolTheme(): ToolContext["theme"] {
 const BUTTON =
   "inline-flex h-8 items-center rounded-lg px-3 text-[12.5px] font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-ring)]";
 
-function InstallCard({ name }: { name: string }) {
+function InstallCard({ name, desktopId }: { name: string; desktopId: string }) {
   const t = useTranslations("wsChrome.desktop");
   // waiting: the browser may still be about to offer; prompt: it did; manual: it didn't; hidden: nothing to say.
   const [offer, setOffer] = useState<"waiting" | "prompt" | "manual" | "hidden">("waiting");
   const prompt = useRef<InstallPromptEvent | null>(null);
 
   useEffect(() => {
-    if (isInstalledWindow()) {
+    // Installed already, or the person said «Not now» to this app in this browser: nothing to ask.
+    if (isInstalledWindow() || installCardDismissed(desktopId)) {
       setOffer("hidden");
       return;
     }
@@ -88,7 +93,7 @@ function InstallCard({ name }: { name: string }) {
       window.removeEventListener("beforeinstallprompt", onPrompt);
       window.removeEventListener("appinstalled", onInstalled);
     };
-  }, []);
+  }, [desktopId]);
 
   if (offer === "waiting" || offer === "hidden") return null;
 
@@ -101,13 +106,20 @@ function InstallCard({ name }: { name: string }) {
     void event?.prompt().catch(() => {});
   };
 
+  // Without the browser's offer the card says exactly where to install it in THIS browser (Claude says where the app went).
+  const how = offer === "prompt" ? t("install.body") : t(`install.manual.${installBrowser(navigator.userAgent)}`);
+  const notNow = () => {
+    dismissInstallCard(desktopId);
+    setOffer("hidden");
+  };
+
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center p-4">
       <div className="bg-elev bd shadow-elev pointer-events-auto w-full max-w-md rounded-xl border p-4" data-desktop-install={offer}>
         <p className="fg text-[14px] font-semibold">{t("install.title", { name })}</p>
-        <p className="fg-muted mt-1 text-[12.5px] leading-relaxed">{offer === "prompt" ? t("install.body") : t("install.manual")}</p>
+        <p className="fg-muted mt-1 text-[12.5px] leading-relaxed">{how}</p>
         <div className="mt-3 flex justify-end gap-2">
-          <button type="button" className={`${BUTTON} fg-muted hover:bg-hover`} onClick={() => setOffer("hidden")}>
+          <button type="button" className={`${BUTTON} fg-muted hover:bg-hover`} onClick={notNow}>
             {t("install.later")}
           </button>
           {offer === "prompt" ? (
@@ -216,7 +228,7 @@ export function DesktopWindow(p: DesktopWindowProps) {
             data-desktop-frame
           />
         )}
-        <InstallCard name={name} />
+        <InstallCard name={name} desktopId={p.desktopId} />
       </div>
     </div>
   );

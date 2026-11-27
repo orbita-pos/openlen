@@ -23,6 +23,7 @@ import { DesktopWindow, type DesktopWindowProps } from "./desktop-window";
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const APP: DesktopWindowProps = {
+  desktopId: "d1",
   name: "Bookings",
   frameUrl: "https://lienzo-0123456789abcdef0123456789abcdef.openlen.app/?v=sha1",
   frameOrigin: "https://lienzo-0123456789abcdef0123456789abcdef.openlen.app",
@@ -78,6 +79,7 @@ const button = (text: string) => buttons().find((b) => b.textContent === text);
 
 beforeEach(() => {
   missing = [];
+  localStorage.clear();
   vi.useFakeTimers();
   stubDisplayMode(false);
   vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ jobs: [] }), { status: 200 })));
@@ -229,22 +231,142 @@ describe("the install card", () => {
     expect(card()).toBeNull();
   });
 
-  it("«Not now» and a finished install close it for good", async () => {
+  /** A new visit to the window: the page is gone and comes back, with the browser's offer to install it again. */
+  async function visitAgain(over: Partial<DesktopWindowProps> = {}) {
+    await act(async () => root!.unmount());
+    root = createRoot(host);
+    delete (window as unknown as Record<string, unknown>).__openlenInstallPrompt;
+    await render(over);
+    await act(async () => void window.dispatchEvent(installEvent()));
+  }
+
+  it("«Not now» closes the card, for the rest of this visit too", async () => {
     await render();
     await act(async () => void window.dispatchEvent(installEvent()));
     await act(async () => button("Not now")!.click());
     expect(card()).toBeNull();
     await act(async () => void vi.advanceTimersByTime(3000));
     expect(card()).toBeNull();
+    // Not even if the browser offers again.
+    await act(async () => void window.dispatchEvent(installEvent()));
+    expect(card()).toBeNull();
+  });
 
-    await act(async () => root!.unmount());
-    root = createRoot(host);
-    delete (window as unknown as Record<string, unknown>).__openlenInstallPrompt;
+  it("🔴 «Not now» is remembered for that app in this browser: the next visit does not ask again", async () => {
+    await render();
+    await act(async () => void window.dispatchEvent(installEvent()));
+    await act(async () => button("Not now")!.click());
+    expect(localStorage.getItem("openlen:desktop-install-later:d1")).toBe("1");
+
+    await visitAgain();
+    expect(card()).toBeNull();
+    await act(async () => void vi.advanceTimersByTime(3000));
+    expect(card()).toBeNull();
+  });
+
+  it("it is remembered per app: another app's card still asks", async () => {
+    await render();
+    await act(async () => void window.dispatchEvent(installEvent()));
+    await act(async () => button("Not now")!.click());
+
+    await visitAgain({ desktopId: "d2" });
+    expect(card()).not.toBeNull();
+    expect(card()!.textContent).toContain("Install Bookings");
+  });
+
+  it("🔴 without storage the page still works: «Not now» closes it for this visit, and it may ask again on the next", async () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new DOMException("blocked", "SecurityError");
+    });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("full", "QuotaExceededError");
+    });
+    try {
+      await render();
+      await act(async () => void window.dispatchEvent(installEvent()));
+      expect(card()).not.toBeNull();
+      await act(async () => button("Not now")!.click());
+      expect(card()).toBeNull();
+
+      await visitAgain();
+      expect(card()).not.toBeNull();
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
+
+  it("a finished install closes the card too", async () => {
     await render();
     await act(async () => void window.dispatchEvent(installEvent()));
     expect(card()).not.toBeNull();
     await act(async () => void window.dispatchEvent(new Event("appinstalled")));
     expect(card()).toBeNull();
+  });
+
+  // M10 — Claude says exactly where the app went; a browser draws its own shortcut, so the steps are the browser's.
+  describe("how to install it by hand, per browser", () => {
+    const UAS = {
+      chrome: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      edge: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.2849.56",
+      safari: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15",
+      firefox: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0",
+    } as const;
+    const original = navigator.userAgent;
+    const as = (userAgent: string) => Object.defineProperty(navigator, "userAgent", { configurable: true, get: () => userAgent });
+    afterEach(() => void Object.defineProperty(navigator, "userAgent", { configurable: true, get: () => original }));
+
+    async function manual() {
+      await render();
+      await act(async () => void vi.advanceTimersByTime(3000));
+      expect(card()?.getAttribute("data-desktop-install")).toBe("manual");
+      expect(button("Install")).toBeUndefined();
+      return card()!.textContent!;
+    }
+
+    it("Chrome: the icon in the address bar, or its menu", async () => {
+      as(UAS.chrome);
+      const text = await manual();
+      expect(text).toContain("In Chrome, click the install icon");
+      expect(text).toContain("Install page as app");
+      expect(text).not.toContain("Firefox");
+    });
+
+    it("Edge: the icon in the address bar, or Apps in its menu", async () => {
+      as(UAS.edge);
+      const text = await manual();
+      expect(text).toContain("In Edge, click the install icon");
+      expect(text).toContain("Install this site as an app");
+    });
+
+    it("Safari on a Mac: Add to Dock", async () => {
+      as(UAS.safari);
+      const text = await manual();
+      expect(text).toContain("Safari");
+      expect(text).toContain("Add to Dock");
+    });
+
+    it("Firefox can't install an app on a computer: it says to open it in Chrome or Edge", async () => {
+      as(UAS.firefox);
+      const text = await manual();
+      expect(text).toContain("Firefox can’t install apps on a computer");
+      expect(text).toContain("Chrome or Edge");
+      expect(text).not.toContain("install icon");
+    });
+
+    it("a browser it can't tell gets today's text, which names both", async () => {
+      as("Lynx/2.9.0");
+      const text = await manual();
+      expect(text).toContain("Your browser didn’t offer to install it from here");
+      expect(text).toContain("Firefox and Safari can’t install apps on a computer");
+    });
+
+    it("when the browser did offer, there are no steps to read: the button is all there is", async () => {
+      as(UAS.firefox);
+      await render();
+      await act(async () => void window.dispatchEvent(installEvent()));
+      expect(card()?.getAttribute("data-desktop-install")).toBe("prompt");
+      expect(card()!.textContent).not.toContain("Firefox");
+    });
   });
 });
 

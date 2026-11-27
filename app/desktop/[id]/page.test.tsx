@@ -65,6 +65,7 @@ describe("the page", () => {
     const win = inner(el);
     expect((win.type as { name: string }).name).toBe("DesktopWindow");
     expect(win.props).toEqual({
+      desktopId: ID,
       name: "Bookings",
       frameUrl: READY.frameUrl,
       frameOrigin: READY.frameOrigin,
