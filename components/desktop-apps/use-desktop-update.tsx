@@ -26,6 +26,9 @@ export interface UpdateSource {
   locale: string;
 }
 
+/** At most one fresh check of the installed release per this time, however fast the frame loads. */
+export const FRESH_CHECK_FLOOR_MS = 2000;
+
 export type UpdatePhase = { kind: "idle" } | { kind: "updating" } | { kind: "stopped"; reason: DesktopFailure };
 
 /** The frame's address for another release: `toolFrameUrl` keeps the version in `?v=`. */
@@ -46,13 +49,13 @@ export interface DesktopUpdate {
   phase: UpdatePhase;
   update: () => Promise<void>;
   /** The frame may be running another release than `releaseSha` (Claude's «mixed versions»): the route reported another
-   *  installed release, or the frame loaded again and the check that followed has not said it is still this one. The app
-   *  has no permissions while this holds; it only ends with the window reloaded (or an in-window update, which already
-   *  takes them until then). */
+   *  installed release (until the window reloads), or the frame loaded and no check from after that load has named this
+   *  release yet — which is also how the window STARTS, since the server-rendered frame may have loaded before hydration,
+   *  where no listener saw it. The app has no permissions while this holds. */
   holdsTwoVersions: boolean;
-  /** The frame's element fired `load` again (the app reloaded itself, or crashed and came back): it may have loaded the
-   *  release installed NOW, which is not necessarily the window's. */
-  frameReloaded: () => void;
+  /** The frame's element fired `load` (any load: the first, the app reloading itself, a crash and back): it may have loaded
+   *  the release installed NOW, which is not necessarily the window's. */
+  frameLoaded: () => void;
 }
 
 type StateBody = { updateAvailable?: unknown; published?: unknown; desktopApp?: { releaseSha?: unknown; name?: unknown } | null } | null;
@@ -74,8 +77,13 @@ export function useDesktopUpdate(p: UpdateSource): DesktopUpdate {
   /** The route said the installed release is not the one this frame was given: a reload of the frame would run it. Sticky. */
   const [otherInstalled, setOtherInstalled] = useState(false);
   /** A load of the frame after its first one that no check after it has cleared yet (each load starts a new one). */
-  const [reloadUnchecked, setReloadUnchecked] = useState(false);
-  const reloadCheck = useRef(0);
+  const [loadUnchecked, setLoadUnchecked] = useState(true);
+  const unchecked = useRef(true);
+  /** Moves with every load: an answer to a question from before the last load says nothing about what it loaded. */
+  const loadSerial = useRef(0);
+  /** When the last fresh check went out, and the one trailing check a load inside the floor waits for. */
+  const lastFreshAt = useRef(Number.NEGATIVE_INFINITY);
+  const freshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const endpoint = `/api/projects/${encodeURIComponent(p.projectId)}/desktop`;
 
   // Claude's probe: a deadline on every question, one request in flight for whoever asks, and the window being looked at again
@@ -139,11 +147,62 @@ export function useDesktopUpdate(p: UpdateSource): DesktopUpdate {
     [probe, adoptName],
   );
 
+  /** Clears the unchecked load when `asked` — a question from after the last load — names the running release. No answer, or
+   *  one without a release, leaves the app without permissions (failing closed). */
+  const confirmFrom = useCallback((asked: Promise<StateBody>) => {
+    const serial = loadSerial.current;
+    const epoch = landed.current;
+    asked.then(
+      (body) => {
+        if (!alive.current || serial !== loadSerial.current || landed.current !== epoch) return;
+        const installed = body?.desktopApp?.releaseSha;
+        if (typeof installed !== "string" || installed === "") return;
+        if (installed !== running.current) {
+          setOtherInstalled(true);
+          setAvailable(true);
+        }
+        unchecked.current = false;
+        setLoadUnchecked(false);
+      },
+      () => {},
+    );
+  }, []);
+
+  /** A fresh check, at most one per `FRESH_CHECK_FLOOR_MS`: inside the floor ONE trailing check waits for its end (never
+   *  dropped — permissions stay closed until it answers). */
+  const freshCheck = useCallback(() => {
+    if (freshTimer.current !== null) return;
+    const wait = lastFreshAt.current + FRESH_CHECK_FLOOR_MS - Date.now();
+    const go = () => {
+      freshTimer.current = null;
+      if (!alive.current) return;
+      lastFreshAt.current = Date.now();
+      confirmFrom(probe.askFresh());
+    };
+    if (wait <= 0) go();
+    else freshTimer.current = setTimeout(go, wait);
+  }, [confirmFrom, probe]);
+
+  const frameLoaded = useCallback(() => {
+    loadSerial.current += 1;
+    unchecked.current = true;
+    setLoadUnchecked(true);
+    freshCheck();
+  }, [freshCheck]);
+
   useEffect(() => {
     alive.current = true;
     void check(false);
+    // The question on opening went out after hydration, so after any load the window missed: it is the first fresh check.
+    lastFreshAt.current = Date.now();
+    confirmFrom(probe.ask());
     const onVisible = () => {
-      if (document.visibilityState === "visible") void check(true);
+      if (document.visibilityState === "visible") {
+        // A check that never answered is asked again when the person comes back, not left closed for good. First, so the
+        // focus check shares its question instead of sending a second one.
+        if (unchecked.current) freshCheck();
+        void check(true);
+      }
       // Leaving the window takes its deferred check with it: it asks again when the person comes back.
       else cancelTrailing();
     };
@@ -151,9 +210,11 @@ export function useDesktopUpdate(p: UpdateSource): DesktopUpdate {
     return () => {
       alive.current = false;
       cancelTrailing();
+      if (freshTimer.current !== null) clearTimeout(freshTimer.current);
+      freshTimer.current = null;
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [check, cancelTrailing]);
+  }, [check, cancelTrailing, confirmFrom, freshCheck, probe]);
 
   const update = useCallback(async () => {
     if (updating.current || removed.current) return;
@@ -195,28 +256,7 @@ export function useDesktopUpdate(p: UpdateSource): DesktopUpdate {
     }
   }, [endpoint, p.locale, adoptName]);
 
-  const frameReloaded = useCallback(() => {
-    const serial = ++reloadCheck.current;
-    const epoch = landed.current;
-    setReloadUnchecked(true);
-    // A question from AFTER the load (one already out may have been answered before the frame fetched its release). No
-    // answer, or one without the installed release, leaves it closed: failing closed until a later load's check, or a reload.
-    probe.askFresh().then(
-      (body) => {
-        if (!alive.current || serial !== reloadCheck.current || landed.current !== epoch) return;
-        const installed = body?.desktopApp?.releaseSha;
-        if (typeof installed !== "string" || installed === "") return;
-        if (installed !== running.current) {
-          setOtherInstalled(true);
-          setAvailable(true);
-        }
-        setReloadUnchecked(false);
-      },
-      () => {},
-    );
-  }, [probe]);
-
-  return { name, ...shown, available, published, phase, update, holdsTwoVersions: otherInstalled || reloadUnchecked, frameReloaded };
+  return { name, ...shown, available, published, phase, update, holdsTwoVersions: otherInstalled || loadUnchecked, frameLoaded };
 }
 
 /** Where the strip's one action goes (`failureAction`): all in OpenLen, outside the window's own scope. */
