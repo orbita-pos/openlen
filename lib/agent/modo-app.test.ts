@@ -418,17 +418,26 @@ describe("desktop notifications in Len's manual", () => {
     expect(paragraph.length).toBeLessThan(1200);
   });
 
-  it("it says where it works: only in the installed desktop window, only while it is open, and undefined everywhere else", () => {
+  // The facts, not the sentences: the wording may change, what it tells Len may not.
+  const paragraph = () => {
     const on = manual({});
-    expect(on).toContain("there, and only while its window is open, it can show notifications");
-    expect(on).toContain("window.openlenApp exists only in that window (on the canvas, in your eyes and in the published app it is undefined)");
-    expect(on).toContain("EPERM, EINVAL or ENOTSUP");
+    const start = on.indexOf(MARKER);
+    return on.slice(start, on.indexOf("\n\n", start));
+  };
+
+  it("it says where it works: the desktop window only while open (a tab of its page too), undefined everywhere else", () => {
+    const p = paragraph();
+    expect(p).toMatch(/only while its window is open/);
+    expect(p).toMatch(/browser tab/);
+    for (const elsewhere of ["canvas", "eyes", "published"]) expect(p).toContain(elsewhere);
+    expect(p).toMatch(/undefined/);
+    for (const code of ["EPERM", "EINVAL", "ENOTSUP"]) expect(p).toContain(code);
   });
 
-  it("it says what an update does to the answer, as it is: a yes is asked again, a no stays no", () => {
-    const on = manual({});
-    expect(on).toContain("a yes is asked again after the app is updated, a no stays no");
-    expect(on).not.toContain("it asks again after the app is updated");
+  it("it says what an update does to the answer, as it is: a yes is asked again, a no stays", () => {
+    const p = paragraph();
+    expect(p).toMatch(/yes[^.]*asked again[^.]*updated/);
+    expect(p).toMatch(/no stays no/);
   });
 
   it("a page's manual and the doc for converting a page never carry it", () => {

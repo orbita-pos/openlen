@@ -932,6 +932,7 @@
       "button": "Permissions",
       "title": "Permissions for {app}",
       "empty": "This app hasn’t asked for any permissions.",
+      "unknown": "You can’t change permissions here right now: the app is still loading, or it was updated while open and can’t use its permissions until you reload it.",
       "off": "OpenLen has turned notifications from apps on the desktop off for now.",
       "notInBrowser": "Not available in the browser",
       "browserBlocked": "Your browser is blocking notifications from OpenLen. To turn them back on, click the icon at the left of the address bar, open the site settings and allow notifications.",

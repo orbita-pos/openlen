@@ -932,6 +932,7 @@
       "button": "Permissões",
       "title": "Permissões de {app}",
       "empty": "Este app não pediu nenhuma permissão.",
+      "unknown": "Agora você não pode mudar as permissões aqui: o app ainda está carregando, ou foi atualizado enquanto estava aberto e não pode usar suas permissões até você recarregá-lo.",
       "off": "O OpenLen desativou por enquanto as notificações dos apps da área de trabalho.",
       "notInBrowser": "Não disponível no navegador",
       "browserBlocked": "Seu navegador está bloqueando as notificações do OpenLen. Para reativá-las, clique no ícone à esquerda da barra de endereços, abra as configurações do site e permita as notificações.",

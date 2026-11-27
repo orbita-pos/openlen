@@ -388,6 +388,20 @@ describe("permissions and notifications (spec local 2026-11-27-notificaciones-de
       expect(replyTo(show)).toMatchObject({ ok: false, code: "EPERM" });
     });
 
+    it("many calls while the check is pending share one wait with one timer, and all settle together", async () => {
+      stubState(() => ""); // never confirmed: every call waits out the bound
+      await render();
+      capture();
+      await tick();
+      const timersBefore = vi.getTimerCount();
+      const ids: string[] = [];
+      for (let n = 0; n < 20; n++) ids.push(await call("permissions.state", { name: "notifications" }));
+      await tick();
+      expect(vi.getTimerCount() - timersBefore).toBeLessThanOrEqual(1);
+      await wait(WHEN_CHECKED_TIMEOUT_MS);
+      for (const id of ids) expect(replyTo(id)).toMatchObject({ ok: true, value: "unavailable" });
+    });
+
     it("a window holding two versions answers unavailable at once", async () => {
       let installed = "sha1";
       const route = stubState(() => installed);

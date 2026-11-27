@@ -73,7 +73,8 @@ function desktopToolTheme(): ToolContext["theme"] {
   return { mode, tokens: { ...WORKSPACE_TOOL_THEME[mode], ...(font ? { "--font-sans": font } : {}) } };
 }
 
-const NOTHING_DECLARED: DesktopPermission[] = [];
+/** Frozen: shared by every render that declares nothing, so nothing can push into it for the next one. */
+const NOTHING_DECLARED = Object.freeze([]) as unknown as DesktopPermission[];
 
 const BUTTON =
   "inline-flex h-8 items-center rounded-lg px-3 text-[12.5px] font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-ring)]";
@@ -214,7 +215,8 @@ export function DesktopWindow(p: DesktopWindowProps) {
     element.addEventListener("load", frameLoaded);
     return () => element.removeEventListener("load", frameLoaded);
   }, [frameLoaded, version.frameUrl, p.toolInstallationId]);
-  const declared = version.releaseSha === p.releaseSha && !version.holdsTwoVersions ? p.declaredPermissions : NOTHING_DECLARED;
+  const versionUnknown = version.releaseSha !== p.releaseSha || version.holdsTwoVersions;
+  const declared = versionUnknown ? NOTHING_DECLARED : p.declaredPermissions;
   const appApi = useAppApiHost({
     frame,
     frameOrigin: p.frameOrigin,
@@ -225,6 +227,7 @@ export function DesktopWindow(p: DesktopWindowProps) {
     declared,
     // A call at startup waits for the version check instead of hearing «unavailable» (Claude chains calls behind `declare`).
     whenChecked: version.whenChecked,
+    versionUnknown,
     notificationsOn: p.notificationsOn,
     appName: name,
     iconUrl: `/desktop/${encodeURIComponent(p.desktopId)}/icon`,

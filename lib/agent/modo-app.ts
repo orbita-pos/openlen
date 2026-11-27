@@ -224,7 +224,7 @@ const INDICE_DE_LA_APP = `MORE, IN /.openlen/docs (read them when you need them)
  *  `lib/desktop-apps/app-api/`, its types are in the checker's ambient file (`lib/apps/checker/checker-core.mjs`). A few
  *  lines, because the manual is cached: how to declare it and use it, and that it exists only in the installed window. */
 const DESKTOP_NOTIFICATIONS_MANUAL = `NOTIFICATIONS ON THE DESKTOP:
-- The person can install the app on their desktop: there, and only while its window is open, it can show notifications. window.openlenApp exists only in that window (on the canvas, in your eyes and in the published app it is undefined), so always write window.openlenApp?.… and let the app work without it.
+- The person can install the app on their desktop: there, and only while its window is open, it can show notifications. window.openlenApp exists only in that window (also when its page is open in a browser tab; on the canvas, in your eyes and in the published app it is undefined), so always write window.openlenApp?.… and let the app work without it.
 - Declare the permission in /index.html: <script id="openlen-app-manifest" type="application/json">{"permissions":["notifications"]}</script>. Then await window.openlenApp?.permissions.request(["notifications"]) (OpenLen asks the person; a yes is asked again after the app is updated, a no stays no) and await window.openlenApp?.notification.show({ body }), body of 1 to 300 characters and no other key (the title and the icon are the app's). Both reject with an Error whose code is EPERM, EINVAL or ENOTSUP: catch it. Add it only when the user asks to be notified of something.`;
 
 /** /AGENTS.md de una app, antes de las palancas de la terminal. */

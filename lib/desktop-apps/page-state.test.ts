@@ -281,7 +281,9 @@ describe("desktopPageState", () => {
     });
   });
 
-  it("notificationsOn follows OPENLEN_DESKTOP_NOTIFICATIONS", async () => {
+  // The dependency here is a stand-in: how the switch reads the environment is `enabled.test.ts`'s
+  // (`desktopNotificationsEnabled`, which the real dependency is); this pins that the page carries what it says.
+  it("notificationsOn is what the notifications switch says", async () => {
     expect(await ask(deps({ notificationsEnabled: () => true }))).toMatchObject({ kind: "ready", notificationsOn: true });
     expect(await ask(deps({ notificationsEnabled: () => false }))).toMatchObject({ kind: "ready", notificationsOn: false });
   });
@@ -300,6 +302,9 @@ describe("desktopPageState", () => {
       deps({ readRelease, row: { ...PLAIN, removedAt: new Date() } }),
       deps({ readRelease, plan: vi.fn(async () => "free" as const) }),
       deps({ readRelease, env: { ...PROD, OPENLEN_LIENZO_ORIGEN: "0" } }),
+      // a tool that is gone: tools off, or its installation switched off
+      deps({ readRelease, row: TOOL, toolsEnabled: () => false }),
+      deps({ readRelease, row: TOOL, toolInstallation: vi.fn(async () => ({ ...RAIL_ON, enabled: false })) }),
     ]) {
       expect((await askAsPage(d)).kind).not.toBe("ready");
     }

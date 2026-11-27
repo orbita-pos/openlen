@@ -932,6 +932,7 @@
       "button": "Berechtigungen",
       "title": "Berechtigungen für {app}",
       "empty": "Diese App hat keine Berechtigungen angefragt.",
+      "unknown": "Du kannst die Berechtigungen hier gerade nicht ändern: Die App lädt noch, oder sie wurde aktualisiert, während sie geöffnet war, und kann ihre Berechtigungen erst nach dem Neuladen nutzen.",
       "off": "OpenLen hat Benachrichtigungen von Apps auf dem Desktop vorerst ausgeschaltet.",
       "notInBrowser": "Im Browser nicht verfügbar",
       "browserBlocked": "Dein Browser blockiert Benachrichtigungen von OpenLen. Um sie wieder einzuschalten, klicke auf das Symbol links in der Adressleiste, öffne die Website-Einstellungen und erlaube Benachrichtigungen.",

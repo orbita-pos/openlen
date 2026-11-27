@@ -195,20 +195,25 @@ export function useDesktopUpdate(p: UpdateSource): DesktopUpdate {
   /** Whether `whenChecked` may resolve now: set by the effect below after the render, cleared at once by a load. */
   const settled = useRef(false);
   const waiters = useRef(new Set<() => void>());
-  const whenChecked = useCallback(
-    () =>
-      new Promise<void>((resolve) => {
-        if (settled.current || !alive.current) return resolve();
-        const done = () => {
-          clearTimeout(timer);
-          waiters.current.delete(done);
-          resolve();
-        };
-        const timer = setTimeout(done, WHEN_CHECKED_TIMEOUT_MS);
-        waiters.current.add(done);
-      }),
-    [],
-  );
+  // ONE wait for every call while a check is pending, with one timer — as Claude chains every call behind the one
+  // `declare` — so a frame asking in a loop adds nothing but promises that all settle together.
+  const pendingCheck = useRef<Promise<void> | null>(null);
+  const whenChecked = useCallback(() => {
+    if (settled.current || !alive.current) return Promise.resolve();
+    if (pendingCheck.current) return pendingCheck.current;
+    const wait = new Promise<void>((resolve) => {
+      const done = () => {
+        clearTimeout(timer);
+        waiters.current.delete(done);
+        if (pendingCheck.current === wait) pendingCheck.current = null;
+        resolve();
+      };
+      const timer = setTimeout(done, WHEN_CHECKED_TIMEOUT_MS);
+      waiters.current.add(done);
+    });
+    pendingCheck.current = wait;
+    return wait;
+  }, []);
   // Two versions for good (another release installed, or an update landed in the window) wait for nothing: they last
   // until the window reloads, so the answer is «unavailable» now.
   const twoForGood = otherInstalled || shown.releaseSha !== p.releaseSha;

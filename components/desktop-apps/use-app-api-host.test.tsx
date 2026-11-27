@@ -13,7 +13,7 @@ import type { DesktopPermission } from "@/lib/desktop-apps/permissions/declared"
 import { GRANTS_STORAGE_KEY, grantKey, localGrantStore } from "@/lib/desktop-apps/permissions/grants";
 import { windowMessages } from "@/lib/desktop-apps/window-messages";
 
-import { useAppApiHost, type AppApiHostInput } from "./use-app-api-host";
+import { BROWSER_PROMPT_WAIT_MS, useAppApiHost, type AppApiHostInput } from "./use-app-api-host";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -278,6 +278,8 @@ describe("request", () => {
 
   it("the guard starts again for every dialog that shows", async () => {
     await send("permissions.request", undefined);
+    // Long past the first dialog's guard before it is answered, so only a guard that STARTS AGAIN can stop the click below.
+    later(600);
     await act(async () => button("Don’t allow")!.click());
     // A «no» is for good, so the next one to ask needs a fresh permission: a re-asked «yes» of another version.
     localStorage.clear();
@@ -285,6 +287,9 @@ describe("request", () => {
     await send("permissions.request", undefined);
     await act(async () => button("Allow")!.click());
     expect(localGrantStore().get(KEY)).toMatchObject({ releaseSha: "old" });
+    later(600);
+    await act(async () => button("Allow")!.click());
+    expect(localGrantStore().get(KEY)).toMatchObject({ releaseSha: "sha1" });
   });
 
   it("while the browser's own prompt is up, the dialog does not come back", async () => {
@@ -539,6 +544,92 @@ describe("manage", () => {
     await act(async () => button("Cancel")!.click());
     expect(stored()).toBeNull();
     expect(host.querySelector("[data-desktop-permissions]")).toBeNull();
+  });
+});
+
+describe("while the version check is pending", () => {
+  const never = () => new Promise<void>(() => {});
+  const activation = (isActive: boolean) => Object.defineProperty(navigator, "userActivation", { configurable: true, value: { isActive, hasBeenActive: isActive } });
+
+  it("manage() does not wait for it: its gesture would be gone", async () => {
+    await render({ whenChecked: never });
+    activation(true);
+    const id = await send("permissions.manage", undefined);
+    expect(replyTo(id)).toMatchObject({ ok: true });
+    expect(host.querySelector("[data-desktop-permissions]")).not.toBeNull();
+  });
+
+  it("arguments that don't fit are EINVAL at once, before waiting", async () => {
+    await render({ whenChecked: never });
+    const a = await send("permissions.state", { name: "camera" });
+    const b = await send("permissions.request", { names: "notifications" });
+    const c = await send("notification.show", { body: "" });
+    for (const id of [a, b, c]) expect(replyTo(id)).toMatchObject({ ok: false, code: "EINVAL" });
+    // and a call that fits waits: no answer yet
+    const d = await send("permissions.state", { name: "notifications" });
+    expect(replyTo(d)).toBeUndefined();
+  });
+
+  it("Permisos says the version is unknown instead of «asked for none»", async () => {
+    await render({ declared: [], versionUnknown: true });
+    await act(async () => api!.openPermissions());
+    const panel = host.querySelector("[data-desktop-permissions]")!;
+    expect(panel.textContent).toContain("still loading");
+    expect(panel.textContent).not.toContain("hasn’t asked for any permissions");
+    expect(panel.querySelector("[role=switch]")).toBeNull();
+  });
+});
+
+describe("the browser's own prompt", () => {
+  it("left unanswered, it holds the next ask for at most 12 s; its answer still counts when it comes", async () => {
+    vi.useRealTimers();
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+    vi.setSystemTime(new Date("2026-11-27T09:00:00.000Z"));
+    let answerBrowser: (p: NotificationPermission) => void = () => {};
+    FakeNotification.requestPermission.mockImplementationOnce(
+      () => new Promise<NotificationPermission>((r) => (answerBrowser = (p) => { FakeNotification.permission = p; r(p); })),
+    );
+    const id = await send("permissions.request", { names: ["notifications"] });
+    await clickAllow();
+    await flush();
+    expect(replyTo(id)).toBeUndefined();
+    await act(async () => void (await vi.advanceTimersByTimeAsync(BROWSER_PROMPT_WAIT_MS - 1)));
+    await flush();
+    expect(replyTo(id)).toBeUndefined();
+    await act(async () => void (await vi.advanceTimersByTimeAsync(1)));
+    await flush();
+    await flush();
+    expect(replyTo(id)).toMatchObject({ ok: true, value: { notifications: "prompt" } });
+    // OpenLen's «yes» was kept; the browser answering later makes it granted
+    await act(async () => answerBrowser("granted"));
+    await flush();
+    const s = await send("permissions.state", { name: "notifications" });
+    expect(replyTo(s)).toMatchObject({ ok: true, value: "granted" });
+  });
+});
+
+describe("a phone", () => {
+  it("is told by the browser itself (userAgentData.mobile): notifications are unavailable", async () => {
+    Object.defineProperty(navigator, "userAgentData", { configurable: true, value: { mobile: true } });
+    try {
+      await render();
+      const id = await send("permissions.state", { name: "notifications" });
+      expect(replyTo(id)).toMatchObject({ ok: true, value: "unavailable" });
+    } finally {
+      Reflect.deleteProperty(navigator, "userAgentData");
+    }
+  });
+});
+
+describe("a request when another version lands", () => {
+  it("asks nothing more: the open dialog closes unsaved and the request answers", async () => {
+    const id = await send("permissions.request", { names: ["notifications"] });
+    expect(dialog()).not.toBeNull();
+    await render({ releaseSha: "sha2" });
+    await flush();
+    expect(dialog()).toBeNull();
+    expect(replyTo(id)).toMatchObject({ ok: true });
+    expect(stored()).toBeNull();
   });
 });
 

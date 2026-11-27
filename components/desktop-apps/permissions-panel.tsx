@@ -4,7 +4,8 @@
 // strip, next to «Acerca de», or by the app's `permissions.manage()`. It lists what the app DECLARED, each with its state;
 // what can be granted (`notifications`) has a switch, what a PWA can't have reads «Not available in the browser». A browser
 // that blocks OpenLen's notifications is explained, since only the person can lift that — in the browser's own settings.
-// With the notifications off in OpenLen there is one line and nothing else.
+// With the notifications off in OpenLen there is one line and nothing else; while the window can't tell which version its
+// frame runs (still checking, or two versions after an update), one line that says so and to reload.
 //
 // Like Claude's Permissions dialog it is MODAL over the window, with «Cancel» and «Save»: the switches only change a draft,
 // and nothing is stored until «Save» (Cancel and Escape discard it). «Save» ignores clicks for a moment after the panel
@@ -28,6 +29,9 @@ export interface PermissionsPanelProps {
   notificationsOn: boolean;
   /** What the app declared, each with its state now. */
   rows: { permission: DesktopPermission; state: PermissionState }[];
+  /** The window doesn't know yet which version its frame runs, or holds two: like Claude's «You cannot change permissions
+   *  here: the artifact is still loading…», it says so instead of the list (which would read as «asked for none»). */
+  unknown?: boolean;
   /** The browser can make a Notification in this window. */
   supported: boolean;
   /** The browser blocks notifications for openlen.com. */
@@ -62,8 +66,8 @@ export function PermissionsPanel(p: PermissionsPanelProps) {
   }, []);
 
   const canChange = (permission: DesktopPermission) => p.supported && GRANTABLE.includes(permission);
-  const blockedLine = p.browserBlocked && p.rows.some((r) => canChange(r.permission));
-  const changeable = p.notificationsOn && p.rows.some((r) => canChange(r.permission));
+  const blockedLine = p.unknown !== true && p.browserBlocked && p.rows.some((r) => canChange(r.permission));
+  const changeable = p.unknown !== true && p.notificationsOn && p.rows.some((r) => canChange(r.permission));
   const isOn = (permission: DesktopPermission, state: PermissionState) => draft[permission] ?? state === "granted";
 
   const save = () => {
@@ -87,6 +91,8 @@ export function PermissionsPanel(p: PermissionsPanelProps) {
         <p className="fg text-[14px] font-semibold break-words">{t("title", { app: p.appName })}</p>
         {!p.notificationsOn ? (
           <p className="fg-muted mt-2 text-[12.5px] leading-relaxed">{t("off")}</p>
+        ) : p.unknown === true ? (
+          <p className="fg-muted mt-2 text-[12.5px] leading-relaxed">{t("unknown")}</p>
         ) : p.rows.length === 0 ? (
           <p className="fg-muted mt-2 text-[12.5px] leading-relaxed">{t("empty")}</p>
         ) : (

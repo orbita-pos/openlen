@@ -932,6 +932,7 @@
       "button": "Autorizzazioni",
       "title": "Autorizzazioni di {app}",
       "empty": "Questa app non ha chiesto nessuna autorizzazione.",
+      "unknown": "Ora non puoi cambiare le autorizzazioni qui: l’app sta ancora caricando, oppure è stata aggiornata mentre era aperta e non può usare le sue autorizzazioni finché non la ricarichi.",
       "off": "OpenLen ha disattivato per ora le notifiche delle app sul desktop.",
       "notInBrowser": "Non disponibile nel browser",
       "browserBlocked": "Il tuo browser sta bloccando le notifiche di OpenLen. Per riattivarle, fai clic sull’icona a sinistra della barra degli indirizzi, apri le impostazioni del sito e consenti le notifiche.",

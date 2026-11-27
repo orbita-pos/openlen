@@ -53,6 +53,8 @@ export interface AppApiHostInput {
   /** Resolves when the window knows which release its frame runs (or gives up, still closed): `state`, `request` and
    *  `show` wait for it, as Claude chains every call behind the manifest's `declare`. Never `manage`. */
   whenChecked?: () => Promise<void>;
+  /** The window can't tell yet which version its frame runs, or holds two: «Permisos» says so instead of the list. */
+  versionUnknown?: boolean;
   store?: GrantStore;
   NotificationCtor?: typeof Notification;
 }
@@ -65,15 +67,21 @@ export const SHOW_INTERVAL_MS = 1000;
 const ATTENDED_POLL_MS = 500;
 /** How many answered request ids the window remembers, to answer a posted-again request once. */
 const ANSWERED_IDS_KEPT = 512;
+/** How long a request waits on the browser's own prompt before the next ask goes on: Claude waits at most 12 s for a
+ *  dialog in the way (`Xh`). A prompt the browser leaves unanswered (quieted into the address bar, say) would otherwise
+ *  hold every later request until a reload; the answer, when it comes, still refreshes the state. */
+export const BROWSER_PROMPT_WAIT_MS = 12_000;
 
 /** `answered`: the person said «Allow» and the browser's own prompt may be up — the dialog never shows again for it. */
 type Ask = { permission: DesktopPermission; done: () => void; answered?: boolean };
 
 const attended = () => document.visibilityState === "visible" && document.hasFocus();
 
-/** Phones and tablets have a `Notification` that can't be constructed (Android Chrome throws; iOS needs a service worker). */
+/** Phones and tablets have a `Notification` that can't be constructed (Android Chrome throws; iOS needs a service worker).
+ *  The browser's own word first (`userAgentData.mobile`, Chromium), then the user agent. */
 function isMobile(): boolean {
   if (typeof navigator === "undefined") return false;
+  if ((navigator as { userAgentData?: { mobile?: unknown } }).userAgentData?.mobile === true) return true;
   const ua = navigator.userAgent ?? "";
   if (/Android|iPhone|iPad|iPod/i.test(ua)) return true;
   return /Macintosh/.test(ua) && (navigator.maxTouchPoints ?? 0) > 1; // iPadOS says it is a Mac
@@ -285,7 +293,13 @@ export function useAppApiHost(i: AppApiHostInput): { dialog: ReactNode; openPerm
     save(ask.permission, "granted");
     const asked = askBrowser(ask.permission);
     setAsking(null);
-    void asked.then(() => {
+    void asked.then(refresh);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const waited = new Promise<void>((done) => {
+      timer = setTimeout(done, BROWSER_PROMPT_WAIT_MS);
+    });
+    void Promise.race([asked, waited]).then(() => {
+      clearTimeout(timer);
       refresh();
       finish(ask);
     });
@@ -330,7 +344,11 @@ export function useAppApiHost(i: AppApiHostInput): { dialog: ReactNode; openPerm
           const args = parseRequestArgs(req.args);
           if ("code" in args) return appApiFail(id, args.code, args.message);
           await latest.current.whenChecked?.();
+          // Like Claude's `t.alive() && await Bs(…)`: once another version lands in the window, the page that asked is
+          // gone, so the loop asks nothing more and answers with the map as it is.
+          const askedFor = `${latest.current.releaseSha}\n${latest.current.installedAt}`;
           for (const permission of args.names ?? [...latest.current.declared]) {
+            if (!alive.current || `${latest.current.releaseSha}\n${latest.current.installedAt}` !== askedFor) break;
             if (stateOf(permission) !== "prompt") continue;
             if (queue.current.length >= MAX_WAITING_REQUESTS) return appApiFail(id, "EPERM", "too many pending requests");
             await new Promise<void>((done) => {
@@ -439,6 +457,7 @@ export function useAppApiHost(i: AppApiHostInput): { dialog: ReactNode; openPerm
           appName: i.appName,
           notificationsOn: i.notificationsOn,
           rows: declaredRows,
+          unknown: i.versionUnknown === true,
           supported: ctor() !== undefined,
           browserBlocked: browser() === "denied",
           onSave: saveChanges,

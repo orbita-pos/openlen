@@ -932,6 +932,7 @@
       "button": "Permisos",
       "title": "Permisos de {app}",
       "empty": "Esta app no ha pedido ningún permiso.",
+      "unknown": "Ahora no puedes cambiar los permisos aquí: la app aún está cargando, o se actualizó mientras estaba abierta y no puede usar sus permisos hasta que la recargues.",
       "off": "OpenLen ha apagado por ahora las notificaciones de las apps del escritorio.",
       "notInBrowser": "No disponible en el navegador",
       "browserBlocked": "Tu navegador está bloqueando las notificaciones de OpenLen. Para volver a activarlas, pulsa el icono a la izquierda de la barra de direcciones, abre la configuración del sitio y permite las notificaciones.",

@@ -932,6 +932,7 @@
       "button": "Autorisations",
       "title": "Autorisations de {app}",
       "empty": "Cette app n’a demandé aucune autorisation.",
+      "unknown": "Vous ne pouvez pas modifier les autorisations ici pour l’instant : l’app est encore en cours de chargement, ou elle a été mise à jour pendant qu’elle était ouverte et ne peut pas utiliser ses autorisations tant que vous ne l’avez pas rechargée.",
       "off": "OpenLen a désactivé pour l’instant les notifications des apps du bureau.",
       "notInBrowser": "Non disponible dans le navigateur",
       "browserBlocked": "Votre navigateur bloque les notifications d’OpenLen. Pour les réactiver, cliquez sur l’icône à gauche de la barre d’adresse, ouvrez les paramètres du site et autorisez les notifications.",

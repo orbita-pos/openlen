@@ -932,6 +932,7 @@
       "button": "Machtigingen",
       "title": "Machtigingen voor {app}",
       "empty": "Deze app heeft geen machtigingen gevraagd.",
+      "unknown": "Je kunt de machtigingen hier nu niet wijzigen: de app wordt nog geladen, of hij is bijgewerkt terwijl hij open was en kan zijn machtigingen pas gebruiken nadat je hem opnieuw laadt.",
       "off": "OpenLen heeft meldingen van apps op het bureaublad voorlopig uitgezet.",
       "notInBrowser": "Niet beschikbaar in de browser",
       "browserBlocked": "Je browser blokkeert meldingen van OpenLen. Om ze weer aan te zetten, klik je op het pictogram links in de adresbalk, open je de site-instellingen en sta je meldingen toe.",
