@@ -77,12 +77,29 @@ describe("the page", () => {
     });
   });
 
-  it("only the window's own texts travel to the browser, in the person's language", async () => {
+  it("an ordinary app's window gets only its own texts, in the person's language", async () => {
     const el = await open();
     const messages = el.props.messages as { wsChrome: Record<string, unknown> };
     expect(Object.keys(messages)).toEqual(["wsChrome"]);
     expect(Object.keys(messages.wsChrome)).toEqual(["desktop"]);
     expect(JSON.stringify(messages.wsChrome.desktop)).toContain("Acerca de");
+  });
+
+  it("🔴 a tool's window also gets the texts of the dialogs OpenLen draws around its frame (data change, job, files)", async () => {
+    asked({ ...READY, toolInstallationId: "ti1" });
+    const el = await open();
+    const messages = el.props.messages as { wsChrome: { desktop: unknown; tools: Record<string, unknown> } };
+    expect(Object.keys(messages.wsChrome)).toEqual(["desktop", "tools"]);
+    expect(Object.keys(messages.wsChrome.tools).sort()).toEqual(["change", "files", "jobs"]);
+    expect(JSON.stringify(messages.wsChrome.tools)).toContain("Aplicar");
+    expect(inner(el).props).toMatchObject({ toolInstallationId: "ti1" });
+  });
+
+  it("a notice has no dialogs, so a tool's notice gets none of them either", async () => {
+    asked({ kind: "gone", name: "Bookings" });
+    expect(Object.keys((await open()).props.messages.wsChrome)).toEqual(["desktop"]);
+    asked({ kind: "plan_required", name: "Bookings" });
+    expect(Object.keys((await open()).props.messages.wsChrome)).toEqual(["desktop"]);
   });
 
   it("gone and plan_required are the notice, with no frame", async () => {

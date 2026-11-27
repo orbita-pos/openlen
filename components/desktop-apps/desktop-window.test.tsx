@@ -15,9 +15,9 @@ vi.mock("@/lib/tools/bridge/host", async (importOriginal) => ({
   createToolBridgeHost: bridge.create,
 }));
 
-import wsChrome from "@/messages/en/wsChrome.json";
 import { WORKSPACE_TOOL_THEME } from "@/lib/tools/bridge/workspace-theme";
 import { EARLY_INSTALL_PROMPT_SCRIPT } from "@/lib/desktop-apps/early-install-prompt";
+import { windowMessages } from "@/lib/desktop-apps/window-messages";
 import { DesktopWindow, type DesktopWindowProps } from "./desktop-window";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -48,11 +48,18 @@ function stubDisplayMode(standalone: boolean) {
   }));
 }
 
+/** Every message next-intl could not find (it falls back to the key's path and tells `onError`). */
+let missing: string[] = [];
+
+/** The window inside the provider the PAGE builds: exactly the texts it sends to the browser, no more (the workspace's whole
+ *  `wsChrome` is never there). */
 async function render(over: Partial<DesktopWindowProps> = {}) {
+  const props = { ...APP, ...over };
+  const messages = await windowMessages("en", { tool: props.toolInstallationId !== null });
   await act(async () => {
     root!.render(
-      <NextIntlClientProvider locale="en" messages={{ wsChrome }}>
-        <DesktopWindow {...APP} {...over} />
+      <NextIntlClientProvider locale="en" messages={messages} onError={(e) => void missing.push(e.message)}>
+        <DesktopWindow {...props} />
       </NextIntlClientProvider>,
     );
   });
@@ -70,6 +77,7 @@ const buttons = () => [...host.querySelectorAll("button")];
 const button = (text: string) => buttons().find((b) => b.textContent === text);
 
 beforeEach(() => {
+  missing = [];
   vi.useFakeTimers();
   stubDisplayMode(false);
   vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ jobs: [] }), { status: 200 })));
@@ -79,6 +87,8 @@ beforeEach(() => {
   root = createRoot(host);
 });
 afterEach(() => {
+  // Whatever a test showed, every text it needed was in what the page sends.
+  expect(missing).toEqual([]);
   act(() => root?.unmount());
   root = null;
   document.body.innerHTML = "";
@@ -235,5 +245,69 @@ describe("the install card", () => {
     expect(card()).not.toBeNull();
     await act(async () => void window.dispatchEvent(new Event("appinstalled")));
     expect(card()).toBeNull();
+  });
+});
+
+describe("a tool's dialogs, with only the texts the page sends", () => {
+  type Options = {
+    onConfirmChange(change: unknown): Promise<boolean>;
+    onConfirmJob(job: unknown): Promise<boolean>;
+    onPickFiles(pick: { multiple: boolean }): Promise<File[] | null>;
+    onJobStarted(job: unknown): void;
+  };
+  const options = () => bridge.create.mock.calls.at(-1)![0] as Options;
+  const bodyText = () => document.body.textContent ?? "";
+  const bodyButton = (text: string) => [...document.body.querySelectorAll("button")].find((b) => b.textContent === text);
+  /** What the person would read if a message were missing: the key's own path. */
+  const NO_RAW_KEYS = /wsChrome|tools\.(change|jobs|files)/;
+
+  it("🔴 the confirmation before a tool changes production data is in words, not in key paths", async () => {
+    await render({ toolInstallationId: "ti1" });
+    let answer!: Promise<boolean>;
+    await act(async () => {
+      answer = options().onConfirmChange({ projectId: "p2", table: "orders", key: { id: 7 }, set: { status: "paid" }, before: { status: "open" }, projectTitle: "Shop" });
+    });
+    expect(bodyText()).toContain("Bookings wants to change orders in Shop");
+    expect(bodyText()).toContain("Nothing is changed until you apply it");
+    expect(bodyText()).not.toMatch(NO_RAW_KEYS);
+    await act(async () => bodyButton("Apply")!.click());
+    await expect(answer).resolves.toBe(true);
+  });
+
+  it("🔴 the confirmation of what a job may cost is in words too", async () => {
+    await render({ toolInstallationId: "ti1" });
+    let answer!: Promise<boolean>;
+    await act(async () => {
+      answer = options().onConfirmJob({ name: "export", title: "Export report", maxMinutes: 5, mostCentis: 120, files: [{ id: "f1", name: "sales.csv" }] });
+    });
+    expect(bodyText()).toContain("Bookings wants to run “Export report”");
+    expect(bodyText()).toContain("Up to 5 min");
+    expect(bodyText()).toContain("sales.csv");
+    expect(bodyText()).not.toMatch(NO_RAW_KEYS);
+    await act(async () => bodyButton("Cancel")!.click());
+    await expect(answer).resolves.toBe(false);
+  });
+
+  it("OpenLen's own file picker and the line of a job the frame started", async () => {
+    await render({ toolInstallationId: "ti1" });
+    await act(async () => void options().onPickFiles({ multiple: false }));
+    expect(bodyText()).toContain("Bookings asks for files");
+    expect(bodyText()).toContain("Choose files");
+    expect(bodyText()).not.toMatch(NO_RAW_KEYS);
+    await act(async () => bodyButton("Cancel")!.click());
+
+    const job = { id: "j1", name: "export", title: "Export report", status: "running", progress: null, detail: null, result: null, delivered: [], startedAt: new Date().toISOString(), finishedAt: null, seconds: 0, chargedCentis: 0 };
+    await act(async () => options().onJobStarted(job));
+    expect(bodyText()).toContain("Export report");
+    expect(bodyButton("Stop")).toBeDefined();
+    await act(async () => options().onJobStarted({ ...job, status: "failed", finishedAt: new Date().toISOString() }));
+    expect(bodyText()).toContain("Failed");
+    expect(bodyButton("Close")).toBeDefined();
+    expect(bodyText()).not.toMatch(NO_RAW_KEYS);
+  });
+
+  it("an ordinary app has no bridge, so none of those texts are sent to it", async () => {
+    const plain = await windowMessages("en", { tool: false });
+    expect(JSON.stringify(plain)).not.toContain("wants to change");
   });
 });

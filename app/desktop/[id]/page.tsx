@@ -10,6 +10,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { DesktopNotice } from "@/components/desktop-apps/desktop-notice";
 import { DesktopWindow } from "@/components/desktop-apps/desktop-window";
 import { desktopRequest, requestLocale } from "@/lib/desktop-apps/page-request";
+import { windowMessages } from "@/lib/desktop-apps/window-messages";
 
 export const dynamic = "force-dynamic";
 
@@ -28,19 +29,14 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   };
 }
 
-/** The window's own texts, and only those: the page is client-rendered from here on. */
-async function windowMessages(locale: string): Promise<Record<string, unknown>> {
-  const file = (await import(`@/messages/${locale}/wsChrome.json`)) as { default: { desktop: unknown } };
-  return { wsChrome: { desktop: file.default.desktop } };
-}
-
 export default async function DesktopPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [locale, { state, personName }] = await Promise.all([requestLocale(), desktopRequest(id)]);
   if (state.kind === "off") notFound();
   // `next`, which the login reads: it comes back through `/<locale>/desktop/<id>`, which the middleware sends here.
   if (state.kind === "sign_in") redirect(`/${locale}/login?next=${encodeURIComponent(`/desktop/${id}`)}`);
-  const messages = await windowMessages(locale);
+  // Its own texts and, for a tool framed with OpenLen's dialogs around it, theirs (`lib/desktop-apps/window-messages.ts`).
+  const messages = await windowMessages(locale, { tool: state.kind === "ready" && state.toolInstallationId !== null });
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
       {state.kind === "ready" ? (
