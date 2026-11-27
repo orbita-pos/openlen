@@ -897,7 +897,7 @@
       "reason": {
         "security": "A revisão de segurança encontrou algo para olhar antes de atualizar.",
         "securityPending": "A revisão de segurança ainda está em andamento. Tente de novo em um minuto.",
-        "confirm": "Para atualizar, é preciso da sua confirmação no OpenLen.",
+        "confirm": "Para atualizar, você precisa confirmar primeiro no OpenLen.",
         "problem": "A versão nova tem um problema e ainda não pode ser instalada.",
         "failed": "Tente de novo em instantes.",
         "plan_required": "Os apps na área de trabalho vêm com os planos pagos.",
