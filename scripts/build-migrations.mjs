@@ -172,6 +172,9 @@ const targets = [
   // Tools made by Len: toolReleases and toolInstallations (spec local 2026-11-04-herramientas-hechas-por-len).
   // Aditiva e idempotente. 🔴 OBLIGATORIA antes que el código: sin ella, «Instalar» falla al guardar.
   "tools-migrate",
+  // Apps on the desktop: the desktopApps table (spec local 2026-11-26-apps-en-el-escritorio, §4.2). Aditiva e
+  // idempotente. 🔴 OBLIGATORIA antes que el código: sin ella, «Instalar en el escritorio» falla al guardar.
+  "desktop-apps-migrate",
   // Los datos en borrador y producción: la tabla projectBackendEnvironments y,
   // para cada base de antes, su entorno de siempre. Aditiva e idempotente; va
   // después de `pages-backend-migrate` porque lee projectBackends. 🔴

@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 import { etiquetaDeLienzo } from "@/lib/lienzo/host";
-import { toolHostLabel, toolPhoneHostLabel } from "@/lib/tools/host";
+import { desktopHostLabel, toolHostLabel, toolPhoneHostLabel } from "@/lib/tools/host";
 
 import { lenArtifactFrameUrl, lenArtifactHostLabel, lenArtifactPhoneHostLabel } from "./host";
 
@@ -52,6 +52,23 @@ describe("the labels never meet", () => {
       etiquetaDeLienzo(ID, ENV),
     ];
     expect(new Set(labels).size).toBe(labels.length);
+  });
+});
+
+// An app installed on the desktop (spec local 2026-11-26-apps-en-el-escritorio, §4.2) has its own domain too: its
+// label is looked up in `desktopApps`, so one id can never be a tool's host and a desktop app's at once.
+describe("desktopHostLabel", () => {
+  it("is a lienzo label, stable, and not an installed tool's workspace or phone label of the same id", () => {
+    expect(desktopHostLabel(ID, ENV)).toMatch(/^lienzo-[0-9a-f]{32}$/);
+    expect(desktopHostLabel(ID, ENV)).toBe(desktopHostLabel(ID, ENV));
+    expect(desktopHostLabel(ID, ENV)).not.toBe(toolHostLabel(ID, ENV));
+    expect(desktopHostLabel(ID, ENV)).not.toBe(toolPhoneHostLabel(ID, ENV));
+    expect(desktopHostLabel(ID, ENV)).not.toBe(lenArtifactHostLabel(ID, ENV));
+    expect(desktopHostLabel(ID, ENV)).not.toBe(etiquetaDeLienzo(ID, ENV));
+  });
+
+  it("without a secret there is no label", () => {
+    expect(desktopHostLabel(ID, {})).toBeNull();
   });
 });
 

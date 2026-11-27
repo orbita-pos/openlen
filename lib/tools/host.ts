@@ -30,6 +30,12 @@ export function toolPhoneHostLabel(installationId: string, env: Env = process.en
   return hmacHostLabel("openlen-tool-phone:", installationId, env);
 }
 
+/** THE PRIVATE HOST OF AN APP INSTALLED ON THE DESKTOP (spec local 2026-11-26-apps-en-el-escritorio, §4.2): a domain of its
+ *  own, looked up in `desktopApps`, so one id is never a tool's host and a desktop app's at once. Null without a secret. */
+export function desktopHostLabel(id: string, env: Env = process.env): string | null {
+  return hmacHostLabel("openlen-desktop:", id, env);
+}
+
 /** Where the workspace frames the tool: its private host, with the release in the query so a reinstall
  *  never shows a cached older one. `null` = no isolated host here (the canvas origin is switched off). */
 export function toolFrameUrl(

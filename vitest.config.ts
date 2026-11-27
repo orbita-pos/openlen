@@ -681,6 +681,8 @@ export default defineConfig({
       "lib/event-tasks/**/*.test.ts",
       // Tools made by Len (spec local 2026-11-04-herramientas-hechas-por-len). LISTA BLANCA.
       "lib/tools/**/*.test.ts",
+      // An app installed on the desktop, as a PWA (spec local 2026-11-26-apps-en-el-escritorio). LISTA BLANCA.
+      "lib/desktop-apps/**/*.test.ts",
       // The person's own assistant (spec local 2026-11-06-asistente-propio).
       "lib/assistants/**/*.test.ts",
       // The tool that lives inside an agent (spec local 2026-11-22-artifacts-de-len). LISTA BLANCA.

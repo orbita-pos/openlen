@@ -2860,6 +2860,37 @@ export const toolInstallations = pgTable(
   ],
 );
 
+/** AN APP INSTALLED ON THE DESKTOP (spec local 2026-11-26-apps-en-el-escritorio, §4.2): a frozen release of an app
+ *  project, opened in a window of its own as a PWA from openlen.com. One row per person and project; removing keeps the
+ *  row, the host label is fixed for its life, and its release lives in `toolReleases`. `npm run desktop-apps:migrate`. */
+export const desktopApps = pgTable(
+  "desktopApps",
+  {
+    id: text("id").primaryKey(),
+    personId: text("personId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    releaseSha: text("releaseSha").notNull(),
+    /** The project's name when it was installed (the window's title). */
+    name: text("name").notNull(),
+    /** A tool's own icon (its manifest's `iconPath`); null for an ordinary app, which gets one drawn from its name. */
+    iconPath: text("iconPath"),
+    /** The `toolInstallations` row it was installed from, when the project is a tool; null for an ordinary app. */
+    toolInstallationId: text("toolInstallationId"),
+    /** A fingerprint of the files the release was built from: tells whether the project moved since. */
+    filesFingerprint: text("filesFingerprint").notNull(),
+    /** The window's private host label (`desktopHostLabel`); fixed for the row's life. */
+    hostLabel: text("hostLabel").notNull(),
+    installedAt: timestamp("installedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+    removedAt: timestamp("removedAt", { mode: "date", withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("desktopApps_person_project_idx").on(t.personId, t.projectId),
+    uniqueIndex("desktopApps_hostLabel_idx").on(t.hostLabel),
+    index("desktopApps_projectId_idx").on(t.projectId),
+  ],
+);
+
 /** «CREAR» CARDS (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): DeepSeek's card under one of Len's
  *  answers, proposing a tool; one press builds it in the background and installs it. `npm run tools:migrate`. */
 export const toolCards = pgTable(
