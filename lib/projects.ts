@@ -1167,6 +1167,7 @@ export async function publishProject(
       userId: params.userId,
       currentLogoUrl: project.logoUrl,
       html,
+      isApp: app !== null,
     });
   } catch (err) {
     // eslint-disable-next-line no-console

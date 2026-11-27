@@ -766,6 +766,8 @@ export default defineConfig({
       // Servir una release como Caddy (14/10): lo usan el Flight Check y la miniatura. LISTA BLANCA.
       "lib/publish/serve-release.test.ts",
       "lib/publish/serve-release.browser.test.ts",
+      // The logo a publish bakes in: in an app the shell's own icon wins over the saved one (27/11). LISTA BLANCA.
+      "lib/branding/resolve-project-logo.test.ts",
       // Her visuals in the published bubble, in real Chromium (phase 2B: jsdom gives no window to a shadow root's iframe).
       "lib/publish/assistant-widget.browser.test.ts",
       "lib/publish/assistant-figure.browser.test.ts",
