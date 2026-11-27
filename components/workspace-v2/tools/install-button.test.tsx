@@ -53,10 +53,14 @@ describe("ToolInstallButton", () => {
   describe("one install card at a time", () => {
     const desktopState = () =>
       new Response(JSON.stringify({ desktopApp: null, updateAvailable: false, published: false, canInstall: true, blockedBy: null }));
-    const cards = () => [...document.querySelectorAll("[data-install-card]")];
+    // What is ON SCREEN: the tool's card is hidden, not unmounted, while the desktop's is open (so its install in flight is
+    // not lost), and a hidden one is not a card the person sees nor a button they can press.
+    const shown = (el: Element) => el.closest("[hidden]") === null;
+    const allCards = () => [...document.querySelectorAll("[data-install-card]")];
+    const cards = () => allCards().filter(shown);
     const toolCard = () => cards().find((c) => c.textContent?.includes("installCard.title"));
     const desktopCard = () => cards().find((c) => c.textContent?.includes("desktopInstall.title"));
-    const press = (text: string) => [...document.querySelectorAll("button")].find((b) => b.textContent?.includes(text))!;
+    const press = (text: string) => [...document.querySelectorAll("button")].filter(shown).find((b) => b.textContent?.includes(text))!;
 
     async function open() {
       vi.stubGlobal("fetch", vi.fn(async () => desktopState()));
@@ -97,6 +101,49 @@ describe("ToolInstallButton", () => {
       await act(async () => press("installCard.cancel").click());
       expect(toolCard()).toBeDefined();
       expect(desktopCard()).toBeUndefined();
+    });
+
+    // The tool's card can be mid-install when the person opens the desktop's: unmounting it would lose the POST's outcome (an
+    // «Instalada», a security finding to accept) and leave a fresh «Instalar» that would run the whole install again.
+    it("🔴 the tool card keeps its in-flight install while the desktop card is open", async () => {
+      let finish!: (r: Response) => void;
+      const toolPosts: string[] = [];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: unknown, init?: RequestInit) => {
+          if (String(input) !== "/api/projects/p1/install") return desktopState();
+          toolPosts.push(init?.method ?? "GET");
+          return new Promise<Response>((resolve) => void (finish = resolve));
+        }),
+      );
+      root = createRoot(document.body.appendChild(document.createElement("div")));
+      await act(async () => root!.render(<ToolInstallButton projectId="p1" title="Reservas" desktop />));
+      await act(async () => document.querySelector<HTMLButtonElement>("button[data-tool-install]")!.click());
+
+      // The tool's install starts and is still running...
+      await act(async () => toolCard()!.querySelector<HTMLButtonElement>("button")!.click());
+      expect(toolCard()!.getAttribute("data-install-card")).toBe("installing");
+      expect(toolPosts).toEqual(["POST"]);
+
+      // ...the desktop's card takes the screen: one card on screen, and the tool's is still there, hidden and installing.
+      await act(async () => press("desktopInstall.menu.install").click());
+      expect(cards()).toHaveLength(1);
+      expect(desktopCard()).toBeDefined();
+      expect(toolCard()).toBeUndefined();
+      const hiddenToolCard = allCards().find((c) => c.textContent?.includes("installCard.title"));
+      expect(hiddenToolCard?.getAttribute("data-install-card")).toBe("installing");
+
+      // Back: the same card, still installing, and no second install went out.
+      await act(async () => press("desktopInstall.menu.back").click());
+      expect(cards()).toHaveLength(1);
+      expect(toolCard()!.getAttribute("data-install-card")).toBe("installing");
+      expect(toolPosts).toEqual(["POST"]);
+
+      // It lands while the person is on the way back, and says so.
+      await act(async () => press("desktopInstall.menu.install").click());
+      await act(async () => finish(new Response(JSON.stringify({ ok: true }), { status: 200 })));
+      await act(async () => press("desktopInstall.menu.back").click());
+      expect(toolCard()!.getAttribute("data-install-card")).toBe("installed");
     });
 
     it("a menu that is closed and opened again starts with the tool's card, not the desktop's", async () => {

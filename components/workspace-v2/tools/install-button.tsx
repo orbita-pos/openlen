@@ -46,8 +46,12 @@ export function ToolInstallButton({ projectId, title, desktop = false }: { proje
       </button>
       {open ? (
         <div className="absolute right-0 mt-2 w-80 rounded-xl bg-elev border bd shadow-elev p-1.5 z-50 slide-down">
-          {/* One install card at a time: the desktop's replaces the tool's while it is open, and has a way back. */}
-          {desktopCard ? null : <InstallConfirmCard projectId={projectId} install={{ title }} onInstalled={() => {}} onCancelled={() => setOpen(false)} />}
+          {/* One install card at a time: the desktop's takes the screen while it is open, and has a way back. 🔴 The tool's is
+              HIDDEN, not unmounted: it may be mid-install, and unmounting it would lose what the install answers (an «Instalada»,
+              a finding to accept) and leave a fresh «Instalar» that runs the whole install again. */}
+          <div hidden={desktopCard}>
+            <InstallConfirmCard projectId={projectId} install={{ title }} onInstalled={() => {}} onCancelled={() => setOpen(false)} />
+          </div>
           {/* Also on the desktop, in a window of its own (spec local 2026-11-26-apps-en-el-escritorio, §4.3): the owner's, and
               only once the tool is installed for them — the route says it otherwise. */}
           {desktop ? (
