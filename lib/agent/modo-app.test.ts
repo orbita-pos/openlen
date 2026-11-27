@@ -425,6 +425,12 @@ describe("desktop notifications in Len's manual", () => {
     expect(on).toContain("EPERM, EINVAL or ENOTSUP");
   });
 
+  it("it says what an update does to the answer, as it is: a yes is asked again, a no stays no", () => {
+    const on = manual({});
+    expect(on).toContain("a yes is asked again after the app is updated, a no stays no");
+    expect(on).not.toContain("it asks again after the app is updated");
+  });
+
   it("a page's manual and the doc for converting a page never carry it", () => {
     expect(manual({}, null)).not.toContain("openlenApp");
     expect(Object.values(documentosDeLaPlataforma()).join("\n")).not.toContain("openlenApp");
