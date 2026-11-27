@@ -541,3 +541,40 @@ describe("manage", () => {
     expect(host.querySelector("[data-desktop-permissions]")).toBeNull();
   });
 });
+
+describe("the frame asked before the window listened (a cold start of the installed app)", () => {
+  it("a request posted again with the same id is answered once", async () => {
+    localGrantStore().set(KEY, { answer: "granted", releaseSha: "sha1", installedAt: INSTALLED });
+    FakeNotification.permission = "granted";
+    const raw = { channel: APP_API_CHANNEL, id: "same-id", method: "notification.show", args: { body: "hi" } };
+    await send("", undefined, { raw });
+    await send("", undefined, { raw });
+    expect(replies.filter((r) => r.message.id === "same-id")).toHaveLength(1);
+    expect(FakeNotification.made).toHaveLength(1);
+  });
+
+  it("says ready to the frame's origin when the frame loads, and not for another frame", async () => {
+    await act(async () => void otherFrame().dispatchEvent(new Event("load")));
+    expect(replies).toEqual([]);
+    await act(async () => void appFrame().dispatchEvent(new Event("load")));
+    expect(replies).toEqual([{ message: { channel: APP_API_CHANNEL, ready: true }, target: ORIGIN }]);
+  });
+
+  it("says ready when it starts listening, and not again when it re-renders", async () => {
+    act(() => root!.unmount());
+    const posted: { message: unknown; target: string }[] = [];
+    vi.spyOn(HTMLIFrameElement.prototype, "contentWindow", "get").mockReturnValue({
+      postMessage: (message: unknown, target: string) => posted.push({ message, target }),
+    } as unknown as Window);
+    root = createRoot(host);
+    await render();
+    // jsdom loads a new iframe as it is inserted, so starting may say it twice (listening + the load); both are «ready».
+    expect(posted.length).toBeGreaterThanOrEqual(1);
+    expect(new Set(posted.map((p) => JSON.stringify(p)))).toEqual(
+      new Set([JSON.stringify({ message: { channel: APP_API_CHANNEL, ready: true }, target: ORIGIN })]),
+    );
+    const afterStart = posted.length;
+    await render({ declared: [] });
+    expect(posted).toHaveLength(afterStart);
+  });
+});

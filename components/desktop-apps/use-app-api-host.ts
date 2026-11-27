@@ -23,6 +23,7 @@ import { createElement, Fragment, useCallback, useEffect, useMemo, useRef, useSt
 import {
   appApiFail,
   appApiOk,
+  appApiReady,
   isAppApiRequest,
   parseRequestArgs,
   parseShowArgs,
@@ -62,6 +63,8 @@ export const MAX_WAITING_REQUESTS = 8;
 export const SHOW_INTERVAL_MS = 1000;
 /** While a dialog waits for the window to be in front, how often it looks (focus moving into the frame fires nothing here). */
 const ATTENDED_POLL_MS = 500;
+/** How many answered request ids the window remembers, to answer a posted-again request once. */
+const ANSWERED_IDS_KEPT = 512;
 
 /** `answered`: the person said «Allow» and the browser's own prompt may be up — the dialog never shows again for it. */
 type Ask = { permission: DesktopPermission; done: () => void; answered?: boolean };
@@ -374,12 +377,18 @@ export function useAppApiHost(i: AppApiHostInput): { dialog: ReactNode; openPerm
     [ctor, stateMap, stateOf],
   );
 
+  // The ids already taken: the frame posts a waiting request again when this window says it is ready (`appApiReady`), and
+  // one already being answered must not open a second dialog or show a second notification.
+  const answered = useRef(new Set<string>());
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       const cur = latest.current;
       const frameWindow = cur.frame.current?.contentWindow;
       if (!frameWindow || e.source !== frameWindow || !cur.frameOrigin || e.origin !== cur.frameOrigin) return;
       if (!isAppApiRequest(e.data)) return;
+      if (answered.current.has(e.data.id)) return;
+      answered.current.add(e.data.id);
+      if (answered.current.size > ANSWERED_IDS_KEPT) answered.current.delete(answered.current.values().next().value as string);
       // Copied off the message: nothing the frame passed is read again after the checks.
       const req: AppApiRequest = { channel: e.data.channel, id: e.data.id, method: e.data.method, args: e.data.args };
       const origin = e.origin;
@@ -394,6 +403,29 @@ export function useAppApiHost(i: AppApiHostInput): { dialog: ReactNode; openPerm
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, [handle]);
+
+  // «I am listening»: once the listener above is on (effects run in order; it is swapped within one commit when `handle`
+  // changes, so this needs saying only once) — the server-rendered frame may have loaded and asked before hydration — and
+  // after every load of the frame (`load` does not bubble, so it is caught on the way down). A frame not yet on its origin
+  // drops it.
+  useEffect(() => {
+    const sayReady = () => {
+      const cur = latest.current;
+      const frameWindow = cur.frame.current?.contentWindow;
+      if (!frameWindow || !cur.frameOrigin) return;
+      try {
+        frameWindow.postMessage(appApiReady(), cur.frameOrigin);
+      } catch {
+        // the frame is gone
+      }
+    };
+    const onLoad = (e: Event) => {
+      if (e.target === latest.current.frame.current) sayReady();
+    };
+    document.addEventListener("load", onLoad, true);
+    sayReady();
+    return () => document.removeEventListener("load", onLoad, true);
+  }, []);
 
   const openPermissions = useCallback(() => setPanelOpen(true), []);
   const closePermissions = useCallback(() => setPanelOpen(false), []);

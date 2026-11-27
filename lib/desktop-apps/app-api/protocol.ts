@@ -64,7 +64,16 @@ export function isAppApiResponse(x: unknown): x is AppApiResponse {
   return x.ok === false && typeof x.code === "string" && (APP_API_CODES as readonly string[]).includes(x.code) && typeof x.message === "string";
 }
 
-export const appApiOk = (id: string, value: unknown): AppApiResponse => ({ channel: APP_API_CHANNEL, id, ok: true, value });
+/**
+ * window → frame, carrying nothing: «I am listening now». The window is server-rendered and starts listening only after
+ * hydration, but the frame in its HTML may load and ask before that; such a request is lost. So the window says this when
+ * it starts listening and after every load of the frame, and the frame posts again whatever it is still waiting on (the
+ * window answers an id once). The way an Electron preload has no such race, rebuilt over postMessage.
+ */
+export type AppApiReady = { channel: typeof APP_API_CHANNEL; ready: true };
+export const appApiReady = (): AppApiReady => ({ channel: APP_API_CHANNEL, ready: true });
+
+export const appApiOk =(id: string, value: unknown): AppApiResponse => ({ channel: APP_API_CHANNEL, id, ok: true, value });
 export const appApiFail = (id: string, code: AppApiCode, message: string): AppApiResponse => ({ channel: APP_API_CHANNEL, id, ok: false, code, message });
 
 /** The strict schema of `show`: EXACTLY `{ body }`, a string of 1 to 300 characters; any other key is an error, as Claude's. */

@@ -13,7 +13,9 @@
 //   · `manage()` needs a CLICK or a KEY of the last 5 s in the frame, once each (`navigator.userActivation` when the
 //     browser has it, on top of the events the script saw itself; only trusted events count), and posts nothing without;
 //   · `state` and `show` and `manage` wait 30 s for the window; `request` waits on the person and has no limit;
-//   · unframed (the private host opened by itself in a tab) there is no one to ask: every method rejects ENOTSUP.
+//   · unframed (the private host opened by itself in a tab) there is no one to ask: every method rejects ENOTSUP;
+//   · the window may start listening after the frame asked (it hydrates late): when it says `ready` (`appApiReady`), every
+//     request still waiting is posted again, with the same id — the window answers an id once.
 // Every rejection is an `Error` whose `code` is `EPERM`, `EINVAL` or `ENOTSUP`. ES5 syntax on purpose (it uses `Map` and `Promise`): it
 // runs before the app's bundle, in any browser that has them. The window validates every request again (an app can post to its parent by hand), so the
 // arguments go as the app gave them: `show({ body, title })` is the window's EINVAL, not something hidden here.
@@ -72,7 +74,9 @@ export function appApiClientSource(parentOrigins: readonly string[]): string {
     window.addEventListener("message", function (e) {
       if (e.source !== window.parent || PARENTS.indexOf(e.origin) < 0) return;
       var m = e.data;
-      if (!m || typeof m !== "object" || m.channel !== CHANNEL || typeof m.id !== "string") return;
+      if (!m || typeof m !== "object" || m.channel !== CHANNEL) return;
+      if (m.ready === true && m.id === undefined) { pending.forEach(function (p) { send(p.message); }); return; }
+      if (typeof m.id !== "string") return;
       var p = pending.get(m.id);
       if (!p) return;
       var failure = null;
@@ -97,6 +101,11 @@ export function appApiClientSource(parentOrigins: readonly string[]): string {
     return true;
   }
 
+  // Posting again what was already sent once: it could be sent then, so it can now; a failure is the timer's to report.
+  function send(message) {
+    try { window.parent.postMessage(message, targetOrigin()); } catch (_) {}
+  }
+
   function call(method, args, waitsOnThePerson) {
     return new Promise(function (resolve, reject) {
       if (!framed) { reject(fail("ENOTSUP", "window.openlenApp only works inside the OpenLen desktop window")); return; }
@@ -104,9 +113,10 @@ export function appApiClientSource(parentOrigins: readonly string[]): string {
       if (!id) { reject(fail("ENOTSUP", "this browser has no secure random source")); return; }
       var timer = null;
       if (!waitsOnThePerson) timer = setTimeout(function () { pending.delete(id); reject(fail("ENOTSUP", "OpenLen did not answer")); }, TIMEOUT);
-      pending.set(id, { resolve: resolve, reject: reject, timer: timer });
+      var message = { channel: CHANNEL, id: id, method: method, args: args };
+      pending.set(id, { resolve: resolve, reject: reject, timer: timer, message: message });
       try {
-        window.parent.postMessage({ channel: CHANNEL, id: id, method: method, args: args }, targetOrigin());
+        window.parent.postMessage(message, targetOrigin());
       } catch (_) {
         pending.delete(id);
         clearTimeout(timer);

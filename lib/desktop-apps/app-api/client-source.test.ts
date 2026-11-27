@@ -92,6 +92,22 @@ describe("window.openlenApp", () => {
     await expect(p).resolves.toBe("prompt");
   });
 
+  it("what is still waiting is posted again, same id, when the window says ready — only from the parent, and once answered no more", async () => {
+    const f = build();
+    const p = f.api.permissions.state("notifications");
+    const first = f.last();
+    f.deliver({ channel: APP_API_CHANNEL, ready: true }, { origin: "https://evil.openlen.app" });
+    f.deliver({ channel: APP_API_CHANNEL, ready: true }, { source: {} });
+    expect(f.requests()).toHaveLength(1);
+    f.deliver({ channel: APP_API_CHANNEL, ready: true });
+    expect(f.requests()).toEqual([first, first]);
+    expect(f.postMessage).toHaveBeenLastCalledWith(first, APP);
+    f.deliver({ channel: APP_API_CHANNEL, id: first.id, ok: true, value: "prompt" });
+    await expect(p).resolves.toBe("prompt");
+    f.deliver({ channel: APP_API_CHANNEL, ready: true });
+    expect(f.requests()).toHaveLength(2);
+  });
+
   it("an error answer rejects with an Error whose code is the answer's code", async () => {
     const f = build();
     const p = f.api.notification.show({ body: "hi" });
