@@ -147,6 +147,8 @@ function withRelease(frameUrl: string, releaseSha: string): string {
 function useDesktopUpdate(p: DesktopWindowProps) {
   const [shown, setShown] = useState({ frameUrl: p.frameUrl, releaseSha: p.releaseSha });
   const [available, setAvailable] = useState(false);
+  /** The project also has a published site: «Actualizar» migrates the production data that site shares (spec §5). */
+  const [published, setPublished] = useState(false);
   const [phase, setPhase] = useState<UpdatePhase>({ kind: "idle" });
   const alive = useRef(true);
   const asking = useRef(false);
@@ -164,13 +166,14 @@ function useDesktopUpdate(p: DesktopWindowProps) {
     try {
       const res = await fetch(endpoint, { cache: "no-store" });
       if (!res.ok) return;
-      const body = (await res.json()) as { updateAvailable?: unknown; desktopApp?: { releaseSha?: unknown } | null } | null;
+      const body = (await res.json()) as { updateAvailable?: unknown; published?: unknown; desktopApp?: { releaseSha?: unknown } | null } | null;
       if (!alive.current || updating.current || landed.current !== epoch) return;
       // Two ways to be behind: the project moved on since the install, or the install moved on since this frame (the person
       // updated from the workspace, where a gate that stopped «Actualizar» sent them). Either way only the strip says so.
       const installed = body?.desktopApp?.releaseSha;
       const now = body?.updateAvailable === true || (typeof installed === "string" && installed !== "" && installed !== running.current);
       setAvailable(now);
+      setPublished(body?.published === true);
       // What had stopped an earlier press says nothing about a version that is no longer there.
       if (!now) setPhase({ kind: "idle" });
     } catch {
@@ -220,10 +223,10 @@ function useDesktopUpdate(p: DesktopWindowProps) {
     }
   }, [endpoint, p.locale]);
 
-  return { ...shown, available, phase, update };
+  return { ...shown, available, published, phase, update };
 }
 
-function UpdateNotice({ phase, onUpdate, openHref }: { phase: UpdatePhase; onUpdate: () => void; openHref: string }) {
+function UpdateNotice({ phase, shared, onUpdate, openHref }: { phase: UpdatePhase; shared: boolean; onUpdate: () => void; openHref: string }) {
   const t = useTranslations("wsChrome.desktop");
   const text = phase.kind === "stopped" ? t(`update.reason.${phase.reason}`) : t("update.available");
   return (
@@ -235,6 +238,12 @@ function UpdateNotice({ phase, onUpdate, openHref }: { phase: UpdatePhase; onUpd
         <a className="text-link shrink-0 text-[12px] font-medium underline underline-offset-2" href={openHref} target="_blank" rel="noopener">
           {t("about.open")}
         </a>
+      ) : null}
+      {/* «Actualizar» is a one-tap install that migrates the SAME production the published site uses: say so beside it. */}
+      {shared ? (
+        <span className="fg-muted min-w-0 truncate text-[12px]" title={t("update.sharedWithSite")}>
+          {t("update.sharedWithSite")}
+        </span>
       ) : null}
       <button
         type="button"
@@ -293,7 +302,7 @@ export function DesktopWindow(p: DesktopWindowProps) {
         {/* The new-version notice takes the strip's free space between the name and «Acerca de», and renders nothing when
             there is nothing to say. The place is always there, so a screen reader announces what comes into it. */}
         <div className="flex min-w-0 flex-1 items-center gap-2" data-desktop-notice-slot role="status">
-          {version.available ? <UpdateNotice phase={version.phase} onUpdate={() => void version.update()} openHref={openInOpenLenHref(p)} /> : null}
+          {version.available ? <UpdateNotice phase={version.phase} shared={version.published} onUpdate={() => void version.update()} openHref={openInOpenLenHref(p)} /> : null}
         </div>
         <button
           type="button"

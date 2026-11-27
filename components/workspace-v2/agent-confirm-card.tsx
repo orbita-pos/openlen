@@ -2,7 +2,8 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { AlertTriangle, Check, ExternalLink, Globe, Loader } from "./icons";
+import { AlertTriangle, Check, ExternalLink, Globe, Info, Loader } from "./icons";
+import { useDesktopInstalledForPublish } from "./desktop-apps/use-desktop-app";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
 import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 import type { DataChangesPreview, DestructiveChange } from "@/lib/backend/data-changes-types";
@@ -70,6 +71,7 @@ export function AgentConfirmCard({
   confirm,
   onPublished,
   onCancelled,
+  esApp,
 }: {
   projectId: string;
   // SÓLO la tarjeta de publicar. La de objetivo es otro componente y quien
@@ -81,6 +83,9 @@ export function AgentConfirmCard({
   /** «Cancelar»: la tarjeta se apaga. El chat nuevo lo usa para dejar de decir
    *  «Esperando tu aprobación» (plans/new-chat/). */
   onCancelled?: () => void;
+  /** The project is an app (the one thing that can be installed on the desktop). `undefined` = the caller doesn't know: ask
+   *  anyway — the server answers `installed: false` for a project nobody installed. */
+  esApp?: boolean;
 }) {
   const t = useTranslations("wsPage");
   const tDatos = useTranslations("modalsDomain.dataChanges");
@@ -104,6 +109,10 @@ export function AgentConfirmCard({
   const tSecurity = useTranslations("modalsDomain.security");
   // Primera publicación con base de datos: la casilla de copiar los de prueba.
   const [copyDraftData, setCopyDraftData] = useState(false);
+  // La app en el escritorio (spec local 2026-11-26-apps-en-el-escritorio, §5): hay UNA producción, la del sitio y la de la app
+  // instalada, y esta tarjeta ES el diálogo de publicar de Len, así que lo dice igual que `PublishModal`. La pregunta es la de
+  // quien publica (`?for=publish`), no la lectura del dueño.
+  const escritorioInstalado = useDesktopInstalledForPublish(projectId, esApp !== false);
 
   const busy = state.kind === "checking" || state.kind === "publishing";
 
@@ -338,6 +347,13 @@ export function AgentConfirmCard({
           ) : (
             <DataChangesNotice preview={confirm.cambiosDeDatos} copyDraftData={copyDraftData} onCopyDraftData={setCopyDraftData} />
           )}
+        </div>
+      )}
+
+      {escritorioInstalado && (
+        <div data-desktop-notice className="mt-2 flex items-start gap-1.5 text-[11px] fg-muted">
+          <Info size={12} className="mt-0.5 shrink-0" />
+          <span>{tSecretos("desktopInstall.publishNotice")}</span>
         </div>
       )}
 

@@ -887,6 +887,7 @@
       "available": "새 버전이 있어요",
       "button": "업데이트",
       "updating": "업데이트 중…",
+      "sharedWithSite": "게시한 사이트도 같은 데이터를 써요.",
       "reason": {
         "security": "업데이트하기 전에 살펴볼 내용이 보안 검토에서 발견되었어요.",
         "securityPending": "보안 검토가 아직 진행 중이에요. 1분 뒤에 다시 시도해 주세요.",

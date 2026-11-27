@@ -145,7 +145,9 @@ export async function desktopInstalledForPublish(i: { readonly projectId: string
   const d = await depsOrReal(deps);
   if (!d.enabled()) return { status: 200, body: { installed: false } };
   const access = await d.access(i.projectId, i.actorId);
-  if (access instanceof Response) return notFound();
+  // A reader doesn't publish: the real `access` asks for edit permission and refuses one with a 403, but the answer must not
+  // depend on which permission a dependency happened to ask for.
+  if (access instanceof Response || access.rol === "lector") return notFound();
   return { status: 200, body: { installed: await d.hasActiveDesktopApp(i.projectId) } };
 }
 

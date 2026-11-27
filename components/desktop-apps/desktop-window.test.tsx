@@ -325,6 +325,29 @@ describe("the new-version notice (spec §4.4)", () => {
     expect(slot().getAttribute("role")).toBe("status");
   });
 
+  // «Actualizar» is a one-tap install: it applies the non-destructive migrations to the SAME production the published site
+  // uses (spec §5), so the strip says so — beside the button — when the project has a site.
+  const SHARED = "Your published site uses this same data.";
+  const stateOf = (published: boolean) => json({ desktopApp: { id: "d1", releaseSha: "sha1" }, updateAvailable: true, published });
+
+  it("the update notice says the site shares the data when published", async () => {
+    stubApi({ get: () => stateOf(true) });
+    await render();
+    await settle();
+    expect(slot().textContent).toContain("There’s a new version");
+    expect(slot().textContent).toContain(SHARED);
+    expect(slot().querySelector("button")!.textContent).toBe("Update");
+  });
+
+  it("the update notice says nothing of a site when unpublished", async () => {
+    stubApi({ get: () => stateOf(false) });
+    await render();
+    await settle();
+    expect(slot().textContent).toContain("There’s a new version");
+    expect(slot().textContent).not.toContain(SHARED);
+    expect(slot().querySelector("button")!.textContent).toBe("Update");
+  });
+
   it("nothing to say: no notice (not updated, not asked yet, or the question failed)", async () => {
     stubApi({ get: () => state(false) });
     await render();

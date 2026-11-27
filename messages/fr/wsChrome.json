@@ -887,6 +887,7 @@
       "available": "Une nouvelle version est disponible",
       "button": "Mettre à jour",
       "updating": "Mise à jour…",
+      "sharedWithSite": "Votre site publié utilise ces mêmes données.",
       "reason": {
         "security": "La revue de sécurité a trouvé quelque chose à examiner avant la mise à jour.",
         "securityPending": "La revue de sécurité est encore en cours. Réessayez dans une minute.",

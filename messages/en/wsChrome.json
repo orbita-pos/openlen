@@ -887,6 +887,7 @@
       "available": "There’s a new version",
       "button": "Update",
       "updating": "Updating…",
+      "sharedWithSite": "Your published site uses this same data.",
       "reason": {
         "security": "The security review found something to look at before updating.",
         "securityPending": "The security review is still running. Try again in a minute.",

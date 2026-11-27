@@ -438,6 +438,16 @@ describe("desktopInstalledForPublish (the GET ?for=publish)", () => {
       expect(d.hasActiveDesktopApp).not.toHaveBeenCalled();
     }
   });
+
+  it("for=publish 404 for a reader: an access that names the role (not a refusal) is not enough either", async () => {
+    // `exigirAcceso(..., "editar")` already refuses a reader with a 403, but the answer must not depend on which permission
+    // the dependency asked for: a reader doesn't publish, so it doesn't learn whether anyone has the app installed.
+    const d = deps();
+    await install(d); // the owner has it installed
+    const asReader = deps({ access: vi.fn(async () => ({ rol: "lector" as const, duenoId: "u1" })) }, d.store);
+    expect(await forPublish(asReader, "u3")).toEqual({ status: 404, body: { error: "not_found" } });
+    expect(asReader.hasActiveDesktopApp).not.toHaveBeenCalled();
+  });
 });
 
 describe("removeDesktopApp (the DELETE)", () => {

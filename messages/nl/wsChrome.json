@@ -887,6 +887,7 @@
       "available": "Er is een nieuwe versie",
       "button": "Bijwerken",
       "updating": "Bijwerken…",
+      "sharedWithSite": "Je gepubliceerde site gebruikt dezelfde gegevens.",
       "reason": {
         "security": "De beveiligingscontrole heeft iets gevonden dat je moet bekijken voordat je bijwerkt.",
         "securityPending": "De beveiligingscontrole loopt nog. Probeer het over een minuut opnieuw.",

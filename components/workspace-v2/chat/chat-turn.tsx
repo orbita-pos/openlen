@@ -474,6 +474,7 @@ export function LenTurn({
         <AgentConfirmCard
           projectId={projectId}
           confirm={turn.confirm}
+          esApp={esApp}
           onPublished={(url) => {
             onConfirmSettled(turn.id);
             onPublished(url);

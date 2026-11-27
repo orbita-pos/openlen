@@ -887,6 +887,7 @@
       "available": "有新版本",
       "button": "更新",
       "updating": "正在更新…",
+      "sharedWithSite": "你已发布的网站使用同样的数据。",
       "reason": {
         "security": "更新前，安全审查发现了需要你查看的内容。",
         "securityPending": "安全审查仍在进行中，请一分钟后再试。",

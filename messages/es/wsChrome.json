@@ -887,6 +887,7 @@
       "available": "Hay una versión nueva",
       "button": "Actualizar",
       "updating": "Actualizando…",
+      "sharedWithSite": "Tu sitio publicado usa estos mismos datos.",
       "reason": {
         "security": "La revisión de seguridad encontró algo que mirar antes de actualizar.",
         "securityPending": "La revisión de seguridad aún está en marcha. Prueba de nuevo en un minuto.",

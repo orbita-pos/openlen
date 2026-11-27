@@ -24,6 +24,8 @@ function stubFetch(reply: (c: Call, publishN: number) => { status: number; body:
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
+      // The card asks whether the app is on the desktop when it opens (a read, not a request of the publish's): not a call.
+      if (url.includes("/desktop?for=publish")) return new Response(JSON.stringify({ installed: false }), { status: 200 });
       const c: Call = { url, body: init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : undefined };
       calls.push(c);
       const r = reply(c, calls.filter((x) => x.url.endsWith("/publish")).length);
