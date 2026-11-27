@@ -49,6 +49,36 @@ async function depsOrReal(deps: DesktopDeps | undefined): Promise<DesktopDeps> {
 
 const notFound = (): Answer => ({ status: 404, body: { error: "not_found" } });
 
+/** Why an install would be refused, for a person who is the owner of a project that exists: `plan_required` is the 402 and
+ *  the rest are 409s, named by the answer's `error`. The owner's GET tells it before the tap (`blockedBy`). */
+export type InstallBlock = "plan_required" | "not_an_app" | "uses_stripe" | "tool_not_installed";
+
+type Checked =
+  | { readonly blockedBy: Exclude<InstallBlock, "plan_required"> }
+  | { readonly blockedBy: null; readonly app: NonNullable<ProjectData["app"]>; readonly tool: { readonly id: string; readonly iconPath: string } | null };
+
+/** The checks of an install that depend on the project (the POST and the owner's GET ask the same ones, in this order, so
+ *  what the read says is what the install does). Nothing here reviews, builds or deploys. */
+async function checkProject(
+  d: Pick<DesktopDeps, "usesStripe" | "toolInstallation">,
+  i: { readonly projectId: string; readonly actorId: string },
+  project: { readonly data: ProjectData },
+): Promise<Checked> {
+  const app = project.data.app;
+  if (!app) return { blockedBy: "not_an_app" };
+  if (await d.usesStripe(i.projectId)) return { blockedBy: "uses_stripe" };
+
+  // A tool's window gets the bridge through the person's installation of it (spec §4.3): the row points at it.
+  // Switching a tool off stops it everywhere, so a switched-off installation counts as not installed, like a removed one.
+  let tool: { id: string; iconPath: string } | null = null;
+  if (project.data.tool) {
+    const installation = await d.toolInstallation(i.actorId, i.projectId);
+    if (!installation || installation.removedAt || !installation.enabled) return { blockedBy: "tool_not_installed" };
+    tool = installation;
+  }
+  return { blockedBy: null, app, tool };
+}
+
 export async function installDesktopApp(
   i: {
     readonly projectId: string;
@@ -77,18 +107,10 @@ export async function installDesktopApp(
   if (i.fromWindow && (!installed || installed.removedAt)) return { status: 409, body: { error: "desktop_app_removed" } };
 
   const project = await d.loadProject(i.projectId);
-  const app = project?.data.app;
-  if (!project || !app) return { status: 409, body: { error: "not_an_app" } };
-  if (await d.usesStripe(i.projectId)) return { status: 409, body: { error: "uses_stripe" } };
-
-  // A tool's window gets the bridge through the person's installation of it (spec §4.3): the row points at it.
-  // Switching a tool off stops it everywhere, so a switched-off installation counts as not installed, like a removed one.
-  let tool: { id: string; iconPath: string } | null = null;
-  if (project.data.tool) {
-    const installation = await d.toolInstallation(i.actorId, i.projectId);
-    if (!installation || installation.removedAt || !installation.enabled) return { status: 409, body: { error: "tool_not_installed" } };
-    tool = installation;
-  }
+  if (!project) return { status: 409, body: { error: "not_an_app" } };
+  const checked = await checkProject(d, i, project);
+  if (checked.blockedBy !== null) return { status: 409, body: { error: checked.blockedBy } };
+  const { app, tool } = checked;
 
   const files = await d.files(i.projectId);
   const fingerprint = filesFingerprint(project.data.html, files);
@@ -144,8 +166,9 @@ export async function installDesktopApp(
   return { status: 200, body: { desktopApp: toDesktopAppView(core.row), published: project.subdomain !== null } };
 }
 
-/** The GET (spec §4.4): what is installed for the person, and whether the project's files moved on since. Only the
- *  owner's: anyone else gets a 404, as if the project were not there. */
+/** The GET (spec §4.4): what is installed for the person, whether the project's files moved on since, and whether an install
+ *  would work right now (`canInstall`; `blockedBy` says what refuses it, with the install's own predicates and none of its
+ *  gates), so the menu can say it before the tap. Only the owner's: anyone else gets a 404, as if the project were not there. */
 export async function desktopAppState(i: { readonly projectId: string; readonly actorId: string }, deps?: DesktopDeps): Promise<Answer> {
   const d = await depsOrReal(deps);
   if (!d.enabled()) return { status: 404, body: { error: "desktop_apps_off" } };
@@ -155,10 +178,12 @@ export async function desktopAppState(i: { readonly projectId: string; readonly 
   if (!project) return notFound();
 
   const published = project.subdomain !== null;
+  const blockedBy: InstallBlock | null = (await d.plan(i.actorId)) === "free" ? "plan_required" : (await checkProject(d, i, project)).blockedBy;
+  const verdict = { canInstall: blockedBy === null, blockedBy };
   const row = await d.desktopAppOf(i.actorId, i.projectId);
-  if (!row || row.removedAt) return { status: 200, body: { desktopApp: null, updateAvailable: false, published } };
+  if (!row || row.removedAt) return { status: 200, body: { desktopApp: null, updateAvailable: false, published, ...verdict } };
   const current = filesFingerprint(project.data.html, await d.files(i.projectId));
-  return { status: 200, body: { desktopApp: toDesktopAppView(row), updateAvailable: current !== row.filesFingerprint, published } };
+  return { status: 200, body: { desktopApp: toDesktopAppView(row), updateAvailable: current !== row.filesFingerprint, published, ...verdict } };
 }
 
 /** The GET `?for=publish` (spec §5): the publish dialog warns that the site and the desktop app share their production data,

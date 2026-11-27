@@ -523,7 +523,99 @@ describe("desktopAppState (the GET)", () => {
     const d = deps({ loadProject: vi.fn(async () => project({ subdomain: "acme" })) });
     expect(await desktopAppState({ projectId: "p1", actorId: "u1" }, d)).toEqual({
       status: 200,
-      body: { desktopApp: null, updateAvailable: false, published: true },
+      body: { desktopApp: null, updateAvailable: false, published: true, canInstall: true, blockedBy: null },
+    });
+  });
+
+  // Claude hides install where it can't work: the owner's read says whether an install would be refused, and why, so the menu
+  // can say it before the tap. The same predicates as the install's, none of its gates (nothing is reviewed, built or deployed).
+  describe("canInstall / blockedBy", () => {
+    const state = async (d: DesktopDeps) => (await desktopAppState({ projectId: "p1", actorId: "u1" }, d)).body;
+    const toolProject = () => vi.fn(async () => project({}, { tool: { bornAt: "x" } }));
+    const rail = (over: Partial<{ id: string; iconPath: string; enabled: boolean; removedAt: Date | null }> = {}) => ({ id: "ti1", iconPath: "/icon.svg", enabled: true, removedAt: null, ...over });
+
+    it("an app the owner can install: canInstall true, blockedBy null", async () => {
+      expect(await state(deps())).toMatchObject({ canInstall: true, blockedBy: null });
+    });
+
+    it("🔴 a Free owner: canInstall false, plan_required", async () => {
+      const d = deps({ plan: vi.fn(async () => "free" as const) });
+      expect(await state(d)).toEqual({ desktopApp: null, updateAvailable: false, published: false, canInstall: false, blockedBy: "plan_required" });
+      expect(d.plan).toHaveBeenCalledWith("u1");
+    });
+
+    it("a project that is not an app: not_an_app", async () => {
+      const d = deps({ loadProject: vi.fn(async () => project({}, { app: undefined })) });
+      expect(await state(d)).toMatchObject({ canInstall: false, blockedBy: "not_an_app" });
+      expect(d.usesStripe).not.toHaveBeenCalled();
+    });
+
+    it("an app that uses Stripe: uses_stripe", async () => {
+      const d = deps({ usesStripe: vi.fn(async () => true) });
+      expect(await state(d)).toMatchObject({ canInstall: false, blockedBy: "uses_stripe" });
+      expect(d.usesStripe).toHaveBeenCalledWith("p1");
+    });
+
+    it("a tool the person has not installed, or removed, or switched off: tool_not_installed", async () => {
+      for (const installation of [null, rail({ removedAt: new Date("2026-11-20T00:00:00Z") }), rail({ enabled: false })]) {
+        const d = deps({ loadProject: toolProject(), toolInstallation: vi.fn(async () => installation) });
+        expect(await state(d)).toMatchObject({ canInstall: false, blockedBy: "tool_not_installed" });
+        expect(d.toolInstallation).toHaveBeenCalledWith("u1", "p1");
+      }
+    });
+
+    it("a tool whose rail installation is on: it can be installed on the desktop", async () => {
+      const d = deps({ loadProject: toolProject(), toolInstallation: vi.fn(async () => rail()) });
+      expect(await state(d)).toMatchObject({ canInstall: true, blockedBy: null });
+    });
+
+    it("an ordinary app never asks about a tool installation", async () => {
+      const d = deps();
+      await state(d);
+      expect(d.toolInstallation).not.toHaveBeenCalled();
+    });
+
+    it("the install's own order: the plan before the project, an app before Stripe, Stripe before the tool", async () => {
+      const notApp = project({}, { app: undefined });
+      const both = deps({ plan: vi.fn(async () => "free" as const), loadProject: vi.fn(async () => notApp) });
+      expect(await state(both)).toMatchObject({ blockedBy: "plan_required" });
+      const stripeAndTool = deps({ loadProject: toolProject(), usesStripe: vi.fn(async () => true), toolInstallation: vi.fn(async () => null) });
+      expect(await state(stripeAndTool)).toMatchObject({ blockedBy: "uses_stripe" });
+      expect(stripeAndTool.toolInstallation).not.toHaveBeenCalled();
+    });
+
+    it("an app already on the desktop is still listed when the plan lapsed: shown, and not installable", async () => {
+      const d = deps();
+      await install(d);
+      d.plan = vi.fn(async () => "free" as const);
+      const body = await state(d);
+      expect(body.desktopApp).toMatchObject({ id: "d1" });
+      expect(body).toMatchObject({ canInstall: false, blockedBy: "plan_required" });
+    });
+
+    it("🔴 no gate runs for a read: nothing is reviewed, built, deployed or saved", async () => {
+      const d = deps();
+      await state(d);
+      for (const gate of [d.securityGate, d.entorno, d.build, d.prepareFunctions, d.dataChanges, d.saveRelease, d.markPublished, d.upsertDesktopApp]) {
+        expect(gate).not.toHaveBeenCalled();
+      }
+    });
+
+    it("what the read says is what the install does: each blockedBy is the install's own refusal", async () => {
+      const cases: Array<[DesktopDeps, number, string]> = [
+        [deps({ plan: vi.fn(async () => "free" as const) }), 402, "plan_required"],
+        [deps({ loadProject: vi.fn(async () => project({}, { app: undefined })) }), 409, "not_an_app"],
+        [deps({ usesStripe: vi.fn(async () => true) }), 409, "uses_stripe"],
+        [deps({ loadProject: toolProject(), toolInstallation: vi.fn(async () => null) }), 409, "tool_not_installed"],
+      ];
+      for (const [d, status, blockedBy] of cases) {
+        expect(await state(d)).toMatchObject({ canInstall: false, blockedBy });
+        expect(await install(d)).toEqual({ status, body: { error: blockedBy } });
+      }
+    });
+
+    it("an owner that cannot read the project is a 404 as before, with no verdict", async () => {
+      expect(await desktopAppState({ projectId: "p1", actorId: "u1" }, deps({ loadProject: vi.fn(async () => null) }))).toEqual({ status: 404, body: { error: "not_found" } });
     });
   });
 
@@ -536,6 +628,8 @@ describe("desktopAppState (the GET)", () => {
       desktopApp: { id: "d1", url: "/desktop/d1", name: "Mis reservas", releaseSha: "sha1", installedAt: "2026-11-26T10:00:00.000Z" },
       updateAvailable: false,
       published: false,
+      canInstall: true,
+      blockedBy: null,
     });
   });
 
@@ -631,7 +725,13 @@ describe("removeDesktopApp (the DELETE)", () => {
     await install(d);
     expect(await removeDesktopApp({ projectId: "p1", actorId: "u1" }, d)).toEqual({ status: 200, body: { removed: true } });
     expect(d.markRemoved).toHaveBeenCalledWith("d1", "u1");
-    expect((await desktopAppState({ projectId: "p1", actorId: "u1" }, d)).body).toEqual({ desktopApp: null, updateAvailable: false, published: false });
+    expect((await desktopAppState({ projectId: "p1", actorId: "u1" }, d)).body).toEqual({
+      desktopApp: null,
+      updateAvailable: false,
+      published: false,
+      canInstall: true,
+      blockedBy: null,
+    });
   });
 
   it("nothing installed: removed false, nothing marked", async () => {

@@ -28,11 +28,12 @@ let rol: "dueno" | "editor" | "lector" | "none";
 let row: DesktopAppRow | null;
 let gate: { stop: { status: number; body: Record<string, unknown> } } | { fingerprint: string | null };
 let sha: string;
+let plan: "free" | "pro";
 
 function fakeDeps(): DesktopDeps {
   return {
     enabled: () => true,
-    plan: async () => "pro",
+    plan: async () => plan,
     // What `exigirAcceso(..., "editar")` answers: a non-member is a 404, a reader a 403, the rest get their role.
     access: async () =>
       rol === "none"
@@ -87,6 +88,7 @@ beforeEach(() => {
   row = null;
   gate = { fingerprint: "fp1" };
   sha = "sha1";
+  plan = "pro";
   vi.mocked(auth).mockResolvedValue({ user: { id: "u1" } } as never);
   vi.mocked(realDesktopDeps).mockImplementation(async () => fakeDeps());
 });
@@ -171,7 +173,14 @@ describe("GET /api/projects/[id]/desktop", () => {
   it("not installed: no desktopApp", async () => {
     const res = await get();
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ desktopApp: null, updateAvailable: false, published: false });
+    expect(await res.json()).toEqual({ desktopApp: null, updateAvailable: false, published: false, canInstall: true, blockedBy: null });
+  });
+
+  it("a Free owner is told before the tap: canInstall false, plan_required", async () => {
+    plan = "free";
+    const res = await get();
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ desktopApp: null, updateAvailable: false, published: false, canInstall: false, blockedBy: "plan_required" });
   });
 
   it("GET updateAvailable flips after a source changes", async () => {
@@ -257,7 +266,7 @@ describe("DELETE /api/projects/[id]/desktop", () => {
     const res = await del();
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ removed: true });
-    expect(await (await get()).json()).toEqual({ desktopApp: null, updateAvailable: false, published: false });
+    expect(await (await get()).json()).toEqual({ desktopApp: null, updateAvailable: false, published: false, canInstall: true, blockedBy: null });
   });
 
   it("DELETE 404 for a non-owner, and nothing is removed", async () => {
