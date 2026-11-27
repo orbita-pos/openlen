@@ -85,15 +85,23 @@ export async function hasActiveDesktopApp(projectId: string): Promise<boolean> {
 }
 
 /** Whether the project's production backend has someone on the desktop to answer (spec §5): `hasActiveDesktopApp`, but a
- *  row of a TOOL counts only while the installation it points at exists, is on and is not removed — a switched-off tool is
- *  not served (`desktopAppIsLive`), so it is no reason to call production. A missing installation fails `enabled = true`. */
-export async function hasLiveDesktopApp(projectId: string): Promise<boolean> {
+ *  row of a TOOL counts only while the tools are on (`tools`, `OPENLEN_TOOLS`) and the installation it points at is THIS
+ *  person's, of THIS project, on and not removed — a tool that is not served (`desktopAppIsLive`) is no reason to call
+ *  production. The join only matches an installation of the same project and person, and a missing one fails
+ *  `enabled = true`. */
+export async function hasLiveDesktopApp(projectId: string, o: { readonly tools: boolean }): Promise<boolean> {
   const t = schema.toolInstallations;
   const [row] = await db
     .select({ id: a.id })
     .from(a)
-    .leftJoin(t, eq(t.id, a.toolInstallationId))
-    .where(and(eq(a.projectId, projectId), isNull(a.removedAt), or(isNull(a.toolInstallationId), and(eq(t.enabled, true), isNull(t.removedAt)))))
+    .leftJoin(t, and(eq(t.id, a.toolInstallationId), eq(t.projectId, a.projectId), eq(t.personId, a.personId)))
+    .where(
+      and(
+        eq(a.projectId, projectId),
+        isNull(a.removedAt),
+        o.tools ? or(isNull(a.toolInstallationId), and(eq(t.enabled, true), isNull(t.removedAt))) : isNull(a.toolInstallationId),
+      ),
+    )
     .limit(1);
   return !!row;
 }

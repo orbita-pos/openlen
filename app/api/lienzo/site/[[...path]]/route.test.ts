@@ -495,6 +495,8 @@ describe("GET /api/lienzo/site — an app on the desktop", () => {
   const TOOL = "lienzo-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
   const INSTALLED = "lienzo-00112233445566778899aabbccddeeff";
   const NOTHING = "lienzo-cccccccccccccccccccccccccccccccc";
+  /** The person's installation of the tool a desktop row points at. */
+  const toolOn = { id: "ti1", personId: "u1", projectId: P2, enabled: true, removedAt: null };
   const row = (hostLabel: string, over: Record<string, unknown> = {}) => ({
     id: "d1",
     personId: "u1",
@@ -516,7 +518,7 @@ describe("GET /api/lienzo/site — an app on the desktop", () => {
     vi.mocked(lenArtifactByLabel).mockClear();
     tools.byLabel = {};
     tools.agentByLabel = {};
-    tools.byId = { ti1: { id: "ti1", enabled: true, removedAt: null } };
+    tools.byId = { ti1: toolOn };
     tools.releases = { "desktop-sha": { "/index.html": { content: "<html><head></head><body>desktop</body></html>", contentType: "text/html; charset=utf-8" } } };
     desktop.byLabel = { [PLAIN]: row(PLAIN), [TOOL]: row(TOOL, { toolInstallationId: "ti1" }) };
   });
@@ -539,11 +541,25 @@ describe("GET /api/lienzo/site — an app on the desktop", () => {
   });
 
   it("🔴 a tool on the desktop whose installation is switched off, removed or gone is a 404, for the page and for the bridge", async () => {
-    for (const installation of [{ id: "ti1", enabled: false, removedAt: null }, { id: "ti1", enabled: true, removedAt: new Date() }, undefined]) {
+    for (const installation of [{ ...toolOn, enabled: false }, { ...toolOn, removedAt: new Date() }, undefined]) {
       tools.byId = installation ? { ti1: installation } : {};
       expect((await pide(`${TOOL}.openlen.app`, "/")).status).toBe(404);
       expect((await pide(`${TOOL}.openlen.app`, "/openlen/tool-bridge.js")).status).toBe(404);
     }
+  });
+
+  it("🔴 an installation of another project or person is not the tool's: 404", async () => {
+    for (const installation of [{ ...toolOn, projectId: P1 }, { ...toolOn, personId: "u2" }]) {
+      tools.byId = { ti1: installation };
+      expect((await pide(`${TOOL}.openlen.app`, "/")).status).toBe(404);
+    }
+  });
+
+  it("tool on desktop with OPENLEN_TOOLS=0 is 404, while an ordinary app of the desktop is still served", async () => {
+    vi.stubEnv("OPENLEN_TOOLS", "0");
+    expect((await pide(`${TOOL}.openlen.app`, "/")).status).toBe(404);
+    expect((await pide(`${TOOL}.openlen.app`, "/openlen/tool-bridge.js")).status).toBe(404);
+    expect((await pide(`${PLAIN}.openlen.app`, "/")).status).toBe(200);
   });
 
   it("with OPENLEN_DESKTOP_APPS=0 it is not served, and not even looked up", async () => {

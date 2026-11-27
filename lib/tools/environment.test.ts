@@ -57,8 +57,9 @@ describe("toolLiveIsPublished with tools off", () => {
 // neither turns the tools off nor is turned off by them.
 describe("a desktop app's label", () => {
   const DESKTOP_LABEL = "lienzo-aabbccddeeff00112233445566778899";
-  const desktopRow = (over: Record<string, unknown> = {}) => ({ projectId: "p1", removedAt: null, toolInstallationId: null, ...over });
-  const desktop = (r: unknown, tool: unknown = { enabled: true, removedAt: null }) => ({
+  const desktopRow = (over: Record<string, unknown> = {}) => ({ projectId: "p1", personId: "u1", removedAt: null, toolInstallationId: null, ...over });
+  const toolOn = { enabled: true, removedAt: null, projectId: "p1", personId: "u1" };
+  const desktop = (r: unknown, tool: unknown = toolOn) => ({
     byLabel: vi.fn(async () => r as never),
     toolInstallation: vi.fn(async () => tool as never),
   });
@@ -97,8 +98,16 @@ describe("a desktop app's label", () => {
     expect(d.byLabel).not.toHaveBeenCalled();
   });
 
-  it("OPENLEN_TOOLS=0 does not turn the desktop off: they are two switches", async () => {
+  it("plain desktop app with OPENLEN_TOOLS=0 is still production: they are two switches", async () => {
     expect(await ask(desktopRow(), { OPENLEN_TOOLS: "0" })).toBe(true);
+  });
+
+  it("desktop label of a tool with OPENLEN_TOOLS=0 is not production, and its installation is not even asked", async () => {
+    const row = desktopRow({ toolInstallationId: "ti1" });
+    const d = desktop(row);
+    expect(await ask(row, { OPENLEN_TOOLS: "0" }, d)).toBe(false);
+    expect(d.toolInstallation).not.toHaveBeenCalled();
+    expect(await ask(row, {}, d)).toBe(true);
   });
 
   it("a tool on the desktop is production only while its installation is on", async () => {
@@ -110,9 +119,15 @@ describe("a desktop app's label", () => {
 
   it("desktop label of a switched-off tool is not production", async () => {
     const row = desktopRow({ toolInstallationId: "ti1" });
-    expect(await ask(row, {}, desktop(row, { enabled: false, removedAt: null }))).toBe(false);
-    expect(await ask(row, {}, desktop(row, { enabled: true, removedAt: new Date() }))).toBe(false);
+    expect(await ask(row, {}, desktop(row, { ...toolOn, enabled: false }))).toBe(false);
+    expect(await ask(row, {}, desktop(row, { ...toolOn, removedAt: new Date() }))).toBe(false);
     expect(await ask(row, {}, desktop(row, null))).toBe(false);
+  });
+
+  it("an installation of another project or person is not production", async () => {
+    const row = desktopRow({ toolInstallationId: "ti1" });
+    expect(await ask(row, {}, desktop(row, { ...toolOn, projectId: "p2" }))).toBe(false);
+    expect(await ask(row, {}, desktop(row, { ...toolOn, personId: "u2" }))).toBe(false);
   });
 
   it("an ordinary app asks nothing about tool installations", async () => {
@@ -147,6 +162,16 @@ describe("toolLiveIsPublished with apps on the desktop", () => {
     expect(await toolLiveIsPublished("p1", yes, { OPENLEN_TOOLS: "0" }, yes)).toBe(true);
   });
 
+  it("with OPENLEN_TOOLS=0 the desktop is asked for ordinary apps only: a tool's row cannot count", async () => {
+    const { toolLiveIsPublished } = await import("./environment");
+    const desktop = vi.fn(async () => true);
+    await toolLiveIsPublished("p1", yes, { OPENLEN_TOOLS: "0" }, desktop);
+    expect(desktop).toHaveBeenCalledWith("p1", { tools: false });
+    desktop.mockClear();
+    await toolLiveIsPublished("p1", no, {}, desktop);
+    expect(desktop).toHaveBeenCalledWith("p1", { tools: true });
+  });
+
   it("an active desktop app counts alone, an installed tool counts alone, neither is a no", async () => {
     const { toolLiveIsPublished } = await import("./environment");
     expect(await toolLiveIsPublished("p1", no, {}, yes)).toBe(true);
@@ -176,6 +201,6 @@ describe("toolLiveIsPublished with apps on the desktop", () => {
     const { toolLiveIsPublished } = await import("./environment");
     const desktop = vi.fn(async () => false);
     await toolLiveIsPublished("p7", no, {}, desktop);
-    expect(desktop).toHaveBeenCalledWith("p7");
+    expect(desktop).toHaveBeenCalledWith("p7", { tools: true });
   });
 });

@@ -33,13 +33,13 @@ const deps = (over: Partial<DesktopServeDeps> = {}): DesktopServeDeps => ({
   plan: vi.fn(async () => "pro" as const),
   getBlob: vi.fn(async () => new Uint8Array([1, 2, 3])),
   planRequiredText: vi.fn(async (locale: string) => (locale === "es" ? "Necesitas un plan de pago" : "You need a paid plan")),
-  toolInstallation: vi.fn(async () => ({ enabled: true, removedAt: null })),
+  toolInstallation: vi.fn(async () => ({ enabled: true, removedAt: null, projectId: "p1", personId: "u1" })),
   ...over,
 });
 
 const ENV = { NEXT_PUBLIC_SITE_URL: "https://openlen.com", NODE_ENV: "production" };
-const serve = (path: string, row: DesktopAppRow = PLAIN, d: DesktopServeDeps = deps(), acceptLanguage: string | null = "es-MX,es;q=0.9") =>
-  serveDesktopApp(row, path, { requestHost: "openlen.com", acceptLanguage, env: ENV }, d);
+const serve = (path: string, row: DesktopAppRow = PLAIN, d: DesktopServeDeps = deps(), acceptLanguage: string | null = "es-MX,es;q=0.9", env: Record<string, string> = ENV) =>
+  serveDesktopApp(row, path, { requestHost: "openlen.com", acceptLanguage, env }, d);
 
 describe("serveDesktopApp — an ordinary app", () => {
   it("plain app index has no bridge script", async () => {
@@ -131,12 +131,31 @@ describe("serveDesktopApp — a tool on the desktop", () => {
   });
 
   it("tool on desktop whose installation is switched off is 404", async () => {
-    for (const installation of [{ enabled: false, removedAt: null }, { enabled: true, removedAt: new Date() }, null]) {
+    const on = { enabled: true, removedAt: null, projectId: "p1", personId: "u1" };
+    for (const installation of [{ ...on, enabled: false }, { ...on, removedAt: new Date() }, null]) {
       const d = deps({ toolInstallation: vi.fn(async () => installation) });
       expect((await serve("/", TOOL, d)).status).toBe(404);
       expect((await serve(TOOL_BRIDGE_PATH, TOOL, d)).status).toBe(404);
       expect(d.readRelease).not.toHaveBeenCalled();
     }
+  });
+
+  it("an installation of another project or person is not served", async () => {
+    const on = { enabled: true, removedAt: null, projectId: "p1", personId: "u1" };
+    for (const installation of [{ ...on, projectId: "p2" }, { ...on, personId: "u2" }]) {
+      const d = deps({ toolInstallation: vi.fn(async () => installation) });
+      expect((await serve("/", TOOL, d)).status).toBe(404);
+      expect(d.readRelease).not.toHaveBeenCalled();
+    }
+  });
+
+  it("tool on desktop with OPENLEN_TOOLS=0 is 404, and an ordinary app is still served", async () => {
+    const off = { ...ENV, OPENLEN_TOOLS: "0" };
+    const d = deps();
+    expect((await serve("/", TOOL, d, null, off)).status).toBe(404);
+    expect((await serve(TOOL_BRIDGE_PATH, TOOL, d, null, off)).status).toBe(404);
+    expect(d.readRelease).not.toHaveBeenCalled();
+    expect((await serve("/", PLAIN, d, null, off)).status).toBe(200);
   });
 
   it("a lookup that fails is a 404, never a page", async () => {

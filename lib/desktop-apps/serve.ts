@@ -3,11 +3,12 @@
 // serving (`serveRelease`) with one difference that matters: an ordinary app gets NO `window.openlen` — the bridge's
 // methods run with the person's session and read their other projects — so its shell is served as built and the bridge
 // path is a 404. A TOOL on the desktop does get it, through the person's installation of it, and so it is served only
-// while that installation is on. A removed row, a switched-off tool or a release that is gone doesn't exist; on the Free
-// plan the page says a paid plan is needed (§6).
+// while the tools are on (`OPENLEN_TOOLS`) and that installation — this person's, of this project — is on. A removed row,
+// a switched-off tool or a release that is gone doesn't exist; on the Free plan the page says a paid plan is needed (§6).
 import "server-only";
 
 import { frameAncestors } from "@/lib/lienzo/host";
+import { toolsEnabled } from "@/lib/tools/enabled";
 import { realServeDeps, releaseNotFound, serveRelease, type ServeDeps } from "@/lib/tools/serve";
 
 import { desktopAppIsLive, type ToolInstallationState } from "./live";
@@ -32,9 +33,10 @@ export async function serveDesktopApp(
   deps?: DesktopServeDeps,
 ): Promise<Response> {
   const d = deps ?? (await realDesktopServeDeps());
-  // A lookup that fails is a 404, never a page: this row's backend is production.
-  if (!(await desktopAppIsLive(row, d.toolInstallation).catch(() => false))) return releaseNotFound();
   const env = o.env ?? process.env;
+  // A lookup that fails is a 404, never a page: this row's backend is production. A tool's row also needs the tools on.
+  const live = await desktopAppIsLive(row, { toolsEnabled: toolsEnabled(env), toolInstallation: d.toolInstallation }).catch(() => false);
+  if (!live) return releaseNotFound();
   return serveRelease(
     { releaseSha: row.releaseSha, personId: row.personId, path, bridge: row.toolInstallationId !== null, ancestors: frameAncestors(env) },
     { requestHost: o.requestHost, acceptLanguage: o.acceptLanguage, env },

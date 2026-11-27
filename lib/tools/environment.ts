@@ -3,21 +3,23 @@
 // «another project's canvas». This tells it the one case to let through: the label belongs to an installed,
 // switched-on tool of THIS project, which is production. Looked up only for a foreign `lienzo-` label.
 // AN APP ON THE DESKTOP (spec local 2026-11-26-apps-en-el-escritorio, §5) is, for the backend, exactly an installed tool:
-// its private label is production too — only for ITS OWN project, only while its row is not removed (and, for a tool on
-// the desktop, while that tool's installation is on), and only with its own switch (`OPENLEN_DESKTOP_APPS`), which
-// `OPENLEN_TOOLS` neither turns off nor is turned off by.
+// its private label is production too — only for ITS OWN project, only while its row is not removed, and only with its
+// own switch (`OPENLEN_DESKTOP_APPS`). `OPENLEN_TOOLS` does not turn an ordinary app off; a TOOL on the desktop obeys both
+// switches, and also needs its person's installation of that project to be on (`desktopAppIsLive`).
 import "server-only";
 
 import { desktopAppsEnabled } from "@/lib/desktop-apps/enabled";
 import { desktopAppIsLive, type ToolInstallationState } from "@/lib/desktop-apps/live";
 import { etiquetaDelHost } from "@/lib/lienzo/prefijo";
 
+import { toolsEnabled } from "./enabled";
+
 type Env = Readonly<Record<string, string | undefined>>;
 type Lookup = (label: string) => Promise<{ projectId: string; enabled: boolean; removedAt: Date | null } | null>;
 
 /** What the desktop's lookup needs: the row a label belongs to, and the installation of the tool behind it. */
 export interface DesktopLookup {
-  byLabel(label: string): Promise<{ projectId: string; removedAt: Date | null; toolInstallationId: string | null } | null>;
+  byLabel(label: string): Promise<{ projectId: string; personId: string; removedAt: Date | null; toolInstallationId: string | null } | null>;
   toolInstallation(id: string): Promise<ToolInstallationState | null>;
 }
 
@@ -40,7 +42,8 @@ async function isDesktopOriginOf(label: string, projectId: string, desktopLookup
   try {
     const find = desktopLookup ?? (await realDesktopLookup());
     const row = await find.byLabel(label);
-    return !!row && row.projectId === projectId && (await desktopAppIsLive(row, find.toolInstallation));
+    // A TOOL's row also needs the tools on (`OPENLEN_TOOLS`); an ordinary app's obeys only the desktop's switch.
+    return !!row && row.projectId === projectId && (await desktopAppIsLive(row, { toolsEnabled: toolsEnabled(env), toolInstallation: find.toolInstallation }));
   } catch {
     return false;
   }
@@ -66,22 +69,23 @@ export async function isInstalledToolOrigin(
 /** AN INSTALLED TOOL'S PRODUCTION FUNCTIONS ANSWER (phase 4, §4.7): the gateway calls production only for a published
  *  project, and a tool is installed, never published. Its screen and Len's operations call the same production function,
  *  so a tool project with an installation switched on counts as published. An app on the desktop is the same: it counts
- *  while someone has it installed and live (`hasLiveDesktopApp`: a tool's row only while its installation is on). The two
- *  have their own switches. A failed lookup is a no. */
+ *  while someone has it installed and live (`hasLiveDesktopApp`: a tool's row only while the tools are on and its
+ *  installation is on). The two have their own switches. A failed lookup is a no. */
 export async function toolLiveIsPublished(
   projectId: string,
   lookup?: (projectId: string) => Promise<boolean>,
   env: Env = process.env,
-  desktopLookup?: (projectId: string) => Promise<boolean>,
+  desktopLookup?: (projectId: string, o: { readonly tools: boolean }) => Promise<boolean>,
 ): Promise<boolean> {
-  // OPENLEN_TOOLS=0 turns tools off entirely (§4.15): no installed tool's production answers.
-  if (env.OPENLEN_TOOLS !== "0") {
+  // OPENLEN_TOOLS=0 turns tools off entirely (§4.15): no installed tool's production answers, and no tool on the desktop.
+  const tools = toolsEnabled(env);
+  if (tools) {
     const find = lookup ?? (async (p: string) => (await import("./store")).hasActiveInstallation(p));
     if (await find(projectId).catch(() => false)) return true;
   }
   if (!desktopAppsEnabled(env)) return false;
   // A caller that injects the tool lookup (a test) and not the desktop's never reaches the database through it.
   if (lookup && !desktopLookup) return false;
-  const findDesktop = desktopLookup ?? (async (p: string) => (await import("@/lib/desktop-apps/store")).hasLiveDesktopApp(p));
-  return findDesktop(projectId).catch(() => false);
+  const findDesktop = desktopLookup ?? (async (p: string, o: { readonly tools: boolean }) => (await import("@/lib/desktop-apps/store")).hasLiveDesktopApp(p, o));
+  return findDesktop(projectId, { tools }).catch(() => false);
 }
