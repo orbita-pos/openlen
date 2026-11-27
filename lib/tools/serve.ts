@@ -94,12 +94,15 @@ export async function serveRelease(
   const { path } = r;
   const frame = { "content-security-policy": `frame-ancestors ${r.ancestors}`, "referrer-policy": "no-referrer", "x-content-type-options": "nosniff", "cache-control": "no-store" };
 
+  // What does not exist is a 404 whatever the plan: an app with no bridge has no bridge path, and asking about the plan first
+  // would tell a Free person that rule at an address that was never there.
+  if (path === TOOL_BRIDGE_PATH && !r.bridge) return notFound();
   if ((await d.plan(r.personId)) === "free") {
     const text = await d.planRequiredText(localeOf(o.acceptLanguage));
     const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0"><p>${text.replace(/[<>&]/g, "")}</p></body></html>`;
     return new Response(html, { status: 402, headers: { ...frame, "content-type": "text/html; charset=utf-8" } });
   }
-  if (path === TOOL_BRIDGE_PATH) return r.bridge ? toolBridgeScriptResponse(o.requestHost, env, r.parents) : notFound();
+  if (path === TOOL_BRIDGE_PATH) return toolBridgeScriptResponse(o.requestHost, env, r.parents);
 
   const release = await d.readRelease(r.releaseSha);
   if (!release) return notFound();

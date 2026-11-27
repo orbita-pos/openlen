@@ -58,6 +58,15 @@ describe("serveDesktopApp — an ordinary app", () => {
     expect((await serve(TOOL_BRIDGE_PATH)).status).toBe(404);
   });
 
+  // What does not exist is a 404 whatever the plan: the bridge path of an app that has no bridge never reveals the plan rule.
+  it("🔴 a free owner's plain app answers its bridge path 404, before the plan is even asked", async () => {
+    const d = deps({ plan: vi.fn(async () => "free" as const) });
+    expect((await serve(TOOL_BRIDGE_PATH, PLAIN, d)).status).toBe(404);
+    expect(d.plan).not.toHaveBeenCalled();
+    // The page itself still says a paid plan is needed.
+    expect((await serve("/", PLAIN, d)).status).toBe(402);
+  });
+
   it("a plain app never asks about a tool installation", async () => {
     const d = deps();
     await serve("/", PLAIN, d);
@@ -166,5 +175,9 @@ describe("serveDesktopApp — a tool on the desktop", () => {
   it("free plan gets 402 page", async () => {
     const res = await serve("/", TOOL, deps({ plan: vi.fn(async () => "free" as const) }));
     expect(res.status).toBe(402);
+  });
+
+  it("a free owner's tool still answers its bridge path with the plan page: the bridge exists, the plan comes first", async () => {
+    expect((await serve(TOOL_BRIDGE_PATH, TOOL, deps({ plan: vi.fn(async () => "free" as const) }))).status).toBe(402);
   });
 });
