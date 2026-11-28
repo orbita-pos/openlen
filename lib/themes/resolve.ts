@@ -103,6 +103,8 @@ interface Entry {
   heavy(): boolean;
   /** The opacity the install raised the glass to. */
   glassOpacity?: number;
+  /** The gate ignored the declared tint for the workspace's own surface of the theme's window. */
+  tintIgnored?: boolean;
   /** The themes of the same gallery or version, by id: where a twin is looked for. */
   siblings: ReadonlyMap<string, Entry>;
 }
@@ -134,6 +136,7 @@ function bundledSource(): ReadonlyMap<string, Entry> {
       heavy: () => heavyBundledScene(def.id),
       // Raised when the gallery was generated, by the same meter and the same sum as an install (`themes:bundle`).
       ...(typeof def.glassAdjusted === "number" && { glassOpacity: def.glassAdjusted }),
+      ...(def.tintIgnored === true && { tintIgnored: true }),
       siblings: entries,
     });
   }
@@ -155,6 +158,7 @@ function installedSource(row: ThemeInstallationRow, release: ThemeReleaseMeta): 
       hasScene: def.hasScene === true,
       heavy: () => Object.hasOwn(release.costs ?? {}, def.id) && release.costs[def.id]?.heavy === true,
       ...(typeof raised === "number" && { glassOpacity: raised }),
+      ...(Object.hasOwn(release.tintIgnored ?? {}, def.id) && release.tintIgnored[def.id] === true && { tintIgnored: true }),
       siblings: entries,
     });
   }
@@ -243,7 +247,8 @@ function glassOf(entry: Entry): ThemeGlass | false {
     blur: def.glass.blur,
     opacity: entry.glassOpacity ?? def.glass.opacity,
     // What the contrast gate judged the text against when the glass names no tint (R13), so what is painted is what was measured.
-    tint: def.glass.tint ?? WORKSPACE_COLORS[def.window]["--bg-sidebar"],
+    // And when the gate ignored the declared tint (no opacity let the text read on it), the surface it fitted with instead.
+    tint: entry.tintIgnored ? WORKSPACE_COLORS[def.window]["--bg-sidebar"] : (def.glass.tint ?? WORKSPACE_COLORS[def.window]["--bg-sidebar"]),
   };
 }
 

@@ -133,7 +133,7 @@ for (const [id, svg] of scenes) fs.writeFileSync(path.join(OUT, `${id}.svg`), sv
 
 const { checkScene } = await import("../lib/themes/scene-check.ts");
 const { openSceneMeter } = await import("../lib/themes/measure-under.ts");
-const { GLASS_INKS, READABLE, glassFit, glassInks } = await import("../lib/themes/contrast.ts");
+const { GLASS_INKS, READABLE, fitThemeGlass } = await import("../lib/themes/contrast.ts");
 
 /** By id: the colour under the panel, and the opacity the glass was raised to (undefined = as Claude Code wrote it). */
 const gate = new Map();
@@ -144,9 +144,11 @@ try {
     if (!checked.ok) fail(`${t.id}: the scene gate refuses it (${JSON.stringify(checked.problem)})`);
     const under = await meter.under(checked.svg);
     if (under === null) fail(`${t.id}: its still could not be measured`);
-    const fit = glassFit({ ...glassInks({ window: t.window }, t.glass), under, opacity: t.glass.opacity });
+    // A tint with which no opacity lets the main text read is ignored for the workspace's own surface (`fitThemeGlass`).
+    const fit = fitThemeGlass({ window: t.window }, t.glass, under);
+    if (fit.tintIgnored) console.warn(`themes:bundle: ${t.id}: its tint cannot carry the text; the workspace's own surface is used`);
     if (fit.ratio < READABLE) console.warn(`themes:bundle: ${t.id}: ${GLASS_INKS[fit.ink]} still reads ${fit.ratio.toFixed(2)}:1 at ${fit.opacity}`);
-    gate.set(t.id, { under, raised: fit.opacity > t.glass.opacity ? fit.opacity : undefined });
+    gate.set(t.id, { under, raised: fit.opacity > t.glass.opacity ? fit.opacity : undefined, tintIgnored: fit.tintIgnored });
   }
 } finally {
   await meter.close();
@@ -168,9 +170,10 @@ function themeOf(t) {
   // A twin only where the other entry is bundled too.
   if (t.twin !== undefined && ids.has(t.twin)) lines.push(`    twin: ${q(t.twin)},`);
   lines.push(`    glass: ${glassOf(t.glass)},`, `    scene: ${q(`${t.id}.svg`)},`);
-  const { under, raised } = gate.get(t.id);
+  const { under, raised, tintIgnored } = gate.get(t.id);
   lines.push(`    measured: ${q(under)},`);
   if (raised !== undefined) lines.push(`    glassAdjusted: ${raised},`);
+  if (tintIgnored) lines.push(`    tintIgnored: true,`);
   lines.push(`    titles: { en: ${q(t.title)} },`, `    blurbs: { en: ${q(t.blurb)} },`);
   return `  {\n${lines.join("\n")}\n  },`;
 }

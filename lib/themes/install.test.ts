@@ -373,6 +373,18 @@ describe("every text colour of the panel reads (Claude Code: «only where its ow
     expect(saved(b).glassAdjusted["estanque"]).toBeGreaterThan(0.3);
   });
 
+  it("a tint with which no opacity lets the text read is IGNORED for the workspace's own surface, and kept with the version", async () => {
+    // A dark window's light text on a white tint can never read; the workspace's dark sidebar over the black scene does.
+    const whiteNight = { ...POND_NIGHT, glass: { blur: 10, tint: "#ffffff", opacity: 0.5 } };
+    const d = deps({ files: vi.fn(async () => files([POND, whiteNight])), openMeter: meter(async () => "#000000").openMeter });
+    const r = await install(d);
+    expect(saved(d).tintIgnored).toEqual({ "estanque-noche": true });
+    expect((r.body.themes as { id: string; tintIgnored?: true }[])[1]).toMatchObject({ id: "estanque-noche", tintIgnored: true });
+    expect((r.body.contrastWarnings as { themeId: string }[]).some((w) => w.themeId === "estanque-noche")).toBe(false);
+    // The declared glass stays as written in the version; only the gate's answer says the tint was ignored.
+    expect(saved(d).themes[1]!.glass).toMatchObject({ tint: "#ffffff" });
+  });
+
   it("names the ink that still does not read", async () => {
     const faint = { ...POND, colors: { "--fg": "#000000", "--fg-muted": "#000000", "--fg-faint": "#ffffff" } };
     const r = await install(deps({ files: vi.fn(async () => files([faint, POND_NIGHT])), openMeter: meter(async () => "#ffffff").openMeter }));

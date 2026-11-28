@@ -194,6 +194,27 @@ export function glassInks(theme: { window: ThemeWindow; colors?: Partial<Record<
   return { fg: GLASS_INKS.map((ink) => theme.colors?.[ink] ?? own[ink]), tint: glass.tint ?? own["--bg-sidebar"] };
 }
 
+/**
+ * THE GATE'S WHOLE ANSWER FOR ONE GLASS (Claude Code's theme-examples README: «the app uses a theme's tint only where
+ * its own text reads on it»). First the declared tint, raised as far as the cap: if with it no opacity makes `--fg` and
+ * `--fg-muted` read at 4.5:1, the tint is IGNORED and the workspace's own surface for that window is used instead
+ * (`--bg-sidebar`, the same tint a glass without one gets, R13), fitted the same way. Either way the opacity is raised
+ * for every ink of the panel (`GLASS_INKS`). `tintIgnored` is kept with the version (or the gallery's entry) so the
+ * layer paints exactly what was measured.
+ */
+export function fitThemeGlass(
+  theme: { window: ThemeWindow; colors?: Partial<Record<ThemeToken, string>> },
+  glass: { tint?: string; opacity: number },
+  under: string,
+): { opacity: number; ratio: number; ink: number; tintIgnored: boolean } {
+  const { fg, tint } = glassInks(theme, glass);
+  const main = glassFit({ fg: fg.slice(0, 2), tint, under, opacity: glass.opacity });
+  const own = WORKSPACE_COLORS[theme.window]["--bg-sidebar"];
+  const tintIgnored = main.ratio < READABLE && tint !== own;
+  const fit = glassFit({ fg, tint: tintIgnored ? own : tint, under, opacity: glass.opacity });
+  return { ...fit, tintIgnored };
+}
+
 // ─── what the gate reports ───────────────────────────────────────────────────
 
 export interface ContrastWarning {

@@ -60,6 +60,7 @@ const release = (over: Partial<ThemeRelease> = {}): ThemeRelease => ({
   costs: { estanque: { elements: 700, animated: 50, heavy: true }, "estanque-noche": { elements: 20, animated: 1, heavy: false } },
   glassAdjusted: { estanque: 0.62 },
   measured: {},
+  tintIgnored: {},
   createdAt: new Date("2026-11-27T10:00:00Z"),
   ...over,
 });
@@ -209,6 +210,12 @@ describe("resolveTheme: what the layer gets", () => {
     const { theme, twin } = await resolveTheme("u1", "p1", "en", d);
     expect(theme?.glass).toEqual({ blur: 10, opacity: 0.62, tint: "#eef8f1" });
     expect(twin?.glass).toMatchObject({ blur: 12, opacity: 0.4 });
+  });
+
+  it("a tint the install ignored is painted as the workspace's own sidebar for the theme's window, what was measured", async () => {
+    const d = deps({ releases: [release({ tintIgnored: { estanque: true } })], choices: { project: POND, everywhere: null } });
+    const { theme } = await resolveTheme("u1", "p1", "en", d);
+    expect(theme?.glass).toEqual({ blur: 10, opacity: 0.62, tint: WORKSPACE_COLORS.light["--bg-sidebar"] });
   });
 
   it("a glass with no tint gets the workspace's own sidebar for the theme's window (R13)", async () => {
@@ -462,38 +469,33 @@ describe("chooseTheme", () => {
 });
 
 describe("the gallery's glass, raised by the same gate as an install", () => {
-  it("every bundled theme was measured, and the opacity it resolves to is the gate's for that colour", async () => {
-    const { glassFit, glassInks } = await import("./contrast");
+  it("every bundled theme was measured, and its glass resolves to the gate's answer for that colour", async () => {
+    const { fitThemeGlass, WORKSPACE_COLORS: own } = await import("./contrast");
     for (const def of BUNDLED_THEMES) {
       expect(def.measured, def.id).toMatch(/^#[0-9a-f]{6}$/);
       const { theme } = await resolveTheme("u1", null, "en", deps({ choices: { project: null, everywhere: `bundled:${def.id}` } }));
       if (!theme || theme.glass === false || !def.glass) throw new Error(`${def.id}: no glass resolved`);
-      const fit = glassFit({ ...glassInks(def, def.glass), under: def.measured!, opacity: def.glass.opacity });
+      const fit = fitThemeGlass(def, def.glass, def.measured!);
       expect(theme.glass.opacity, def.id).toBe(fit.opacity);
       expect(def.glassAdjusted, def.id).toBe(fit.opacity > def.glass.opacity ? fit.opacity : undefined);
+      expect(def.tintIgnored === true, def.id).toBe(fit.tintIgnored);
+      // What is painted is what was measured: the declared tint, or the workspace's own surface when it was ignored.
+      expect(theme.glass.tint, def.id).toBe(fit.tintIgnored ? own[def.window]["--bg-sidebar"] : def.glass.tint);
     }
   });
 
-  it("at that opacity --fg and --fg-muted read at 4.5:1 over the measured colour — except where no opacity could", async () => {
+  it("every gallery theme reads at 4.5:1 for --fg and --fg-muted as resolved (a tint that could not carry them was ignored)", async () => {
     const { READABLE, WORKSPACE_COLORS: own, glassFit } = await import("./contrast");
-    const unfixable: string[] = [];
     for (const def of BUNDLED_THEMES) {
       const { theme } = await resolveTheme("u1", null, "en", deps({ choices: { project: null, everywhere: `bundled:${def.id}` } }));
-      if (!theme || theme.glass === false || !def.glass) throw new Error(`${def.id}: no glass resolved`);
+      if (!theme || theme.glass === false) throw new Error(`${def.id}: no glass resolved`);
       const inks = [own[def.window]["--fg"], own[def.window]["--fg-muted"]];
-      // At the resolved opacity, with nothing raised further: what the panel's main text gets.
+      // At the resolved opacity and tint, with nothing raised further: what the panel's main text gets.
       const at = glassFit({ fg: inks, tint: theme.glass.tint!, under: def.measured!, opacity: theme.glass.opacity });
       expect(at.opacity, def.id).toBe(theme.glass.opacity);
-      if (at.ratio >= READABLE) continue;
-      // It does not read: then no opacity from Claude Code's up to the cap reads either (the gate went as far as it goes,
-      // and an install would report it as glass_below_target) — the tint is lighter than the scene under light text.
-      for (let o = def.glass.opacity; o <= 0.95 + 1e-9; o += 0.02) {
-        expect(glassFit({ fg: inks, tint: theme.glass.tint!, under: def.measured!, opacity: o }).ratio < READABLE, `${def.id} at ${o}`).toBe(true);
-      }
-      unfixable.push(def.id);
+      expect(at.ratio, def.id).toBeGreaterThanOrEqual(READABLE);
     }
-    // Measured 27/11: paper-garden-kraft's kraft tint (#35312a) over its darker paper only gets lighter as it thickens,
-    // and deep-water's glass is at the cap (0.95) with its muted text just under 4.5 on the teal it leaves.
-    expect(unfixable.sort()).toEqual(["deep-water", "paper-garden-kraft"]);
+    // Measured 27/11: these two have a tint with which no opacity lets the main text read.
+    expect(BUNDLED_THEMES.filter((t) => t.tintIgnored).map((t) => t.id).sort()).toEqual(["deep-water", "paper-garden-kraft"]);
   });
 });

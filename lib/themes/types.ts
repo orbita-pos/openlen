@@ -112,6 +112,8 @@ export interface BundledThemeDefinition extends ThemeDefinition {
   measured?: string;
   /** The glass opacity the gate raised it to, over the one Claude Code wrote; absent = as written. */
   glassAdjusted?: number;
+  /** The declared tint was ignored for the workspace's own surface: with it the text could not read (`fitThemeGlass`). */
+  tintIgnored?: true;
 }
 
 /** The `scope` of a choice that holds for all of a person's OpenLen; any other scope is a project's id. */

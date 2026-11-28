@@ -61,6 +61,7 @@ const release = (over: Partial<Parameters<typeof store.saveThemeRelease>[0]> = {
   },
   glassAdjusted: { "estanque-noche": 0.52 },
   measured: { ["a".repeat(64)]: "#0b3a2e" } as Record<string, string>,
+  tintIgnored: { "estanque-noche": true } as Record<string, true>,
   ...over,
 });
 
@@ -150,6 +151,7 @@ describe("theme releases", () => {
     expect(read?.costs.estanque).toEqual({ elements: 40, animated: 3, heavy: false });
     expect(read?.glassAdjusted).toEqual({ "estanque-noche": 0.52 });
     expect(read?.measured).toEqual({ ["a".repeat(64)]: "#0b3a2e" });
+    expect(read?.tintIgnored).toEqual({ "estanque-noche": true });
     expect(read?.createdAt).toBeInstanceOf(Date);
     expect(await store.readThemeRelease("missing")).toBeNull();
   });
@@ -174,6 +176,7 @@ describe("theme releases", () => {
     expect(meta?.themes[0]).toEqual({ ...rest, hasScene: true });
     expect(meta?.costs.estanque).toEqual({ elements: 40, animated: 3, heavy: false });
     expect(meta?.glassAdjusted).toEqual({ "estanque-noche": 0.52 });
+    expect(meta?.tintIgnored).toEqual({ "estanque-noche": true });
     expect(await store.readThemeReleaseMeta("missing")).toBeNull();
   });
 
@@ -216,7 +219,7 @@ describe("theme releases", () => {
 
   it("a theme without a scene (a palette alone) needs no costs", async () => {
     const plain: StoredThemeDefinition = { id: "tinta", window: "dark", colors: { "--bg": "#101010" }, titles: { en: "Ink" }, blurbs: { en: "Just a palette." } };
-    await store.saveThemeRelease({ sha: "sha-plain", projectId: "p1", themes: [plain], costs: {}, glassAdjusted: {}, measured: {} });
+    await store.saveThemeRelease({ sha: "sha-plain", projectId: "p1", themes: [plain], costs: {}, glassAdjusted: {}, measured: {}, tintIgnored: {} });
     expect((await store.readThemeRelease("sha-plain"))?.themes).toEqual([plain]);
   });
 });

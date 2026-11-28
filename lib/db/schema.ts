@@ -2876,6 +2876,9 @@ export const themeReleases = pgTable("themeReleases", {
   /** What each scene measured under Len's panel (`#rrggbb`), by the sha256 of its checked SVG: a reinstall reuses it for
    *  a scene that did not change instead of measuring it again. A scene that could not be measured has no entry. */
   measured: jsonb("measured").$type<Record<string, string>>().notNull().default({}),
+  /** The themes (by id) whose declared tint the gate IGNORED — no opacity up to the cap made the main text read with it —
+   *  for the workspace's own surface of its window; the layer paints that one. */
+  tintIgnored: jsonb("tintIgnored").$type<Record<string, true>>().notNull().default({}),
   createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
 });
 

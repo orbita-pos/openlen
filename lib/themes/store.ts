@@ -25,6 +25,8 @@ export interface ThemeReleaseInput {
   costs: Record<string, SceneCost>;
   glassAdjusted: Record<string, number>;
   measured: Record<string, string>;
+  /** Themes (by id) whose declared tint the gate ignored for the workspace's own surface (`fitThemeGlass`). */
+  tintIgnored: Record<string, true>;
 }
 
 export interface ThemeRelease extends ThemeReleaseInput {
@@ -41,6 +43,7 @@ export interface ThemeReleaseMeta {
   themes: ThemeMeta[];
   costs: Record<string, SceneCost>;
   glassAdjusted: Record<string, number>;
+  tintIgnored: Record<string, true>;
 }
 
 const r = schema.themeReleases;
@@ -58,6 +61,7 @@ export async function saveThemeRelease(release: ThemeReleaseInput): Promise<void
       costs: release.costs,
       glassAdjusted: release.glassAdjusted,
       measured: release.measured,
+      tintIgnored: release.tintIgnored,
     })
     .onConflictDoNothing({ target: r.sha });
 }
@@ -86,6 +90,7 @@ export async function readThemeRelease(sha: string): Promise<ThemeRelease | null
     costs: row.costs,
     glassAdjusted: row.glassAdjusted,
     measured: row.measured,
+    tintIgnored: row.tintIgnored,
     createdAt: row.createdAt,
   };
 }
@@ -106,6 +111,7 @@ export async function readThemeReleaseMeta(sha: string): Promise<ThemeReleaseMet
       )`,
       costs: r.costs,
       glassAdjusted: r.glassAdjusted,
+      tintIgnored: r.tintIgnored,
     })
     .from(r)
     .where(eq(r.sha, sha))

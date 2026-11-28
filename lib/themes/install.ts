@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 import type { AccesoAlProyecto } from "@/lib/projects/acceso";
 import type { ProjectData } from "@/lib/projects/types";
 
-import { GLASS_INKS, READABLE, glassFit, glassInks, paletteWarnings, type ContrastWarning } from "./contrast";
+import { GLASS_INKS, READABLE, fitThemeGlass, paletteWarnings, type ContrastWarning } from "./contrast";
 import { readThemeManifest } from "./manifest";
 import { checkScene, type SceneCost, type SceneProblem } from "./scene-check";
 import type { SceneMeter } from "./measure-under";
@@ -91,9 +91,9 @@ function stableJson(value: unknown): string {
  * it so that an install whose measuring failed (nothing raised) and a later one that measured (something raised) are two
  * versions, and the second is saved and installed instead of the first being kept for good (R12b).
  */
-export function themeReleaseSha(projectId: string, release: Pick<ThemeReleaseInput, "themes" | "costs" | "glassAdjusted" | "measured">): string {
+export function themeReleaseSha(projectId: string, release: Pick<ThemeReleaseInput, "themes" | "costs" | "glassAdjusted" | "measured" | "tintIgnored">): string {
   return createHash("sha256")
-    .update(stableJson({ projectId, themes: release.themes, costs: release.costs, glassAdjusted: release.glassAdjusted, measured: release.measured }))
+    .update(stableJson({ projectId, themes: release.themes, costs: release.costs, glassAdjusted: release.glassAdjusted, measured: release.measured, tintIgnored: release.tintIgnored }))
     .digest("hex");
 }
 
@@ -258,8 +258,9 @@ async function installThemeNow(
 
   const costs: Record<string, SceneCost> = {};
   const glassAdjusted: Record<string, number> = {};
+  const tintIgnored: Record<string, true> = {};
   const contrastWarnings: ContrastWarning[] = [];
-  const summary: { id: string; cost: SceneCost | null; glassOpacity: number | null; addedReducedMotion: boolean }[] = [];
+  const summary: { id: string; cost: SceneCost | null; glassOpacity: number | null; addedReducedMotion: boolean; tintIgnored?: true }[] = [];
 
   for (const theme of manifest.themes) {
     const scene = theme.scene !== undefined ? checked.get(theme.scene)! : null;
@@ -274,7 +275,9 @@ async function installThemeNow(
         contrastWarnings.push({ themeId: theme.id, code: "glass_unmeasured" });
       } else {
         // Raised for the STRICTEST of the panel's text colours, not only --fg.
-        const fit = glassFit({ ...glassInks(theme, glass), under, opacity: glass.opacity });
+        // A tint with which the main text can never read is ignored for the workspace's own surface (`fitThemeGlass`).
+        const fit = fitThemeGlass(theme, glass, under);
+        if (fit.tintIgnored) tintIgnored[theme.id] = true;
         if (fit.opacity > glass.opacity) {
           glassAdjusted[theme.id] = fit.opacity;
           glassOpacity = fit.opacity;
@@ -287,11 +290,11 @@ async function installThemeNow(
       // No glass over a scene: the panels are the palette's own, and the palette's pairs are what has to read.
       contrastWarnings.push(...paletteWarnings(theme));
     }
-    summary.push({ id: theme.id, cost: scene?.cost ?? null, glassOpacity, addedReducedMotion: scene?.addedReducedMotion ?? false });
+    summary.push({ id: theme.id, cost: scene?.cost ?? null, glassOpacity, addedReducedMotion: scene?.addedReducedMotion ?? false, ...(tintIgnored[theme.id] && { tintIgnored: true as const }) });
   }
 
-  const sha = themeReleaseSha(i.projectId, { themes, costs, glassAdjusted, measured });
-  await d.saveRelease({ sha, projectId: i.projectId, themes, costs, glassAdjusted, measured });
+  const sha = themeReleaseSha(i.projectId, { themes, costs, glassAdjusted, measured, tintIgnored });
+  await d.saveRelease({ sha, projectId: i.projectId, themes, costs, glassAdjusted, measured, tintIgnored });
   const row = await d.upsertInstallation({ personId: i.actorId, projectId: i.projectId, releaseSha: sha });
   // The versions nobody points at now go; a failure here leaves them for the next install, and never fails this one.
   await Promise.resolve()
