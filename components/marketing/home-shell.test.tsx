@@ -24,6 +24,9 @@ vi.mock("@/components/workspace-v2/account-menu", () => ({
   AccountMenu: ({ credits }: { credits?: boolean }) => <span data-account-menu data-with-credits={String(credits === true)} />,
 }));
 vi.mock("@/components/locale-switcher", () => ({ LocaleSwitcher: () => <span data-locale-switcher /> }));
+vi.mock("@/components/workspace-v2/theme/theme-backdrop", () => ({
+  ThemeBackdrop: ({ projectId }: { projectId: string | null }) => <span data-theme-backdrop-mock data-project={String(projectId)} />,
+}));
 vi.mock("./hero-len", () => ({ HeroLenMark: () => <span data-len-mark /> }));
 
 import { HomeShell } from "./home-shell";
@@ -54,6 +57,23 @@ function mount({ tools = false }: { tools?: boolean } = {}) {
 }
 const railHref = (host: HTMLElement, label: string) =>
   host.querySelector(`[data-start-rail] [aria-label="${label}"]`)?.getAttribute("href");
+
+describe("the person's theme on the home (28/11)", () => {
+  it("🔴 a signed-in person's home mounts the theme layer as the FIRST child of the frame, with no project", () => {
+    status = "authenticated";
+    const host = mount();
+    const frame = host.querySelector(".workspace-v2");
+    const layer = frame?.firstElementChild;
+    expect(layer?.hasAttribute("data-theme-backdrop-mock")).toBe(true);
+    expect(layer?.getAttribute("data-project")).toBe("null");
+  });
+
+  it("🔴 without an account — or while the session loads — there is no layer", () => {
+    expect(mount().querySelector("[data-theme-backdrop-mock]")).toBeNull();
+    status = "loading";
+    expect(mount().querySelector("[data-theme-backdrop-mock]")).toBeNull();
+  });
+});
 
 describe("the home in the start frame", () => {
   it("🔴 wears the workspace's tokens, with the rail, the top row, the hero and the footer row", () => {

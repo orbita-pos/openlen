@@ -25,6 +25,7 @@ import { Link } from "@/i18n/navigation";
 import { useDarkMode } from "@/lib/use-dark-mode";
 import { AccountMenu } from "@/components/workspace-v2/account-menu";
 import { StartRail, StartTopRow, type StartItem } from "@/components/workspace-v2/start-rail";
+import { ThemeBackdrop } from "@/components/workspace-v2/theme/theme-backdrop";
 import { HeroLenMark } from "./hero-len";
 import { HomeDropZone } from "./home-drop";
 import { HomeFooter } from "./home-footer";
@@ -90,7 +91,15 @@ export function HomeShell({
     // `!bg-transparent`: `.workspace-v2` paints the workspace's background, which covered the home's light (it sits at
     // z-index -1, under every in-flow background of the home). The whole frame takes dropped files, as /new's start
     // screen does (`HomeDropZone`), for the box below.
-    <HomeDropZone className="workspace-v2 flex min-h-[100svh] flex-1 !bg-transparent">
+    // `text-zinc-900 dark:text-zinc-50`: the home is dark, but a theme with a light window turns it light (below).
+    <HomeDropZone className="workspace-v2 flex min-h-[100svh] flex-1 !bg-transparent text-zinc-900 dark:text-zinc-50">
+      {/* THE PERSON'S THEME HERE TOO (Jesús, 28/11: «lo agarra todo menos» the home): like Claude Code, a theme is the
+          whole app's, and the home is where a signed-in person lands. The same layer as /new, as the FIRST child of the
+          frame's `.workspace-v2` (the glass paints over it by document order); the theme's scene replaces the home's
+          own light (`home-glow.css`), and its window replaces the home's fixed dark (`data-fixed-window` on the home's
+          wrapper, `theme-backdrop.tsx`). Signed in only: without an account there is no pick, and a theme cached in
+          this browser by someone who signed out must not show. */}
+      {signedIn && <ThemeBackdrop projectId={null} />}
       <StartRail
         items={items}
         active="crear"

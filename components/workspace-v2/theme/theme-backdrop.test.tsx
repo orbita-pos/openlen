@@ -394,6 +394,53 @@ describe("ThemeBackdrop", () => {
   });
 });
 
+describe("a surface with its own window (the home, 28/11)", () => {
+  /** The home as `app/[locale]/page.tsx` + `home-shell.tsx` draw it: a fixed-dark wrapper around the frame. */
+  async function mountHome() {
+    host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    roots.push(root);
+    await act(async () => {
+      root.render(
+        <NextIntlClientProvider locale="es" messages={{}}>
+          <div data-fixed-window="dark" className="home-page dark" data-testid="home">
+            <div className="workspace-v2">
+              <ThemeBackdrop projectId={null} />
+            </div>
+          </div>
+        </NextIntlClientProvider>,
+      );
+    });
+    await settle();
+    return { home: host.querySelector<HTMLElement>("[data-testid=home]")!, root };
+  }
+
+  it("🔴 picks the DARK twin for the always-dark home, whatever the person's own setting", async () => {
+    window.localStorage.setItem("inari:dark", "0");
+    answer = state(DAWN, DUSK);
+    const { home } = await mountHome();
+    expect(home.querySelector("img")!.getAttribute("src")).toBe(DUSK.sceneUrl);
+    expect(home.classList.contains("dark")).toBe(true);
+    expect(document.documentElement.hasAttribute("data-theme-forced-window")).toBe(false);
+  });
+
+  it("🔴 a light-only theme turns the home AND <html> light (a `dark:` rule matches under either), and gives both back", async () => {
+    window.localStorage.setItem("inari:dark", "1");
+    document.documentElement.classList.add("dark");
+    answer = state(LAGOON);
+    const { home, root } = await mountHome();
+    expect(home.classList.contains("dark")).toBe(false);
+    expect(document.documentElement.classList.contains("dark")).toBe(false);
+    expect(document.documentElement.getAttribute("data-theme-forced-window")).toBe("light");
+    expect(window.localStorage.getItem("inari:dark")).toBe("1");
+    act(() => root.unmount());
+    roots.splice(roots.indexOf(root), 1);
+    expect(home.classList.contains("dark")).toBe(true);
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+  });
+});
+
 describe("the client's canvas stays opaque", () => {
   const repo = process.cwd();
   // The rules only: a comment may name what a rule must not touch.

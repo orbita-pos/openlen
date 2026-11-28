@@ -10,10 +10,10 @@ import { REPO } from "./footer";
 
 export function HomeFooter() {
   const t = useTranslations("marketing");
-  const linkClass = "hover:text-zinc-100 transition-colors";
+  const linkClass = "hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors";
   return (
     <footer data-home-footer className="relative z-10 px-6 pb-5 pt-2">
-      <div className="mx-auto flex max-w-[88rem] flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[12.5px] text-zinc-400">
+      <div className="mx-auto flex max-w-[88rem] flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[12.5px] text-zinc-600 dark:text-zinc-400">
         <span>© 2026 OpenLen</span>
         {/* Since the home is the start frame (06/11), what tells about OpenLen lives here, not in the rail. */}
         <Link href="/features" className={linkClass}>

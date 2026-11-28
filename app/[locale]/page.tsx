@@ -75,8 +75,10 @@ export async function generateMetadata({
 // y del pie (z-10).
 export default function HomePage() {
   return (
+    // `data-fixed-window`: the home is dark whatever the person's setting, but a theme with a light window turns it
+    // light (`theme-backdrop.tsx`, mounted by `home-shell.tsx` for a signed-in person).
     // `home-page`: `home-glow.css` sizes and paints the <body> after it (`body:has(.home-page)`).
-    <div className="home-page dark relative isolate flex min-h-[100svh] flex-col overflow-clip bg-[#100d0c] text-zinc-50">
+    <div className="home-page dark relative isolate flex min-h-[100svh] flex-col overflow-clip bg-[#100d0c] text-zinc-50" data-fixed-window="dark">
       {/* Len's face crowns the rail and the box lives in the hero: one provider around both, so the face listens
           while you type and thinks when you send. */}
       <HeroLenProvider>

@@ -108,3 +108,9 @@ body:has(.home-page) {
   .home-glow__boost { transition: none; }
   .home-glow[data-active="true"] .home-glow__boost { opacity: 0; transform: none; }
 }
+
+/* Under the person's theme (`theme-backdrop.tsx`, mounted by `home-shell.tsx`), the theme's scene is the home's
+   background: its own light would cover the scene right under the box. */
+.workspace-v2[data-theme-layer] [data-home-glow] {
+  display: none;
+}

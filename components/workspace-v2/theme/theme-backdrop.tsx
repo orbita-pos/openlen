@@ -105,6 +105,13 @@ export function ThemeBackdrop({ projectId }: { projectId: string | null }) {
   const [personDark, setPersonDark] = useState<boolean | null>(null);
   useEffect(() => {
     const html = document.documentElement;
+    // A surface with a window of its own (the home, always dark: `data-fixed-window` on its wrapper) is the "person's
+    // mode" here — the person's setting does not change it, so a twin is picked for it and only it is switched.
+    const fixed = anchor.current?.closest<HTMLElement>("[data-fixed-window]")?.getAttribute("data-fixed-window");
+    if (fixed === "dark" || fixed === "light") {
+      setPersonDark(fixed === "dark");
+      return;
+    }
     const read = () => setPersonDark(personPrefersDark());
     read();
     // The person may switch modes while a theme is on (the workspace's own toggle writes the class and the setting), or
@@ -137,10 +144,16 @@ export function ThemeBackdrop({ projectId }: { projectId: string | null }) {
   // to the person's own mode on the way out.
   useEffect(() => {
     if (!force) return;
+    // A surface with its own window (the home) has its own `.dark` too: switched with <html>'s, since a `dark:` rule
+    // matches under either (seen in the browser, 28/11: a light theme left the home's text white under <html>.dark).
+    const host = anchor.current?.closest<HTMLElement>("[data-fixed-window]");
+    const own = host?.getAttribute("data-fixed-window") === "dark";
+    host?.classList.toggle("dark", force === "dark");
     const html = document.documentElement;
     html.classList.toggle("dark", force === "dark");
     html.setAttribute(FORCED_WINDOW_ATTR, force);
     return () => {
+      host?.classList.toggle("dark", own);
       html.removeAttribute(FORCED_WINDOW_ATTR);
       html.classList.toggle("dark", personPrefersDark());
     };
