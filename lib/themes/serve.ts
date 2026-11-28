@@ -102,9 +102,11 @@ export function realSceneServeDeps(): SceneServeDeps {
   };
 }
 
-type ParsedRef = { kind: "bundled"; id: string } | { kind: "installed"; installationId: string; themeId: string };
+/** A ref as `themeChoices` and the scene URL hold it: `bundled:<id>` or `installed:<installationId>:<themeId>`. */
+export type ParsedThemeRef = { kind: "bundled"; id: string } | { kind: "installed"; installationId: string; themeId: string };
 
-function parseRef(ref: string | null): ParsedRef | null {
+/** What a ref names, or null for anything that is not one (also for one too long to be ours). */
+export function parseThemeRef(ref: string | null): ParsedThemeRef | null {
   if (ref === null || ref.length === 0 || ref.length > REF_MAX_LENGTH) return null;
   const parts = ref.split(":");
   if (parts[0] === "bundled" && parts.length === 2 && parts[1]) return { kind: "bundled", id: parts[1] };
@@ -119,7 +121,7 @@ export async function serveThemeScene(
   deps: SceneServeDeps,
 ): Promise<Response> {
   if (!deps.enabled()) return notFound();
-  const ref = parseRef(input.ref);
+  const ref = parseThemeRef(input.ref);
   if (!ref) return notFound();
 
   if (ref.kind === "bundled") {
