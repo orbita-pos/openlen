@@ -14,6 +14,7 @@ import type { ProjectData } from "@/lib/projects/types";
 import { READABLE, glassFit, glassInks, paletteWarnings, type ContrastWarning } from "./contrast";
 import { readThemeManifest } from "./manifest";
 import { checkScene, type SceneCost, type SceneProblem } from "./scene-check";
+import type { SceneMeter } from "./measure-under";
 import type { ThemeInstallationRow, ThemeReleaseInput } from "./store";
 import type { StoredThemeDefinition } from "./types";
 
@@ -22,8 +23,14 @@ export interface ThemeInstallDeps {
   access(projectId: string, userId: string): Promise<AccesoAlProyecto | Response>;
   loadProject(projectId: string): Promise<{ data: ProjectData } | null>;
   files(projectId: string): Promise<Record<string, string>>;
-  /** The mean colour of the scene (a checked one, as the version will keep it) under Len's panel as `#rrggbb`; null when it cannot be measured. */
-  measureUnder(svg: string): Promise<string | null>;
+  /**
+   * Opens ONE browser to measure every scene of an install (R14). Rejects when it cannot launch; the installer reads that
+   * as «not measured» and installs anyway. It is only called when some scene has a glass to measure, and the installer
+   * closes what it opened on every path.
+   */
+  openMeter(): Promise<SceneMeter>;
+  /** The most the installer waits, in total, for all the measuring of one install (default 60 s). */
+  measureDeadlineMs?: number;
   saveRelease(release: ThemeReleaseInput): Promise<void>;
   upsertInstallation(i: { personId: string; projectId: string; releaseSha: string }): Promise<ThemeInstallationRow>;
   /** Every installation of a person, removed ones included. */
@@ -49,7 +56,7 @@ export async function realThemeInstallDeps(): Promise<ThemeInstallDeps> {
       return row ? { data: row.data as ProjectData } : null;
     },
     files: (p) => files.listProjectFiles(p),
-    measureUnder: measure.measureUnder,
+    openMeter: measure.openSceneMeter,
     saveRelease: store.saveThemeRelease,
     upsertInstallation: store.upsertThemeInstallation,
     listInstallations: store.listThemeInstallations,
@@ -71,12 +78,63 @@ function stableJson(value: unknown): string {
 }
 
 /**
- * What names a version: the project and the themes as they are stored (each scene as its checked text). The project is in
- * it so two projects with identical files never share a release — it is keyed by this alone and dies with the first
- * project's row (ruling R12).
+ * What names a version: the project, the themes as they are stored (each scene as its checked text) and what the gate made
+ * of them — the scenes' costs and the glass opacities it raised. The project is in it so two projects with identical files
+ * never share a release (it is keyed by this alone and dies with the first project's row: R12); the gate's results are in
+ * it so that an install whose measuring failed (nothing raised) and a later one that measured (something raised) are two
+ * versions, and the second is saved and installed instead of the first being kept for good (R12b).
  */
-export function themeReleaseSha(projectId: string, themes: readonly StoredThemeDefinition[]): string {
-  return createHash("sha256").update(stableJson({ projectId, themes })).digest("hex");
+export function themeReleaseSha(projectId: string, release: Pick<ThemeReleaseInput, "themes" | "costs" | "glassAdjusted">): string {
+  return createHash("sha256")
+    .update(stableJson({ projectId, themes: release.themes, costs: release.costs, glassAdjusted: release.glassAdjusted }))
+    .digest("hex");
+}
+
+const MEASURE_DEADLINE_MS = 60_000;
+/** After the deadline, how long closing the browser is waited for; it goes on in the background past this. */
+const CLOSE_WAIT_MS = 5_000;
+
+/**
+ * The colour under Len's panel of each scene given, measured in ONE browser (a page per scene) within ONE deadline for all
+ * of them (R14). A scene that is not measured — the browser would not launch, the page would not paint, the deadline came
+ * first — is null, and the caller reports it as unmeasured. The browser is closed on every path, also when it only
+ * finishes launching after the deadline.
+ */
+async function measureScenes(d: ThemeInstallDeps, scenes: ReadonlyMap<string, string>): Promise<Map<string, string | null>> {
+  const found = new Map<string, string | null>([...scenes.keys()].map((path) => [path, null]));
+  if (scenes.size === 0) return found;
+  const deadlineMs = d.measureDeadlineMs ?? MEASURE_DEADLINE_MS;
+  let expired = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  const opened = Promise.resolve().then(() => d.openMeter());
+  const work = (async () => {
+    const meter = await opened;
+    for (const [path, svg] of scenes) {
+      if (expired) return;
+      try {
+        const under = await meter.under(svg);
+        if (!expired) found.set(path, under);
+      } catch {
+        // A page that would not paint: this scene stays unmeasured.
+      }
+    }
+  })();
+  const deadline = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, deadlineMs);
+  });
+  try {
+    await Promise.race([work, deadline]);
+  } catch {
+    // The browser would not launch: nothing was measured.
+  } finally {
+    expired = true;
+    clearTimeout(timer);
+    // Closing the browser also ends a measure still in flight. A launch that is still pending is closed when it finishes.
+    const closing = opened.then((meter) => meter.close()).catch(() => undefined);
+    await Promise.race([closing, new Promise<void>((resolve) => setTimeout(resolve, Math.min(CLOSE_WAIT_MS, deadlineMs)))]);
+  }
+  return new Map(found);
 }
 
 type Answer = { status: number; body: Record<string, unknown> };
@@ -119,20 +177,12 @@ export async function installTheme(
   }));
 
   // The contrast gate. Nothing here refuses: a glass is raised until the text reads, and whatever cannot be fixed that way
-  // is reported. One measure per distinct scene.
-  const measured = new Map<string, string | null>();
-  const measure = async (scenePath: string): Promise<string | null> => {
-    if (!measured.has(scenePath)) {
-      let under: string | null = null;
-      try {
-        under = await d.measureUnder(checked.get(scenePath)!.svg);
-      } catch {
-        // No Chromium, a page that would not paint: the version installs, and the report says it was not measured.
-      }
-      measured.set(scenePath, under);
-    }
-    return measured.get(scenePath)!;
-  };
+  // — or measured — is reported. Each distinct scene that has a glass is measured once, all in one browser and one deadline.
+  const toMeasure = new Map<string, string>();
+  for (const theme of manifest.themes) {
+    if (theme.scene !== undefined && theme.glass) toMeasure.set(theme.scene, checked.get(theme.scene)!.svg);
+  }
+  const measured = await measureScenes(d, toMeasure);
 
   const costs: Record<string, SceneCost> = {};
   const glassAdjusted: Record<string, number> = {};
@@ -147,7 +197,7 @@ export async function installTheme(
 
     if (glass) {
       glassOpacity = glass.opacity;
-      const under = await measure(theme.scene!);
+      const under = measured.get(theme.scene!) ?? null;
       if (under === null) {
         contrastWarnings.push({ themeId: theme.id, code: "glass_unmeasured" });
       } else {
@@ -165,7 +215,7 @@ export async function installTheme(
     summary.push({ id: theme.id, cost: scene?.cost ?? null, glassOpacity, addedReducedMotion: scene?.addedReducedMotion ?? false });
   }
 
-  const sha = themeReleaseSha(i.projectId, themes);
+  const sha = themeReleaseSha(i.projectId, { themes, costs, glassAdjusted });
   await d.saveRelease({ sha, projectId: i.projectId, themes, costs, glassAdjusted });
   const row = await d.upsertInstallation({ personId: i.actorId, projectId: i.projectId, releaseSha: sha });
 

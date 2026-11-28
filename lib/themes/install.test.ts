@@ -36,12 +36,20 @@ const ROW: ThemeInstallationRow = {
   removedAt: null,
 };
 
+/** A fake browser: `under` answers each scene (black by default, where the chat sits); an install opens it once and closes it once. */
+function meter(under: (svg: string) => Promise<string | null> = async () => "#000000") {
+  const underFn = vi.fn(under);
+  const close = vi.fn(async () => {});
+  const openMeter = vi.fn(async () => ({ under: underFn, close }));
+  return { under: underFn, close, openMeter };
+}
+
 const deps = (over: Partial<ThemeInstallDeps> = {}): ThemeInstallDeps => ({
   enabled: () => true,
   access: vi.fn(async () => ({ rol: "dueno" as const, duenoId: "u1" })),
   loadProject: vi.fn(async () => ({ data: { html: "<p>preview</p>", theme: { bornAt: "2026-11-27T09:00:00Z" } } })),
   files: vi.fn(async () => files()),
-  measureUnder: vi.fn(async () => "#000000"),
+  openMeter: meter().openMeter,
   saveRelease: vi.fn(async () => {}),
   upsertInstallation: vi.fn(async (i) => ({ ...ROW, personId: i.personId, projectId: i.projectId, releaseSha: i.releaseSha })),
   listInstallations: vi.fn(async () => [ROW]),
@@ -175,7 +183,8 @@ describe("installTheme", () => {
 describe("the contrast gate", () => {
   it("the measured color under the chat panel raises the glass", async () => {
     // A light theme at 0.3 over a scene that is black where the chat sits: the dark text on the white tint does not read.
-    const d = deps({ measureUnder: vi.fn(async () => "#000000") });
+    const m = meter(async () => "#000000");
+    const d = deps({ openMeter: m.openMeter });
     const r = await install(d);
     const pond = (r.body.themes as { id: string; glassOpacity: number | null }[])[0]!;
     expect(pond.glassOpacity).toBeGreaterThan(0.3);
@@ -186,11 +195,11 @@ describe("the contrast gate", () => {
     expect(release.themes[0]!.glass).toMatchObject({ blur: 10, tint: "#ffffff", opacity: 0.3 });
     expect(release.glassAdjusted["estanque"]).toBe(pond.glassOpacity);
     // The scene was measured as the version will keep it: checked, with the rule in.
-    expect((d.measureUnder as ReturnType<typeof vi.fn>).mock.calls[0]![0]).toContain(REDUCED_MOTION_RULE);
+    expect(m.under.mock.calls[0]![0]).toContain(REDUCED_MOTION_RULE);
   });
 
   it("leaves a glass that already reads exactly as it was, and says so", async () => {
-    const d = deps({ measureUnder: vi.fn(async () => "#ffffff") });
+    const d = deps({ openMeter: meter(async () => "#ffffff").openMeter });
     const r = await install(d);
     const pond = (r.body.themes as { id: string; glassOpacity: number | null }[])[0]!;
     expect(pond.glassOpacity).toBe(0.3);
@@ -200,7 +209,7 @@ describe("the contrast gate", () => {
 
   it("a glass with no tint takes the workspace's own sidebar of its window as the tint, and its text", async () => {
     // The night pond has Claude Code's default glass (0.6, no tint): the workspace's dark sidebar over black reads light text.
-    const d = deps({ measureUnder: vi.fn(async () => "#000000") });
+    const d = deps({ openMeter: meter(async () => "#000000").openMeter });
     const r = await install(d);
     const night = (r.body.themes as { id: string; glassOpacity: number | null }[])[1]!;
     expect(night.glassOpacity).toBe(0.6);
@@ -211,7 +220,7 @@ describe("the contrast gate", () => {
     // A light theme whose own text is white: white on a white tint can never read, whatever the opacity, so the glass
     // stays as declared (nothing to gain by raising it) and the theme is told it still does not read.
     const white = { ...POND, colors: { "--fg": "#ffffff" } };
-    const d = deps({ files: vi.fn(async () => files([white, POND_NIGHT])), measureUnder: vi.fn(async () => "#ffffff") });
+    const d = deps({ files: vi.fn(async () => files([white, POND_NIGHT])), openMeter: meter(async () => "#ffffff").openMeter });
     const r = await install(d);
     expect(r.status).toBe(200);
     expect(r.body.contrastWarnings).toEqual([expect.objectContaining({ themeId: "estanque", code: "glass_below_target", fg: "--fg" })]);
@@ -220,32 +229,44 @@ describe("the contrast gate", () => {
   it("measures each distinct scene once, and none for a theme with no glass", async () => {
     const noGlass = { ...POND, glass: false };
     const shared = { ...POND_NIGHT, scene: "/themes/estanque.svg", glass: { blur: 4, tint: "#000000", opacity: 0.5 } };
-    const d = deps({ files: vi.fn(async () => files([POND, shared])) });
-    await install(d);
-    expect(d.measureUnder).toHaveBeenCalledTimes(1);
+    const m = meter();
+    await install(deps({ files: vi.fn(async () => files([POND, shared])), openMeter: m.openMeter }));
+    expect(m.under).toHaveBeenCalledTimes(1);
 
-    const d2 = deps({ files: vi.fn(async () => files([noGlass, POND_NIGHT])) });
-    const r2 = await install(d2);
-    expect(d2.measureUnder).toHaveBeenCalledTimes(1);
+    const m2 = meter();
+    const r2 = await install(deps({ files: vi.fn(async () => files([noGlass, POND_NIGHT])), openMeter: m2.openMeter }));
+    expect(m2.under).toHaveBeenCalledTimes(1);
     expect((r2.body.themes as { id: string; glassOpacity: number | null }[])[0]!.glassOpacity).toBeNull();
   });
 
   it("never rejects for contrast: a scene that cannot be measured installs, and the warning says it was not", async () => {
-    for (const measureUnder of [vi.fn(async () => null), vi.fn(async () => Promise.reject(new Error("no chromium")))]) {
-      const d = deps({ measureUnder });
+    const unmeasured = (r: Awaited<ReturnType<typeof install>>) =>
+      (r.body.contrastWarnings as { themeId: string; code: string }[]).map((w) => `${w.themeId}:${w.code}`);
+    const both = ["estanque:glass_unmeasured", "estanque-noche:glass_unmeasured"];
+
+    for (const under of [async () => null, async () => Promise.reject(new Error("page crashed"))]) {
+      const d = deps({ openMeter: meter(under).openMeter });
       const r = await install(d);
       expect(r.status).toBe(200);
       expect(saved(d).glassAdjusted).toEqual({});
-      expect((r.body.contrastWarnings as { themeId: string; code: string }[]).map((w) => `${w.themeId}:${w.code}`)).toEqual(["estanque:glass_unmeasured", "estanque-noche:glass_unmeasured"]);
+      expect(unmeasured(r)).toEqual(both);
     }
+    // The browser itself would not launch.
+    const d = deps({ openMeter: vi.fn(async () => Promise.reject(new Error("no chromium"))) });
+    const r = await install(d);
+    expect(r.status).toBe(200);
+    expect(saved(d).glassAdjusted).toEqual({});
+    expect(unmeasured(r)).toEqual(both);
   });
 
   it("a theme with no scene has its palette's pairs checked, and returned, never refused", async () => {
     const calm = { id: "paper", window: "light", colors: { "--fg": "#cccccc" } };
-    const d = deps({ files: vi.fn(async () => files([calm])) });
+    const m = meter();
+    const d = deps({ files: vi.fn(async () => files([calm])), openMeter: m.openMeter });
     const r = await install(d);
     expect(r.status).toBe(200);
-    expect(d.measureUnder).not.toHaveBeenCalled();
+    // Nothing to measure: no browser is launched at all.
+    expect(m.openMeter).not.toHaveBeenCalled();
     const release = saved(d);
     expect(release.themes[0]).not.toHaveProperty("scene");
     expect(release.costs).toEqual({});
@@ -256,11 +277,107 @@ describe("the contrast gate", () => {
 
   it("a scene with its glass off has its palette's pairs checked, since nothing tints the panels", async () => {
     const off = { id: "estanque", window: "light", scene: "/themes/estanque.svg", glass: false, colors: { "--fg": "#cccccc" } };
-    const d = deps({ files: vi.fn(async () => files([off])) });
+    const m = meter();
+    const d = deps({ files: vi.fn(async () => files([off])), openMeter: m.openMeter });
     const r = await install(d);
     expect(r.status).toBe(200);
-    expect(d.measureUnder).not.toHaveBeenCalled();
+    expect(m.openMeter).not.toHaveBeenCalled();
     expect((r.body.contrastWarnings as unknown[]).length).toBe(3);
+  });
+});
+
+describe("a measure that failed does not stick (R12b)", () => {
+  it("a reinstall of unchanged themes that now measures is a new version, installed over the unmeasured one", async () => {
+    // First install: the browser would not launch, so nothing was raised.
+    const first = deps({ openMeter: vi.fn(async () => Promise.reject(new Error("no chromium"))) });
+    const r1 = await install(first);
+    expect(r1.status).toBe(200);
+    const unmeasured = saved(first);
+    expect(unmeasured.glassAdjusted).toEqual({});
+    expect(first.upsertInstallation).toHaveBeenCalledWith({ personId: "u1", projectId: "p1", releaseSha: unmeasured.sha });
+    expect((r1.body.contrastWarnings as { code: string }[]).map((w) => w.code)).toEqual(["glass_unmeasured", "glass_unmeasured"]);
+
+    // Same files, same project, and now it measures: the light pond's glass is raised, so the version is another one.
+    const second = deps({ openMeter: meter(async () => "#000000").openMeter });
+    const r2 = await install(second);
+    expect(r2.status).toBe(200);
+    const measured = saved(second);
+    expect(measured.sha).not.toBe(unmeasured.sha);
+    expect(measured.glassAdjusted["estanque"]).toBeGreaterThan(0.3);
+    expect(second.upsertInstallation).toHaveBeenCalledWith({ personId: "u1", projectId: "p1", releaseSha: measured.sha });
+    expect((r2.body.installation as { releaseSha: string }).releaseSha).toBe(measured.sha);
+    expect(r2.body.contrastWarnings).toEqual([]);
+    // The themes themselves did not change: only what the gate made of them.
+    expect(measured.themes).toEqual(unmeasured.themes);
+  });
+});
+
+describe("one browser, one deadline (R14)", () => {
+  const OTHER = SCENE.replace("#4488cc", "#aa4400");
+  const twoScenes = () => files([POND, { ...POND_NIGHT, scene: "/themes/other.svg" }], { "/themes/other.svg": OTHER });
+
+  it("launches ONE browser for every scene of an install, uses it for each, and closes it", async () => {
+    const m = meter();
+    const r = await install(deps({ files: vi.fn(async () => twoScenes()), openMeter: m.openMeter }));
+    expect(r.status).toBe(200);
+    expect(m.openMeter).toHaveBeenCalledTimes(1);
+    expect(m.under).toHaveBeenCalledTimes(2);
+    expect(m.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes the browser when a page throws", async () => {
+    const m = meter(async () => Promise.reject(new Error("page crashed")));
+    const r = await install(deps({ openMeter: m.openMeter }));
+    expect(r.status).toBe(200);
+    expect(m.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("past the deadline, the scenes not measured yet report unmeasured, the install does not wait, and the browser is closed", async () => {
+    const calls: string[] = [];
+    // The first scene answers; the second never does.
+    const m = meter((svg) => {
+      calls.push(svg);
+      return calls.length === 1 ? Promise.resolve("#000000") : new Promise<string | null>(() => {});
+    });
+    const d = deps({ files: vi.fn(async () => twoScenes()), openMeter: m.openMeter, measureDeadlineMs: 40 });
+    const started = Date.now();
+    const r = await install(d);
+    expect(Date.now() - started).toBeLessThan(2_000);
+    expect(r.status).toBe(200);
+    expect(m.close).toHaveBeenCalledTimes(1);
+    const themes = r.body.themes as { id: string; glassOpacity: number | null }[];
+    expect(themes[0]!.glassOpacity).toBeGreaterThan(0.3); // measured: raised
+    expect(r.body.contrastWarnings).toEqual([{ themeId: "estanque-noche", code: "glass_unmeasured" }]);
+  });
+
+  it("a launch that is still pending at the deadline is closed when it finishes", async () => {
+    const close = vi.fn(async () => {});
+    let open!: () => void;
+    const launched = new Promise<void>((resolve) => (open = resolve));
+    const d = deps({
+      openMeter: vi.fn(async () => {
+        await launched;
+        return { under: vi.fn(async () => "#000000"), close };
+      }),
+      measureDeadlineMs: 30,
+    });
+    const r = await install(d);
+    expect(r.status).toBe(200);
+    expect((r.body.contrastWarnings as { code: string }[]).map((w) => w.code)).toEqual(["glass_unmeasured", "glass_unmeasured"]);
+    expect(close).not.toHaveBeenCalled();
+    open();
+    await vi.waitFor(() => expect(close).toHaveBeenCalledTimes(1));
+  });
+
+  it("a measure that comes back after the deadline changes nothing in what was saved", async () => {
+    let answer!: (color: string) => void;
+    const late = new Promise<string | null>((resolve) => (answer = resolve));
+    const d = deps({ openMeter: meter(() => late).openMeter, measureDeadlineMs: 30 });
+    const r = await install(d);
+    answer("#000000");
+    await Promise.resolve();
+    expect(saved(d).glassAdjusted).toEqual({});
+    expect((r.body.contrastWarnings as { code: string }[]).map((w) => w.code)).toEqual(["glass_unmeasured", "glass_unmeasured"]);
   });
 });
 
