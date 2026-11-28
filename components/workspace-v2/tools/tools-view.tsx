@@ -55,9 +55,10 @@ export function ToolsView({
   }
 
   return (
-    // `data-glass-surface`: with a workspace theme this page is glass (theme-backdrop.tsx); its cards keep their tokens.
-    <section data-glass-surface="" className="relative flex-1 min-w-0 min-h-0 overflow-y-auto nice-scroll bg-app" data-tools-view>
-      <div className="mx-auto max-w-3xl px-6 py-10">
+    // With a workspace theme the page is a stage (`data-glass-stage`: the scene shows in its margins) and only the content
+    // column is glass (`data-glass-surface`), as Claude Code glasses the chat column and not the window (theme-backdrop.tsx).
+    <section data-glass-stage="" className="relative flex-1 min-w-0 min-h-0 overflow-y-auto nice-scroll bg-app" data-tools-view>
+      <div data-glass-surface="" className="relative mx-auto max-w-3xl px-6 py-10 md:my-6 md:rounded-2xl">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-[22px] font-semibold fg tracking-tight">{t("tools.page.title")}</h2>

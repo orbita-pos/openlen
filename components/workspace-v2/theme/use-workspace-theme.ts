@@ -77,6 +77,33 @@ async function readThemes(url: string, preview: boolean, signal: AbortSignal): P
   }
 }
 
+// The last answer, kept in this browser per project, so a reload paints the theme at once instead of the default
+// workspace for the second or two `GET /api/themes` takes (seen in the browser on 27/11). It is only a head start: the
+// server's answer always replaces it. Storage can be missing or throw (private window, blocked site data): then there
+// is simply no head start.
+const CACHE_PREFIX = "openlen:workspace-theme:";
+
+function cachedAnswer(projectId: string | null): ThemeAnswer | null {
+  try {
+    const raw = window.localStorage.getItem(CACHE_PREFIX + (projectId ?? ""));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ThemeAnswer;
+    return parsed && typeof parsed === "object" && "resolved" in parsed ? { resolved: parsed.resolved ?? null, twin: parsed.twin ?? null } : null;
+  } catch {
+    return null;
+  }
+}
+
+function rememberAnswer(projectId: string | null, answer: ThemeAnswer): void {
+  try {
+    const key = CACHE_PREFIX + (projectId ?? "");
+    if (answer.resolved === null) window.localStorage.removeItem(key);
+    else window.localStorage.setItem(key, JSON.stringify(answer));
+  } catch {
+    // no head start next time
+  }
+}
+
 /** The theme that applies to this person in `projectId` (`null` = none open: only «everywhere»), and its twin. */
 export function useWorkspaceTheme(projectId: string | null): WorkspaceTheme {
   const locale = useLocale();
@@ -86,8 +113,15 @@ export function useWorkspaceTheme(projectId: string | null): WorkspaceTheme {
 
   useEffect(() => {
     const controller = new AbortController();
+    // A head start from this browser's last answer (never for a preview, which is not saved).
+    if (preview === null) {
+      const cached = cachedAnswer(projectId);
+      if (cached) setAnswer(cached);
+    }
     void readThemes(themesUrl(projectId, locale, preview), preview !== null, controller.signal).then((next) => {
-      if (!controller.signal.aborted) setAnswer(next);
+      if (controller.signal.aborted) return;
+      setAnswer(next);
+      if (preview === null) rememberAnswer(projectId, next);
     });
     return () => controller.abort();
     // `key` carries the reload counter: a reload with the same preview reads again.

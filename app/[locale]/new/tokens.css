@@ -129,6 +129,15 @@
     backdrop-filter: blur(var(--glass-blur));
   }
 
+  /* `data-glass-stage` — el centro de la pantalla (inicio, Herramientas, Mis páginas) NO es cristal: es el margen donde
+     la escena se ve limpia, como los márgenes junto al chat en Claude Code. Sólo la columna de contenido que va dentro
+     lleva `data-glass-surface`. Visto en el navegador el 27/11: con el centro entero de cristal la escena quedaba lavada
+     al 42 % en toda la pantalla. */
+  .workspace-v2[data-theme-glass] [data-glass-stage] {
+    --bg: transparent;
+    background-color: transparent;
+  }
+
   /* Una superficie marcada DENTRO de otra (la página de Herramientas o Mis páginas dentro del centro de inicio) no vuelve a
      teñir ni a desenfocar: dos capas de tinte dejarían el cristal casi opaco. Se ve el de fuera. */
   .workspace-v2[data-theme-glass] [data-glass-surface] [data-glass-surface] {

@@ -394,9 +394,19 @@ describe("the client's canvas stays opaque", () => {
     expect(rootRule).toBeDefined();
     for (const token of ["--bg:", "--bg-sidebar:", "--bg-elev:"]) expect(rootRule![2]).not.toContain(token);
     for (const [, selector] of glassRules) {
-      expect(selector.trim().startsWith(".workspace-v2[data-theme-glass] [data-glass-surface]") || selector.trim() === ".workspace-v2[data-theme-glass]", selector).toBe(true);
+      expect(
+        selector.trim().startsWith(".workspace-v2[data-theme-glass] [data-glass-surface]") ||
+          selector.trim() === ".workspace-v2[data-theme-glass] [data-glass-stage]" ||
+          selector.trim() === ".workspace-v2[data-theme-glass]",
+        selector,
+      ).toBe(true);
       expect(selector, selector).not.toMatch(/bg-(app|side|elev)/);
     }
+    // A stage (the centre of the screen) is no glass: transparent, no tint, no blur — the scene shows in its margins.
+    const stage = glassRules.find(([, selector]) => selector.trim() === ".workspace-v2[data-theme-glass] [data-glass-stage]");
+    expect(stage).toBeDefined();
+    expect(stage![2]).toMatch(/background-color:\s*transparent/);
+    expect(stage![2]).not.toMatch(/blur|color-mix/);
     // Inside a marked surface what paints the workshop's or the bar's ground lets the glass through; cards stay opaque.
     const surface = glassRules.find(([, selector]) => selector.trim() === ".workspace-v2[data-theme-glass] [data-glass-surface]")!;
     expect(surface[2]).toMatch(/--bg:\s*transparent/);
@@ -475,14 +485,20 @@ describe("the client's canvas stays opaque", () => {
     expect(bar[0]).toMatch(/className="relative /);
     const start = readFileSync(join(repo, "components/workspace-v2/start-rail.tsx"), "utf8");
     expect(start).toMatch(/data-start-rail\n[^<]*data-glass-surface=""\n[\s\S]{0,400}"relative hidden shrink-0/);
-    // The start screen's centre (and its quiet wait), Herramientas and Mis páginas: each one root, positioned.
-    const centre = marked("app/[locale]/new/page.tsx");
-    expect(centre).toHaveLength(2);
-    for (const tag of centre) expect(tag).toMatch(/className="relative flex-1 /);
+    // The start screen's centre (and its quiet wait), Herramientas and Mis páginas are STAGES, not glass: the scene shows
+    // in their margins, as beside Claude Code's chat (seen in the browser on 27/11: a glass centre washed the whole scene
+    // out). Only the content column of Herramientas and Mis páginas is glass, positioned.
+    const staged = (file: string) => {
+      const src = readFileSync(join(repo, file), "utf8");
+      return [...src.matchAll(/<(div|section)\s[^>]*data-glass-stage=""[^>]*>/g)].map((m) => m[0]);
+    };
+    expect(marked("app/[locale]/new/page.tsx")).toHaveLength(0);
+    expect(staged("app/[locale]/new/page.tsx")).toHaveLength(2);
     for (const file of ["components/workspace-v2/tools/tools-view.tsx", "app/[locale]/projects/projects-section.tsx"]) {
-      const roots = marked(file);
-      expect(roots, file).toHaveLength(1);
-      expect(roots[0], file).toMatch(/className="relative flex-1 [^"]*bg-app"/);
+      expect(staged(file), file).toHaveLength(1);
+      const columns = marked(file);
+      expect(columns, file).toHaveLength(1);
+      expect(columns[0], file).toMatch(/className="relative mx-auto /);
     }
     // Menus stay unmarked: they hang over the client's canvas.
     expect(marked("components/workspace-v2/account-menu.tsx")).toHaveLength(0);

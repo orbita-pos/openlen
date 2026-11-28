@@ -54,14 +54,17 @@ export function ProjectsSection({
   }, []);
 
   return (
-    // `data-glass-surface`: with a workspace theme this page is glass (theme-backdrop.tsx); its cards keep their own colours.
-    <div data-glass-surface="" className="relative flex-1 min-w-0 overflow-y-auto flex flex-col bg-app">
+    // With a workspace theme the page is a stage (`data-glass-stage`: the scene shows in its margins) and only the content
+    // column is glass (`data-glass-surface`), as Claude Code glasses the chat column and not the window (theme-backdrop.tsx).
+    <div data-glass-stage="" className="relative flex-1 min-w-0 overflow-y-auto flex flex-col bg-app">
       {state ? (
-        <ProjectsView
-          projects={state.projects}
-          shared={state.shared}
-          onOpenExplore={onOpenExplore}
-        />
+        <div data-glass-surface="" className="relative mx-auto w-full max-w-7xl md:my-6 md:rounded-2xl">
+          <ProjectsView
+            projects={state.projects}
+            shared={state.shared}
+            onOpenExplore={onOpenExplore}
+          />
+        </div>
       ) : (
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="h-5 w-5 animate-spin text-zinc-400" />
