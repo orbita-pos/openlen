@@ -113,6 +113,32 @@ if ($prohibidos.Count -gt 0) {
 Write-Host "    limpio: ni .env, ni .git, ni el repositorio" -ForegroundColor Green
 
 # ───────────────────────────────────────────────────────────────────────
+# GUARDA D · LA GALERIA DE TEMAS VA ENTERA
+#
+# Las escenas de la galeria (lib/themes/bundled/*.svg) no las importa nadie: se
+# leen del disco por ruta (read-scene.ts), y solo llegan al standalone porque
+# next.config.ts las traza (outputFileTracingIncludes). Si esa traza se pierde,
+# el bundle esta "completo" para la guarda A y arranca para la B, y la galeria
+# contesta 404 en cada escena. Se cuentan: tantas como escenas nombra el indice
+# generado (`scene: "<id>.svg"` en lib/themes/bundled/index.ts).
+# ───────────────────────────────────────────────────────────────────────
+Write-Host "[D] Comprobando que la galeria de temas va entera en el standalone..." -ForegroundColor Cyan
+
+$indice = "lib/themes/bundled/index.ts"
+if (-not (Test-Path $indice)) { throw "No hay $indice — la galeria de temas no esta generada (npm run themes:bundle)." }
+$nombradas = @(Select-String -Path $indice -Pattern '^\s*scene:\s*"([A-Za-z0-9_-]+\.svg)",' -AllMatches | ForEach-Object { $_.Matches[0].Groups[1].Value })
+$carpetaGaleria = Join-Path $raizStandalone "lib/themes/bundled"
+$enStandalone = @()
+if (Test-Path $carpetaGaleria) { $enStandalone = @(Get-ChildItem $carpetaGaleria -Filter "*.svg" -File | ForEach-Object { $_.Name }) }
+$faltanEscenas = @($nombradas | Where-Object { $enStandalone -notcontains $_ })
+if ($nombradas.Count -eq 0 -or $faltanEscenas.Count -gt 0 -or $enStandalone.Count -ne $nombradas.Count) {
+  Write-Host ("    el indice nombra {0} escenas; el standalone lleva {1}" -f $nombradas.Count, $enStandalone.Count) -ForegroundColor Red
+  $faltanEscenas | Select-Object -First 10 | ForEach-Object { Write-Host "      falta $_" -ForegroundColor Red }
+  throw "GALERIA DE TEMAS INCOMPLETA: la traza de lib/themes/bundled/*.svg (next.config.ts, outputFileTracingIncludes) no las copio. NO se despliega."
+}
+Write-Host ("    entera: {0} escenas" -f $nombradas.Count) -ForegroundColor Green
+
+# ───────────────────────────────────────────────────────────────────────
 # GUARDA B · EL BUNDLE ARRANCA DE VERDAD
 #
 # La guarda A compara inventarios; esta ejecuta. Es la que habria evitado la
