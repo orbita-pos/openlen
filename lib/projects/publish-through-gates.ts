@@ -4,6 +4,7 @@
 // 3 a.m. stops at exactly the 428s a person would see (spec local 2026-10-30-len-watch, §5.7).
 import { ProjectIsSpaceError } from "@/lib/space/errors";
 import { ProjectIsToolError } from "@/lib/tools/errors";
+import { ProjectIsThemeError } from "@/lib/themes/errors";
 import "server-only";
 
 import { AbBringPendingError, AbExperimentRunningError } from "@/lib/ab/errors";
@@ -218,6 +219,7 @@ export function publishErrorResult(err: unknown): GatedPublishResult | null {
   if (err instanceof SubdomainLimitError) return { status: 402, body: { error: "limit_reached", limit: err.limit } };
   if (err instanceof ProjectNotFoundError) return { status: 404, body: { error: "not_found" } };
   if (err instanceof ProjectIsToolError) return { status: 409, body: { error: "tool_installs" } };
+  if (err instanceof ProjectIsThemeError) return { status: 409, body: { error: "project_is_theme" } };
   if (err instanceof ProjectIsSpaceError) return { status: 409, body: { error: "space_never_publishes" } };
   // A live A/B experiment this publish would have ended (review item 13): Len Watch, MCP, or a person whose publish raced a launch.
   if (err instanceof AbExperimentRunningError) return { status: 409, body: err.body };

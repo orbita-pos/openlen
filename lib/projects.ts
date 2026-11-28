@@ -931,6 +931,12 @@ export async function publishProject(
     const { ProjectIsToolError } = await import("@/lib/tools/errors");
     throw new ProjectIsToolError();
   }
+  // A THEME IS INSTALLED, NOT PUBLISHED (spec local 2026-11-27-temas-del-workspace, §4.5): same bottom door, with themes
+  // on or off — its /locale, /themes and preview page are never a website.
+  if ((project.data as { theme?: unknown } | null)?.theme) {
+    const { ProjectIsThemeError } = await import("@/lib/themes/errors");
+    throw new ProjectIsThemeError();
+  }
   // THE PERSON'S SPACE NEVER PUBLISHES (spec local 2026-11-19-agentes-para-todos, §6.2): same bottom door.
   if (isSpaceData(project.data as { space?: unknown } | null)) {
     const { ProjectIsSpaceError } = await import("@/lib/space/errors");

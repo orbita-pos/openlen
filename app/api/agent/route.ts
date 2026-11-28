@@ -1790,6 +1790,8 @@ async function correrTurno(
     // Len Watch works in a COPY of the project and writes in the parent's chat: what belongs to the project itself, like an
     // artifact's row, is refused there (spec local 2026-11-22-artifacts-de-len, §1).
     ...(proyectoDelChat !== projectId ? { inProjectCopy: true as const } : {}),
+    // Nobody started it in a chat (a scheduled task, Len Watch, «Hazlo», a goal round): `set_theme` refuses (ruling R24).
+    ...(opts.scheduled || opts.round ? { unattended: true as const } : {}),
     mode,
     app: appDelTurno,
     tool: toolDelTurno,

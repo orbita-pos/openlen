@@ -1502,6 +1502,9 @@ export interface AgentSession {
   /** A turn that works on a COPY of the project (a Len Watch turn in its worktree, spec local 2026-10-31-len-watch):
    *  what belongs to the project itself, like an artifact's row (spec local 2026-11-22-artifacts-de-len, §1), is refused. */
   inProjectCopy?: true;
+  /** Nobody started this turn in a chat (a scheduled task, Len Watch, «Hazlo», a goal round): set by the route. What only
+   *  changes how OpenLen looks to a person (`set_theme`, ruling R24) is refused. Absent in a turn a person started. */
+  unattended?: true;
   /** Una línea que va delante de la salida del siguiente comando: la terminal de
    *  este turno es la limitada (o la caja se paró). Se dice una vez. */
   sandboxNotice?: string;
@@ -2943,6 +2946,16 @@ async function toolPublicar(
 
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: { ok: false, error: "project not found" } };
+  // A THEME WITH THEMES OFF (ruling R22): not installed, and still never a website — the bottom door refuses it too.
+  if (row.data.theme) {
+    return {
+      response: {
+        ok: false,
+        error: "project_is_theme",
+        message: "This project is a workspace theme: it is installed, never published as a website, and themes are off on this server right now, so nothing was installed or published.",
+      },
+    };
+  }
 
   // UNA APP QUE NO COMPILA NO SE PUBLICA (F3): `publishToDir` la rechazaría
   // después del botón, con el dueño mirando. Se dice ANTES, a Len, con lo que

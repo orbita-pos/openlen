@@ -85,6 +85,25 @@ describe("set_theme", () => {
     expect(choose).not.toHaveBeenCalled();
   });
 
+  // Ruling R24: a theme changes a person's view only in a turn they started.
+  it.each([
+    ["a server-started turn (scheduled task, Len Watch, «Hazlo», a goal round)", { unattended: true }],
+    ["a turn an agent's message woke", { wokenByAgent: true }],
+    ["a turn on a copy of the project", { inProjectCopy: true }],
+  ])("refuses in %s, and nothing is read or saved", async (_label, extra) => {
+    const { d, choose } = deps();
+    const out = await runSetTheme({ ...owner, ...extra } as AgentSession, { theme: "bundled:honu-lagoon", scope: "everywhere" }, d);
+    expect(out.response).toMatchObject({ error: "unattended" });
+    expect(choose).not.toHaveBeenCalled();
+    expect(d.available).not.toHaveBeenCalled();
+  });
+
+  it("the person's own assistant, talking with its owner, may apply one", async () => {
+    const { d } = deps();
+    const session = { ...owner, assistant: { id: "a1" } } as unknown as AgentSession;
+    expect((await runSetTheme(session, { theme: "bundled:honu-lagoon", scope: "everywhere" }, d)).response).toEqual({ applied: "bundled:honu-lagoon", scope: "everywhere" });
+  });
+
   it("is declared with themes on, and not with OPENLEN_THEMES=0", () => {
     expect(buildFunctionDeclarations({}).map((x) => x.name)).toContain(SET_THEME);
     expect(buildFunctionDeclarations({ OPENLEN_THEMES: "0" }).map((x) => x.name)).not.toContain(SET_THEME);
@@ -121,6 +140,14 @@ describe("publish in a theme project", () => {
     const problems = [{ code: "script", file: "/themes/scene.svg" }];
     const out = await publishTheme(owner, async () => ({ status: 422, body: { error: "theme_manifest_invalid", problems } }));
     expect(out.response).toMatchObject({ ok: false, error: "theme_manifest_invalid", problems });
+  });
+
+  it("🔴 with themes off, Len's `publish` in a theme project refuses: it is never published as a website", async () => {
+    const loadProject = vi.fn(async () => ({ data: { html: "<p>preview</p>", theme: { bornAt: "2026-11-27T00:00:00Z" } } }));
+    const out = await runAgentTool({ ...owner } as AgentSession, { loadProject, saveProjectData: vi.fn() } as unknown as AgentDeps, "publish", {});
+    expect(out.response).toMatchObject({ ok: false, error: "project_is_theme" });
+    expect(String(out.response.message)).toContain("never published");
+    expect(out.confirm).toBeUndefined();
   });
 
   it("Len's `publish` takes that road in a theme project, and never loads the project to publish it", async () => {
