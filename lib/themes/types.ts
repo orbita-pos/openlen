@@ -91,3 +91,23 @@ export interface ThemeDefinition {
   titles: Record<string, string>;
   blurbs: Record<string, string>;
 }
+
+/**
+ * A `ThemeDefinition` as a release keeps it (`themeReleases.themes`): the same theme, but its `scene` holds the CHECKED
+ * SVG TEXT (what `checkScene` returned, with the reduced-motion rule added when it was missing) and not the path the
+ * manifest named. Nothing at serve time goes back to the project's files: the version is all there is.
+ */
+export interface StoredThemeDefinition extends Omit<ThemeDefinition, "scene"> {
+  /** The scene's checked SVG source, not a path. */
+  scene?: string;
+}
+
+/** The `scope` of a choice that holds for all of a person's OpenLen; any other scope is a project's id. */
+export const EVERYWHERE_SCOPE = "everywhere";
+
+/** A person's picks, as `themeRefs` (`bundled:<id>` or `installed:<installationId>:<themeId>`): the one for this project
+ *  and the one for everywhere. Which wins, and what falls back when a ref no longer resolves, is the resolver's to say. */
+export interface ThemeChoices {
+  project: string | null;
+  everywhere: string | null;
+}

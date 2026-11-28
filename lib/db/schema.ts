@@ -2860,6 +2860,55 @@ export const toolInstallations = pgTable(
   ],
 );
 
+/** WORKSPACE THEMES (spec local 2026-11-27-temas-del-workspace, §12.1): an installed version of a theme project, immutable
+ *  and content-addressed. Its scenes are CHECKED SVG TEXT inside `themes` — no file is read again when one is served.
+ *  Tables of their own and not `toolInstallations`: a theme has no app to bundle, no functions, no data to migrate.
+ *  `npm run themes:migrate`. */
+export const themeReleases = pgTable("themeReleases", {
+  sha: text("sha").primaryKey(),
+  projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  /** The manifest's themes, checked; each `scene` is the SVG source (`StoredThemeDefinition`). */
+  themes: jsonb("themes").$type<import("@/lib/themes/types").StoredThemeDefinition[]>().notNull(),
+  /** What each scene costs the screen (`checkScene`), by theme id; a theme without a scene has no entry. */
+  costs: jsonb("costs").$type<Record<string, import("@/lib/themes/scene-check").SceneCost>>().notNull().default({}),
+  /** The glass opacity the contrast gate raised for a theme (by id), over the one its manifest declared; absent = as declared. */
+  glassAdjusted: jsonb("glassAdjusted").$type<Record<string, number>>().notNull().default({}),
+  createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+});
+
+/** A theme project installed for a person: one row per person and project. Removing keeps the row (a reinstall brings
+ *  it back); installing again moves it to the new version. */
+export const themeInstallations = pgTable(
+  "themeInstallations",
+  {
+    id: text("id").primaryKey(),
+    personId: text("personId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    releaseSha: text("releaseSha").notNull(),
+    installedAt: timestamp("installedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+    removedAt: timestamp("removedAt", { mode: "date", withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("themeInstallations_person_project_idx").on(t.personId, t.projectId),
+    index("themeInstallations_personId_idx").on(t.personId),
+  ],
+);
+
+/** The theme a person picked: for all their OpenLen (`scope` = "everywhere") or for one project (`scope` = its id). No
+ *  foreign key on `scope` — it is not always a project — so a deleted project leaves its pick behind, harmlessly: nothing
+ *  asks for that scope again. The more specific pick wins. `themeRef` is `bundled:<id>` or `installed:<installationId>:<themeId>`. */
+export const workspaceThemeChoices = pgTable(
+  "workspaceThemeChoices",
+  {
+    personId: text("personId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    scope: text("scope").notNull(),
+    themeRef: text("themeRef").notNull(),
+    updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.personId, t.scope] })],
+);
+
 /** AN APP INSTALLED ON THE DESKTOP (spec local 2026-11-26-apps-en-el-escritorio, §4.2): a frozen release of an app
  *  project, opened in a window of its own as a PWA from openlen.com. One row per person and project; removing keeps the
  *  row, the host label is fixed for its life, and its release lives in `toolReleases`. `npm run desktop-apps:migrate`. */

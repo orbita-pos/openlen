@@ -175,6 +175,10 @@ const targets = [
   // Apps on the desktop: the desktopApps table (spec local 2026-11-26-apps-en-el-escritorio, §4.2). Aditiva e
   // idempotente. 🔴 OBLIGATORIA antes que el código: sin ella, «Instalar en el escritorio» falla al guardar.
   "desktop-apps-migrate",
+  // Workspace themes: themeReleases, themeInstallations and workspaceThemeChoices (spec local 2026-11-27-temas-del-workspace).
+  // Aditiva e idempotente. 🔴 OBLIGATORIA antes que el código: sin ella, instalar un tema falla al guardar y el workspace no
+  // encuentra la elección de la persona.
+  "themes-migrate",
   // Los datos en borrador y producción: la tabla projectBackendEnvironments y,
   // para cada base de antes, su entorno de siempre. Aditiva e idempotente; va
   // después de `pages-backend-migrate` porque lee projectBackends. 🔴
