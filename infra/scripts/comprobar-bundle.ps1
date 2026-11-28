@@ -126,7 +126,8 @@ Write-Host "[D] Comprobando que la galeria de temas va entera en el standalone..
 
 $indice = "lib/themes/bundled/index.ts"
 if (-not (Test-Path $indice)) { throw "No hay $indice — la galeria de temas no esta generada (npm run themes:bundle)." }
-$nombradas = @(Select-String -Path $indice -Pattern '^\s*scene:\s*"([A-Za-z0-9_-]+\.svg)",' -AllMatches | ForEach-Object { $_.Matches[0].Groups[1].Value })
+# Los ficheros DISTINTOS: dos temas pueden compartir una escena, y eso es un fichero, no dos.
+$nombradas = @(Select-String -Path $indice -Pattern '^\s*scene:\s*"([A-Za-z0-9_-]+\.svg)",' -AllMatches | ForEach-Object { $_.Matches[0].Groups[1].Value } | Sort-Object -Unique)
 $carpetaGaleria = Join-Path $raizStandalone "lib/themes/bundled"
 $enStandalone = @()
 if (Test-Path $carpetaGaleria) { $enStandalone = @(Get-ChildItem $carpetaGaleria -Filter "*.svg" -File | ForEach-Object { $_.Name }) }

@@ -21,6 +21,12 @@ import { stillScene } from "./scene-check";
 export const MEASURE_VIEWPORT = { width: 1280, height: 800 } as const;
 /** The columns Len's panel covers in that window: from the rail's right edge to the panel's. */
 export const CHAT_STRIP = { from: 64, to: 444 } as const;
+/**
+ * The meter's version: part of the key a reinstall reuses a measurement by (`install.ts`). 🔴 Bump it whenever what a
+ * measurement means changes — `CHAT_STRIP`, `MEASURE_VIEWPORT`, or how the still is made (`stillScene`) — so a changed
+ * meter measures again instead of reusing colours taken the old way.
+ */
+export const METER_VERSION = 1;
 
 /** The most one scene's page waits for anything on its own; the installer's overall deadline is what bounds a whole install. */
 const PAGE_TIMEOUT_MS = 15_000;

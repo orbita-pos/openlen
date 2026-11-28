@@ -145,7 +145,8 @@ try {
     const under = await meter.under(checked.svg);
     if (under === null) fail(`${t.id}: its still could not be measured`);
     // A tint with which no opacity lets the main text read is ignored for the workspace's own surface (`fitThemeGlass`).
-    const fit = fitThemeGlass({ window: t.window }, t.glass, under);
+    // The whole theme, as an install passes it: its own palette (`colors`) is what its text is.
+    const fit = fitThemeGlass(t, t.glass, under);
     if (fit.tintIgnored) console.warn(`themes:bundle: ${t.id}: its tint cannot carry the text; the workspace's own surface is used`);
     if (fit.ratio < READABLE) console.warn(`themes:bundle: ${t.id}: ${GLASS_INKS[fit.ink]} still reads ${fit.ratio.toFixed(2)}:1 at ${fit.opacity}`);
     gate.set(t.id, { under, raised: fit.opacity > t.glass.opacity ? fit.opacity : undefined, tintIgnored: fit.tintIgnored });

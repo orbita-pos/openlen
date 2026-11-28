@@ -14,7 +14,7 @@ import type { ProjectData } from "@/lib/projects/types";
 import { GLASS_INKS, READABLE, fitThemeGlass, paletteWarnings, type ContrastWarning } from "./contrast";
 import { readThemeManifest } from "./manifest";
 import { checkScene, type SceneCost, type SceneProblem } from "./scene-check";
-import type { SceneMeter } from "./measure-under";
+import { METER_VERSION, type SceneMeter } from "./measure-under";
 import type { ThemeInstallationRow, ThemeReleaseInput } from "./store";
 import type { StoredThemeDefinition } from "./types";
 
@@ -97,8 +97,10 @@ export function themeReleaseSha(projectId: string, release: Pick<ThemeReleaseInp
     .digest("hex");
 }
 
-/** What names a scene's measurement: its checked SVG, byte for byte. */
-const sceneKey = (svg: string): string => createHash("sha256").update(svg, "utf8").digest("hex");
+/** What names a scene's measurement: the meter's version and its checked SVG, byte for byte — a changed meter
+ *  (`METER_VERSION`) names every scene anew, so nothing measured the old way is reused. */
+export const sceneKey = (svg: string, meterVersion: number = METER_VERSION): string =>
+  createHash("sha256").update(`openlen-scene-meter:${meterVersion}\n`, "utf8").update(svg, "utf8").digest("hex");
 
 const MEASURE_DEADLINE_MS = 60_000;
 /** After the deadline, how long closing the browser is waited for; it goes on in the background past this. */

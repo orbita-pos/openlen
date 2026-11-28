@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { themesEnabled } from "./enabled";
-import { installTheme, removeTheme, type ThemeInstallDeps } from "./install";
+import { installTheme, removeTheme, sceneKey, type ThemeInstallDeps } from "./install";
 import { REDUCED_MOTION_RULE } from "./scene-check";
 import type { ThemeInstallationRow } from "./store";
 
@@ -350,6 +350,20 @@ describe("a measure that failed does not stick (R12b)", () => {
     expect(m.under.mock.calls[0]![0]).toContain("#221144");
     expect(r.body.contrastWarnings).toEqual([{ themeId: "estanque-noche", code: "glass_unmeasured" }]);
     expect(saved(second).glassAdjusted["estanque"]).toBe(saved(first).glassAdjusted["estanque"]);
+  });
+
+  it("a measurement taken by another version of the meter is not reused: the scene is measured again", async () => {
+    const first = deps({ openMeter: meter(async () => "#000000").openMeter });
+    await install(first);
+    const now = saved(first).measured;
+    // The same scenes, as an older meter would have keyed them.
+    const svgs = saved(first).themes.map((t) => t.scene!);
+    expect(Object.keys(now).sort()).toEqual(svgs.map((svg) => sceneKey(svg)).sort());
+    const old = Object.fromEntries(svgs.map((svg) => [sceneKey(svg, 0), "#ffffff"]));
+    expect(Object.keys(old).some((k) => Object.hasOwn(now, k))).toBe(false);
+    const m = meter(async () => "#000000");
+    await install(deps({ openMeter: m.openMeter, previousMeasurements: vi.fn(async () => old) }));
+    expect(m.under).toHaveBeenCalledTimes(2);
   });
 
   it("a store that cannot say what was measured before is the same as nothing measured", async () => {
