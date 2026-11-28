@@ -148,9 +148,20 @@
   }
 }
 
-/* El lienzo, con tema: su color encima de una base OPACA (`--bg-preview-base`), por si una paleta le diera un color con
-   transparencia. La escena no asoma nunca detrás de la página. */
-.workspace-v2[data-theme-layer] .bg-preview-a {
+/* La zona de la vista previa (`data-glass-margin`, `preview-area.tsx`): con tema, sus MÁRGENES alrededor de la página
+   dejan ver la escena (spec §4.3, «los márgenes alrededor del lienzo»), y sus dos filas de controles son cristal
+   (`data-glass-surface`). Sólo su propio fondo se vuelve transparente: no se tocan los tokens, así que las lentes que la
+   tapan entera (Código, una herramienta, un artifact: `bg-app`) siguen opacas. La PÁGINA no: su marco pinta un fondo
+   opaco propio (`pageBg` sobre blanco), así que una página sin fondo tampoco deja asomar la escena. Visto por Jesús en
+   el navegador el 27/11: toda la zona salía opaca. */
+.workspace-v2[data-theme-layer] [data-glass-margin] {
+  background-color: transparent;
+  background-image: none;
+}
+
+/* Las demás superficies del lienzo (el aviso de cargando, la página no disponible): su color encima de una base
+   OPACA (`--bg-preview-base`), por si una paleta le diera un color con transparencia. */
+.workspace-v2[data-theme-layer] .bg-preview-a:not([data-glass-margin]) {
   background-color: var(--bg-preview-base);
   background-image: linear-gradient(var(--bg-preview), var(--bg-preview));
 }

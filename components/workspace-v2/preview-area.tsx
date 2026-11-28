@@ -954,7 +954,10 @@ export function PreviewArea({
     // algo que no está resuelto, y el contenedor del lienzo llega a medirse
     // con altura CERO. Ahí `(0 - 24) / 800` da -3% y el lienzo sale en negro.
     // No aparecía ni una vez en este fichero.
+    // `data-glass-margin`: with a workspace theme the margins around the page show the scene and the two control rows
+    // are glass (`data-glass-surface`); the page's own frame stays opaque (tokens.css).
     <section
+      data-glass-margin=""
       className="relative flex flex-col flex-1 min-w-0 min-h-0 bg-preview-a"
       style={reservaDerecha > 0 ? { paddingRight: reservaDerecha } : undefined}
     >
@@ -969,7 +972,7 @@ export function PreviewArea({
           vive en el cálculo de `fitScale` unas líneas más arriba, y su propio
           comentario dice que el fallo era anterior a la fila: ésta sólo lo
           destapó. */}
-      <div className="relative z-20 h-10 shrink-0 px-2.5 grid grid-cols-[auto_1fr_auto] items-center gap-2 border-b bd bg-app/85 backdrop-blur">
+      <div data-glass-surface="" className="relative z-20 h-10 shrink-0 px-2.5 grid grid-cols-[auto_1fr_auto] items-center gap-2 border-b bd bg-app/85 backdrop-blur">
         {/* LA LENTE, CON SU NOMBRE. Aquí sí lleva texto: es lo primero que se
             lee de la barra y decide qué enseña el resto de la pantalla, así que
             un icono a secas obligaría a adivinar. El conmutador de dispositivo
@@ -1087,7 +1090,7 @@ export function PreviewArea({
           sobre el código o la terminal, cambiar de móvil a tablet no encuadra
           nada, y una fila entera de controles muertos es peor que su ausencia. */}
       {lente === "pagina" && !deliverableStage && (
-        <div className="relative z-10 h-9 shrink-0 flex items-center justify-center gap-2 border-b bd bg-app/60">
+        <div data-glass-surface="" className="relative z-10 h-9 shrink-0 flex items-center justify-center gap-2 border-b bd bg-app/60">
           <Segmented<Device>
             size="sm"
             value={device}
@@ -1411,7 +1414,9 @@ export function PreviewArea({
         >
           <div
             className="rounded-xl ring-1 ring-[color:var(--border)] overflow-hidden shadow-card relative"
-            style={{ height: 800 * scale, background: pageBg }}
+            // White UNDER the page's colour: a `--ol-bg` with transparency (or none) never lets a workspace theme's
+            // scene show through the client's page.
+            style={{ height: 800 * scale, backgroundColor: "#ffffff", backgroundImage: `linear-gradient(${pageBg}, ${pageBg})` }}
           >
             <iframe
               key={`${previewUrl ?? docKey ?? doc.slice(0, 120)}:${refreshTick}:${modoRemoto ? "remoto" : "local"}`}

@@ -381,8 +381,20 @@ describe("the client's canvas stays opaque", () => {
     }
   });
 
+  it("the preview's margins show the scene, its control rows are glass, and the page's frame keeps a white base", () => {
+    // Only the zone's own background goes: no token is redefined, so the lenses that cover it (bg-app) stay opaque.
+    const margin = /\.workspace-v2\[data-theme-layer\] \[data-glass-margin\]\s*\{([^}]*)\}/.exec(tokens);
+    expect(margin).not.toBeNull();
+    expect(margin![1]).toMatch(/background-color:\s*transparent/);
+    expect(margin![1]).not.toMatch(/--bg/);
+    const preview = readFileSync(join(repo, "components/workspace-v2/preview-area.tsx"), "utf8");
+    expect(preview).toMatch(/<section\s+data-glass-margin=""\s+className="relative flex flex-col[^"]*bg-preview-a"/);
+    expect([...preview.matchAll(/<div data-glass-surface="" className="relative z-(20|10) h-(10|9) /g)]).toHaveLength(2);
+    expect(preview).toMatch(/backgroundColor: "#ffffff", backgroundImage: `linear-gradient\(\$\{pageBg\}, \$\{pageBg\}\)`/);
+  });
+
   it("under a theme the canvas paints an opaque base below its own colour, whatever a palette says", () => {
-    expect(tokens).toMatch(/\.workspace-v2\[data-theme-layer\] \.bg-preview-a\s*\{[^}]*background-color:\s*var\(--bg-preview-base\)/);
+    expect(tokens).toMatch(/\.workspace-v2\[data-theme-layer\] \.bg-preview-a:not\(\[data-glass-margin\]\)\s*\{[^}]*background-color:\s*var\(--bg-preview-base\)/);
     // The base is a token of both windows, the same values as `--bg-preview`, and no palette can name it.
     expect(tokens).toMatch(/\.workspace-v2 \{[^}]*--bg-preview-base:\s*oklch\(96\.4% 0\.004 12\)/);
     expect(tokens).toMatch(/\.dark \.workspace-v2 \{[^}]*--bg-preview-base:\s*oklch\(10% 0\.01 12\)/);
@@ -515,7 +527,7 @@ describe("the client's canvas stays opaque", () => {
   it("the canvas is `bg-preview-a` and the page's frame paints the page's own ground", () => {
     const area = readFileSync(join(repo, "components/workspace-v2/preview-area.tsx"), "utf8");
     expect(area).toContain('className="relative flex flex-col flex-1 min-w-0 min-h-0 bg-preview-a"');
-    expect(area).toMatch(/style=\{\{ height: 800 \* scale, background: pageBg \}\}/);
+    expect(area).toMatch(/style=\{\{ height: 800 \* scale, backgroundColor: "#ffffff", backgroundImage: `linear-gradient\(\$\{pageBg\}, \$\{pageBg\}\)` \}\}/);
     expect(area).toMatch(/\|\| "#ffffff"/);
   });
 
