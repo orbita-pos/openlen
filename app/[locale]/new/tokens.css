@@ -75,6 +75,50 @@
   --link:          oklch(74% 0.13 255);
 }
 
+/* LOS TEMAS DEL WORKSPACE (spec local 2026-11-27-temas-del-workspace, §4.3): la capa que pinta la escena detrás del
+   taller (`components/workspace-v2/theme/theme-backdrop.tsx`) marca la raíz y pone sus variables en el `style`; estas
+   reglas son lo que leen esas marcas.
+
+   `data-theme-layer` — hay escena o fondo quieto. La capa es `position: fixed` con `z-index: -1`; `isolation` hace de
+   la raíz su contexto de apilamiento, así que la capa queda ENCIMA del fondo propio de la raíz y DEBAJO de todo lo
+   demás, y no se va detrás del `body`. */
+.workspace-v2[data-theme-layer] {
+  isolation: isolate;
+}
+
+/* `data-theme-glass` — el cristal de Claude Code: las tres superficies del taller pasan a ser el tinte del tema a su
+   opacidad sobre la escena. 🔴 NUNCA `--bg-preview`: el lienzo de la página del cliente sigue opaco (Review Focus 5).
+   Va también con `.dark` delante porque `.dark .workspace-v2` pesa lo mismo que `.workspace-v2[data-theme-glass]` y
+   está antes en el fichero, pero no conviene depender del orden. */
+.workspace-v2[data-theme-glass],
+.dark .workspace-v2[data-theme-glass] {
+  --bg:         color-mix(in oklch, var(--glass-tint) calc(var(--glass-opacity) * 100%), transparent);
+  --bg-sidebar: color-mix(in oklch, var(--glass-tint) calc(var(--glass-opacity) * 100%), transparent);
+  --bg-elev:    color-mix(in oklch, var(--glass-tint) calc(var(--glass-opacity) * 100%), transparent);
+}
+
+/* El desenfoque, en las superficies que pintan esos tres fondos: riel y paneles (`bg-side`), barra y página del taller
+   (`bg-app`), menús y tarjetas (`bg-elev`). Medido el 2026-11-27: lo que cuesta frames es la escena, no el blur. */
+.workspace-v2[data-theme-glass] :is(.bg-app, .bg-side, .bg-elev) {
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+/* El lienzo, con tema: su color encima de una base OPACA (los valores de `--bg-preview` de arriba), por si una paleta
+   le diera un color con transparencia. La escena no asoma nunca detrás de la página. */
+.workspace-v2[data-theme-layer] .bg-preview-a {
+  background-color: oklch(96.4% 0.004 12);
+  background-image: linear-gradient(var(--bg-preview), var(--bg-preview));
+}
+.dark .workspace-v2[data-theme-layer] .bg-preview-a {
+  background-color: oklch(10% 0.01 12);
+}
+
+/* `data-theme-font` — la fuente genérica que pide el tema (`--theme-font`, una de las pilas de `FONT_STACKS`). */
+.workspace-v2[data-theme-font] {
+  font-family: var(--theme-font);
+}
+
 /* 🔴 EL VELO DE UN DIÁLOGO, Y POR QUÉ NO PODÍA SER UNA UTILIDAD DE TAILWIND.
    
    `.workspace-v2` pinta su propio fondo (`background: var(--bg)`, arriba). El

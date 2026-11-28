@@ -79,6 +79,18 @@ describe("GET /api/themes", () => {
     expect((await get("?project=secret")).status).toBe(200);
   });
 
+  it("with ?preview=, adds the theme it names as the layer would paint it, and saves nothing", async () => {
+    world.deps = fakeDeps({ choices: { project: null, everywhere: "bundled:aurora" } });
+    const body = await (await get("?locale=en&preview=bundled%3Ahalftone-dawn")).json();
+    expect(body.resolved).toMatchObject({ ref: "bundled:aurora" });
+    expect(body.previewed.resolved).toMatchObject({ ref: "bundled:halftone-dawn", window: "light" });
+    expect(body.previewed.twin).toMatchObject({ ref: "bundled:halftone-dusk", window: "dark" });
+    expect((world.deps as ThemeDeps).setChoice).not.toHaveBeenCalled();
+    expect((await (await get("?preview=bundled%3Anothing")).json()).previewed).toBeNull();
+    expect((await (await get(`?preview=${"x".repeat(600)}`)).json()).previewed).toBeNull();
+    expect("previewed" in (await (await get()).json())).toBe(false);
+  });
+
   it("takes a language it can read and English for anything else", async () => {
     const title = async (query: string) => (await (await get(query)).json()).available.find((a: { ref: string }) => a.ref === "bundled:aurora").title;
     // The gallery has English only, so this checks that nothing breaks and the fallback holds.

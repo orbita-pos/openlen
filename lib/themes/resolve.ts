@@ -304,6 +304,24 @@ export async function themeState(personId: string, projectId: string | null, loc
   return { applied, resolved: theme, twin, available };
 }
 
+/**
+ * A theme the person wants to SEE before picking it (the picker's «Vista previa», like `/custom-theme`'s preview): the
+ * same theme the layer would get if it were picked, and its twin — nothing is saved. Null when the ref is not one the
+ * person can use right now, without saying which way.
+ */
+export async function previewTheme(
+  personId: string,
+  ref: string,
+  locale: string,
+  deps?: ThemeDeps,
+): Promise<{ theme: ResolvedTheme; twin: ResolvedTheme | null } | null> {
+  const d = deps ?? (await realThemeDeps());
+  const entry = await new Catalog(d, personId).find(ref);
+  if (!entry) return null;
+  const twin = twinOf(entry);
+  return { theme: toResolved(entry, locale), twin: twin ? toResolved(twin, locale) : null };
+}
+
 // ─── choosing ────────────────────────────────────────────────────────────────
 
 export type ChooseThemeResult = { ok: true } | { ok: false; error: "unknown_theme" | "no_access" };

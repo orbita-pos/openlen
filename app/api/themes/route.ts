@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { auth } from "@/auth";
 import { themesEnabled } from "@/lib/themes/enabled";
-import { chooseTheme, realThemeDeps, themeState } from "@/lib/themes/resolve";
+import { chooseTheme, previewTheme, realThemeDeps, themeState } from "@/lib/themes/resolve";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,13 +16,14 @@ const json = (body: unknown, status = 200) =>
 
 const LOCALE = /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/;
 const PROJECT_ID_MAX = 200;
+const REF_MAX = 500;
 
 const Body = z
   .object({
     scope: z.enum(["everywhere", "project"]),
     projectId: z.string().min(1).max(PROJECT_ID_MAX).optional(),
     // Any string a person could send: a ref that is not one of theirs is the 404 below, not a malformed body.
-    themeRef: z.string().max(500).nullable(),
+    themeRef: z.string().max(REF_MAX).nullable(),
   })
   .refine((b) => b.scope === "everywhere" || b.projectId !== undefined, { message: "projectId is required for scope «project»", path: ["projectId"] });
 
@@ -32,10 +33,16 @@ export async function GET(req: Request): Promise<Response> {
   if (!userId) return json({ error: "unauthorized" }, 401);
   const params = new URL(req.url).searchParams;
   const project = params.get("project");
-  const locale = params.get("locale") ?? "";
-  return json(
-    await themeState(userId, project && project.length <= PROJECT_ID_MAX ? project : null, LOCALE.test(locale) && locale.length <= 16 ? locale : "en", await realThemeDeps()),
-  );
+  const rawLocale = params.get("locale") ?? "";
+  const locale = LOCALE.test(rawLocale) && rawLocale.length <= 16 ? rawLocale : "en";
+  const deps = await realThemeDeps();
+  const state = await themeState(userId, project && project.length <= PROJECT_ID_MAX ? project : null, locale, deps);
+  // «Vista previa»: the theme a ref names, as the layer would paint it, saved nowhere (only this tab shows it). A ref
+  // that is not the person's to use previews nothing.
+  const preview = params.get("preview");
+  if (preview === null) return json(state);
+  const previewed = preview.length <= REF_MAX ? await previewTheme(userId, preview, locale, deps) : null;
+  return json({ ...state, previewed: previewed && { resolved: previewed.theme, twin: previewed.twin } });
 }
 
 export async function PUT(req: Request): Promise<Response> {

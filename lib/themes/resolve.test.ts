@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { BUNDLED_THEMES } from "./bundled";
 import { WORKSPACE_COLORS } from "./contrast";
-import { chooseTheme, resolveTheme, themeState, type ThemeDeps } from "./resolve";
+import { chooseTheme, previewTheme, resolveTheme, themeState, type ThemeDeps } from "./resolve";
 import type { ThemeInstallationRow, ThemeRelease } from "./store";
 import type { StoredThemeDefinition, ThemeChoices } from "./types";
 
@@ -339,6 +339,22 @@ describe("themeState: what the picker shows", () => {
     const d = deps();
     await themeState("u1", null, "en", d);
     expect(d.canSee).not.toHaveBeenCalled();
+  });
+});
+
+describe("previewTheme", () => {
+  it("the theme a ref names and its twin, as the layer gets them, whatever is picked", async () => {
+    const d = deps({ choices: { project: null, everywhere: "bundled:aurora" } });
+    const previewed = await previewTheme("u1", POND, "en", d);
+    expect(previewed?.theme.ref).toBe(POND);
+    expect(previewed?.twin?.ref).toBe(NIGHT_POND);
+    expect(d.setChoice).not.toHaveBeenCalled();
+  });
+
+  it("null for a ref that is not the person's to use", async () => {
+    expect(await previewTheme("u2", POND, "en", deps())).toBeNull();
+    expect(await previewTheme("u1", "bundled:nothing", "en", deps())).toBeNull();
+    expect(await previewTheme("u1", "not a ref", "en", deps())).toBeNull();
   });
 });
 

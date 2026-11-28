@@ -122,6 +122,7 @@ import {
 } from "@/components/workspace-v2/replace-asset-modal";
 import { OriginalRestoreModal } from "@/components/workspace-v2/original-restore-modal";
 import { TopBar } from "@/components/workspace-v2/top-bar";
+import { ThemeBackdrop } from "@/components/workspace-v2/theme/theme-backdrop";
 import { useArtifacts } from "@/components/workspace-v2/artifacts/use-artifacts";
 import { ArtifactStage } from "@/components/workspace-v2/artifacts/artifact-stage";
 import { ArtifactViewer } from "@/components/workspace-v2/artifacts/artifact-viewer";
@@ -3652,6 +3653,8 @@ function NewV2Inner() {
   return (
     <WorkspaceArtifactsContext.Provider value={workspaceArtifacts}>
     <div className="workspace-v2 h-full flex flex-col">
+      {/* El tema del workspace: la escena detrás, el cristal encima. Marca este div y nada más (theme-backdrop.tsx). */}
+      <ThemeBackdrop projectId={loadedProjectId} />
       {/* SIN PROYECTO NO HAY BARRA (06/11, Jesús, sobre la de Gemini: «/new y / quiero que sea compartido»): la
           pantalla de inicio es la de la portada, con su rail a la izquierda (`StartRail`, abajo) y una fila ligera
           arriba. La barra habla sólo del proyecto. */}
