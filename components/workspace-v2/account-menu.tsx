@@ -25,6 +25,7 @@ import { LocaleSwitcher } from "@/components/locale-switcher";
 import { Link } from "@/i18n/navigation";
 import { ICONO_BARRA, Moon, Sun, Volume2, VolumeX } from "./icons";
 import { Tooltip } from "./ui";
+import { useForcedThemeWindow } from "./theme/use-forced-theme-window";
 
 interface AccountMenuProps {
   dark: boolean;
@@ -59,6 +60,8 @@ export function AccountMenu({
   // `wsChrome` NO FALLA: next-intl devuelve la ruta de la clave, así que el
   // menú salía con «wsChrome.account.editorSound» de etiqueta.
   const t = useTranslations("topbar");
+  // The window a workspace theme is forcing, if any: only for the toggle's hint (`use-forced-theme-window.ts`).
+  const forcedWindow = useForcedThemeWindow();
   const locale = useLocale();
   const { data: session } = useSession();
   const [open, setOpen] = useState(false);
@@ -239,9 +242,15 @@ export function AccountMenu({
             <LocaleSwitcher className="w-full" />
           </div>
 
+          {/* The icon and the words are the person's OWN setting — what a click changes — even while a workspace theme
+              forces the other window; then the button only says why (Claude Code keeps the user's setting and the
+              theme overrides only the window). */}
           <button
             type="button"
             onClick={onToggleDark}
+            data-theme-forced={forcedWindow ?? undefined}
+            title={forcedWindow ? t(forcedWindow === "dark" ? "theme.forcedDark" : "theme.forcedLight") : undefined}
+            aria-description={forcedWindow ? t(forcedWindow === "dark" ? "theme.forcedDark" : "theme.forcedLight") : undefined}
             className="flex items-center gap-2.5 w-full text-left px-2.5 py-2 border-b bd text-[12.5px] fg hover:bg-hover transition"
           >
             {dark ? (

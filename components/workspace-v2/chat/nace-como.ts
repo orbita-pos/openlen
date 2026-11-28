@@ -4,40 +4,43 @@
 
 import { spaceHref } from "@/lib/space/href";
 
-/** What a first message asks the blank project to be born as, besides a page: an app, a tool (spec local
- *  2026-11-04-herramientas-hechas-por-len), a game (spec local 2026-11-05-modo-juego-design) or a workspace theme
- *  (spec local 2026-11-27-temas-del-workspace — no app at all, but it travels the same way: `naceComo` and the
- *  language). A page is born as always, with nothing. */
-export type NaceComoApp = "app" | "tool" | "game" | "theme";
+/** What a first message asks the blank project to be born as, besides a page — each a SKELETON the project gets before
+ *  Len reads anything: an app, a tool (spec local 2026-11-04-herramientas-hechas-por-len), a game (spec local
+ *  2026-11-05-modo-juego-design) or a workspace theme (spec local 2026-11-27-temas-del-workspace — no app at all, but it
+ *  travels the same way: `naceComo` and the language). A page is born as always, with nothing. */
+export type NaceComoConEsqueleto = "app" | "tool" | "game" | "theme";
 
-const COMO_APP: readonly string[] = ["app", "tool", "game", "theme"] satisfies readonly NaceComoApp[];
+const COMO_CON_ESQUELETO: readonly string[] = ["app", "tool", "game", "theme"] satisfies readonly NaceComoConEsqueleto[];
 
 /** What the home's pill can choose: what a project is born as, or an agent of the person's own (spec local
  *  2026-11-19-agentes-para-todos, §6.3) — which goes to their space and is never a way a project is born. */
-export type StartKind = "pagina" | NaceComoApp | "agent";
+export type StartKind = "pagina" | NaceComoConEsqueleto | "agent";
 
 /** Lo que pide nacer como app —o como herramienta, o como juego—: la tarjeta, y el idioma de la interfaz. */
 export interface PideNacer {
-  readonly naceComo?: NaceComoApp;
+  readonly naceComo?: NaceComoConEsqueleto;
   readonly idioma?: string;
 }
 
 /** Los campos del cuerpo: `{ naceComo, idioma }` para una app, una herramienta o un juego, o nada si es una página
  *  (o un agente, que no nace como proyecto). */
 export function camposDeNacer(o: { readonly naceComo?: string; readonly idioma?: string } | null | undefined): PideNacer {
-  if (!o || !naceComoApp(o.naceComo)) return {};
+  if (!o || !naceComoConEsqueleto(o.naceComo)) return {};
   return { naceComo: o.naceComo, ...(o.idioma ? { idioma: o.idioma } : {}) };
 }
 
-/** Whether this first message makes the blank project an app (a tool and a game are apps too). */
-export function naceComoApp(v: string | null | undefined): v is NaceComoApp {
-  return typeof v === "string" && COMO_APP.includes(v);
+/** Whether this first message gives the blank project a skeleton (an app, a tool, a game or a theme), not a page. */
+export function naceComoConEsqueleto(v: string | null | undefined): v is NaceComoConEsqueleto {
+  return typeof v === "string" && COMO_CON_ESQUELETO.includes(v);
 }
 
 /** What the start page can really be born as: a game asked for (a stale `kind=game` link) while the server says
- *  games are off (OPENLEN_GAMES=0) is a page, which is what the server makes of it. */
-export function naceComoDisponible<T extends StartKind>(v: T, juegos: boolean): T | "pagina" {
-  return v === "game" && !juegos ? "pagina" : v;
+ *  games are off (OPENLEN_GAMES=0) is a page, which is what the server makes of it — and so is a theme while themes are
+ *  off (OPENLEN_THEMES=0: a plugin turned off has no commands). `temas` defaults to on, as `juegos` starts. */
+export function naceComoDisponible<T extends StartKind>(v: T, juegos: boolean, temas = true): T | "pagina" {
+  if (v === "game" && !juegos) return "pagina";
+  if (v === "theme" && !temas) return "pagina";
+  return v;
 }
 
 // LA PORTADA TAMBIÉN ELIGE (la píldora del input, `hero-kind-picker.tsx`): su
@@ -49,7 +52,7 @@ export const KIND_PARAM = "kind";
 
 /** Lo que dice la URL: `app`, `tool`, `game`, `theme` o `agent`; lo demás, o nada, es una página. */
 export function kindFromParam(v: string | null): StartKind {
-  return naceComoApp(v) ? v : v === "agent" ? "agent" : "pagina";
+  return naceComoConEsqueleto(v) ? v : v === "agent" ? "agent" : "pagina";
 }
 
 /** El enlace de la portada a /new: el brief escrito y, si no es una página, su `kind`. An agent goes to the person's

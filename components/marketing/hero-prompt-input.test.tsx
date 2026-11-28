@@ -26,6 +26,7 @@ vi.mock("@/i18n/navigation", () => ({
 }));
 vi.mock("next-auth/react", () => ({ useSession: () => ({ status }) }));
 vi.mock("@/components/workspace-v2/use-games-available", () => ({ useGamesAvailable: () => false }));
+vi.mock("@/components/workspace-v2/use-themes-available", () => ({ useThemesAvailable: () => true }));
 const transit = vi.hoisted(() => ({ left: [] as File[][], dropped: 0 }));
 const usage = vi.hoisted(() => ({ events: [] as [string, unknown][] }));
 vi.mock("@/lib/uso/cliente", () => ({

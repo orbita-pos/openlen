@@ -13,10 +13,14 @@ vi.mock("next-intl", () => ({
 }));
 const nav = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => nav }));
-// The tab's own store is the layer's (use-workspace-theme.ts, with its own tests): here only what the picker asks of it.
-const theme = vi.hoisted(() => ({ previewing: null as string | null, preview: vi.fn(), reload: vi.fn() }));
+// The tab's own store is the layer's (use-workspace-theme.ts, with its own tests): here only what the picker asks of it —
+// the preview and the reload, read directly, never `useWorkspaceTheme` (which would GET the themes a second time).
+const theme = vi.hoisted(() => ({ previewing: null as string | null, preview: vi.fn(), reload: vi.fn(), hook: vi.fn() }));
 vi.mock("@/components/workspace-v2/theme/use-workspace-theme", () => ({
-  useWorkspaceTheme: () => ({ resolved: null, twin: null, previewing: theme.previewing, preview: theme.preview, reload: theme.reload }),
+  useWorkspaceTheme: theme.hook,
+  useThemePreview: () => theme.previewing,
+  previewWorkspaceTheme: (ref: string | null) => theme.preview(ref),
+  reloadWorkspaceThemes: () => theme.reload(),
 }));
 
 import type { AvailableTheme } from "@/lib/themes/resolve";
@@ -66,6 +70,7 @@ beforeEach(() => {
   theme.previewing = null;
   theme.preview.mockReset();
   theme.reload.mockReset();
+  theme.hook.mockReset();
   nav.push.mockReset();
   fetchMock.mockReset();
   fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
@@ -114,6 +119,41 @@ describe("ThemesSection", () => {
     expect(document.body.textContent).toBe("");
   });
 
+  it("signed out (401) the section is not there either", async () => {
+    status = 401;
+    await render();
+    expect(document.querySelector("[data-themes]")).toBeNull();
+  });
+
+  it("makes ONE read of the themes: the layer's hook is never mounted here", async () => {
+    await render();
+    expect(theme.hook).not.toHaveBeenCalled();
+    expect(fetchMock.mock.calls.filter(([, init]) => ((init as RequestInit | undefined)?.method ?? "GET") === "GET")).toHaveLength(1);
+  });
+
+  it("a re-read that fails for a passing reason keeps the cards and says so in a line; the next good read clears it", async () => {
+    await render();
+    status = 500;
+    await act(async () => buttonIn(card(DAY), "themes.useEverywhere")!.click());
+    expect(card(DAY)).not.toBeNull();
+    expect(document.querySelector("[data-themes-stale]")?.textContent).toBe("themes.readFailed");
+    // A network error is the same passing failure.
+    fetchMock.mockImplementationOnce(async () => new Response(JSON.stringify({ ok: true })));
+    fetchMock.mockImplementationOnce(async () => Promise.reject(new Error("offline")));
+    await act(async () => buttonIn(card(DAY), "themes.useEverywhere")!.click());
+    expect(card(DAY)).not.toBeNull();
+    status = 200;
+    await act(async () => buttonIn(card(DAY), "themes.useEverywhere")!.click());
+    expect(document.querySelector("[data-themes-stale]")).toBeNull();
+  });
+
+  it("a re-read that answers 404 (themes turned off meanwhile) takes the section away", async () => {
+    await render();
+    status = 404;
+    await act(async () => buttonIn(card(DAY), "themes.useEverywhere")!.click());
+    expect(document.querySelector("[data-themes]")).toBeNull();
+  });
+
   it("groups the cards by the window they paint, and names the twin", async () => {
     await render();
     const light = document.querySelector('[data-theme-group="light"]')!;
@@ -123,9 +163,9 @@ describe("ThemesSection", () => {
     expect([...light.querySelectorAll("[data-theme-card]")].map((c) => c.getAttribute("data-theme-card"))).toEqual([POND, DAY]);
     expect([...dark.querySelectorAll("[data-theme-card]")].map((c) => c.getAttribute("data-theme-card"))).toEqual([NIGHT]);
     // The twin is named by its title, found among the cards; a theme with none names nothing.
-    expect(card(DAY)!.textContent).toContain("themes.twinOf:Aurora noche");
-    expect(card(NIGHT)!.textContent).toContain("themes.twinOf:Aurora día");
-    expect(card(POND)!.textContent).not.toContain("themes.twinOf");
+    expect(card(DAY)!.textContent).toContain("themes.twinDark:Aurora noche");
+    expect(card(NIGHT)!.textContent).toContain("themes.twinLight:Aurora día");
+    expect(card(POND)!.textContent).not.toMatch(/themes.twin(Light|Dark)/);
   });
 
   it("a window with no theme draws no heading", async () => {

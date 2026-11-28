@@ -92,6 +92,12 @@ describe("a theme in the URL and in the first message", () => {
   it("is never made unavailable by the games switch", () => {
     expect(naceComoDisponible("theme", false)).toBe("theme");
   });
+  it("falls back to a page with themes off, as a game does with games off; nothing else moves", () => {
+    expect(naceComoDisponible("theme", true, false)).toBe("pagina");
+    expect(naceComoDisponible("theme", true, true)).toBe("theme");
+    expect(naceComoDisponible("app", true, false)).toBe("app");
+    expect(naceComoDisponible("game", true, false)).toBe("game");
+  });
 });
 
 describe("a tool in the URL (spec local 2026-11-04-herramientas-hechas-por-len)", () => {

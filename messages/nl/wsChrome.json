@@ -871,13 +871,12 @@
     "newTheme": "Nieuw thema",
     "lightWindow": "Licht venster",
     "darkWindow": "Donker venster",
-    "twinOf": "Tegenhanger: {title}",
     "onEverywhere": "Overal actief",
     "onInProject": "In dit project actief",
     "install": {
       "button": "Installeren",
       "installing": "Installeren…",
-      "done": "Thema geïnstalleerd: kies het bij Thema's",
+      "done": "Thema geïnstalleerd: kies het bij Thema’s",
       "problems": "{count, plural, one {Het thema is niet geïnstalleerd: # probleem} other {Het thema is niet geïnstalleerd: # problemen}}",
       "problem": "In {file}: {code}{detail}",
       "inProgress": "Er loopt nog een installatie van je: wacht tot die klaar is",
@@ -887,7 +886,10 @@
         "glass_below_target": "{theme}: de tekst is misschien moeilijk leesbaar, zelfs met versterkt glas",
         "palette_pair": "{theme}: sommige kleuren van het palet hebben te weinig contrast"
       }
-    }
+    },
+    "twinLight": "Lichte versie: {title}",
+    "twinDark": "Donkere versie: {title}",
+    "readFailed": "Je thema’s konden niet worden vernieuwd: wat je ziet is misschien niet meer actueel."
   },
   "space": {
     "title": "Jouw ruimte",

@@ -864,15 +864,14 @@
     "hint": "在工作区后面放一个场景。预览只在当前标签页显示，使用之前不会保存任何内容。",
     "preview": "预览",
     "stopPreview": "停止预览",
-    "useEverywhere": "在所有地方使用",
+    "useEverywhere": "全局使用",
     "useInProject": "在此项目中使用",
     "off": "关闭",
     "remove": "移除",
     "newTheme": "新主题",
-    "lightWindow": "浅色窗口",
-    "darkWindow": "深色窗口",
-    "twinOf": "配对主题：{title}",
-    "onEverywhere": "已在所有地方启用",
+    "lightWindow": "适用于浅色模式",
+    "darkWindow": "适用于深色模式",
+    "onEverywhere": "已全局启用",
     "onInProject": "已在此项目中启用",
     "install": {
       "button": "安装",
@@ -887,7 +886,10 @@
         "glass_below_target": "{theme}：即使加强玻璃，文字也可能难以阅读",
         "palette_pair": "{theme}：其调色板中的部分颜色对比度不足"
       }
-    }
+    },
+    "twinLight": "浅色版：{title}",
+    "twinDark": "深色版：{title}",
+    "readFailed": "无法刷新你的主题：你看到的内容可能不是最新的。"
   },
   "space": {
     "title": "你的空间",

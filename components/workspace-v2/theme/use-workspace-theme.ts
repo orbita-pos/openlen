@@ -40,6 +40,12 @@ export function reloadWorkspaceThemes(): void {
 }
 
 const snapshot = () => `${reloads}\u0000${previewRef ?? ""}`;
+const previewSnapshot = () => previewRef;
+
+/** The ref being previewed in this tab, or null — and nothing else: no read of the themes (the picker has its own). */
+export function useThemePreview(): string | null {
+  return useSyncExternalStore(subscribe, previewSnapshot, () => null);
+}
 
 // ─── the hook ───────────────────────────────────────────────────────────────
 

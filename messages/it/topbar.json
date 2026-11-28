@@ -59,8 +59,10 @@
     "successBody": "Il tuo sito online ora mostra questa pubblicazione precedente."
   },
   "theme": {
-    "lightMode": "Tema chiaro",
-    "darkMode": "Tema scuro"
+    "lightMode": "Modalità chiara",
+    "darkMode": "Modalità scura",
+    "forcedDark": "Il tema del tuo spazio di lavoro usa una finestra scura. Qui cambi la tua impostazione.",
+    "forcedLight": "Il tema del tuo spazio di lavoro usa una finestra chiara. Qui cambi la tua impostazione."
   },
   "account": {
     "fallbackName": "Account",

@@ -60,7 +60,9 @@
   },
   "theme": {
     "lightMode": "Light mode",
-    "darkMode": "Dark mode"
+    "darkMode": "Dark mode",
+    "forcedDark": "Your workspace theme uses a dark window. This changes your own setting.",
+    "forcedLight": "Your workspace theme uses a light window. This changes your own setting."
   },
   "account": {
     "fallbackName": "Account",

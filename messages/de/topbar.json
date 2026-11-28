@@ -60,7 +60,9 @@
   },
   "theme": {
     "lightMode": "Heller Modus",
-    "darkMode": "Dunkler Modus"
+    "darkMode": "Dunkler Modus",
+    "forcedDark": "Dein Workspace-Theme nutzt ein dunkles Fenster. Hier änderst du deine eigene Einstellung.",
+    "forcedLight": "Dein Workspace-Theme nutzt ein helles Fenster. Hier änderst du deine eigene Einstellung."
   },
   "account": {
     "fallbackName": "Konto",

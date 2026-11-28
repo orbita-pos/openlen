@@ -9,12 +9,13 @@
 //   · «Desactivar»: clears the pick this card holds (the project's, everywhere's, or both) — never another card's.
 //   · «Quitar», for a theme the person installed: removes the installation (`DELETE /api/projects/<theme project>/theme-install`).
 // «Nuevo tema» is the Tool button's twin: a blank project born as a theme, from the home's box.
-// With themes off the server answers 404 and none of this is drawn.
+// With themes off (404) or signed out (401) none of this is drawn. Any other failure to read — a network blip, a 500 —
+// keeps the cards the person was looking at and says so in a line, as Claude Code keeps a card on a failure.
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
-import { useWorkspaceTheme } from "@/components/workspace-v2/theme/use-workspace-theme";
+import { previewWorkspaceTheme, reloadWorkspaceThemes, useThemePreview } from "@/components/workspace-v2/theme/use-workspace-theme";
 import type { AvailableTheme } from "@/lib/themes/resolve";
 import type { ThemeChoices } from "@/lib/themes/types";
 
@@ -27,18 +28,20 @@ interface View {
 
 const JSON_HEADERS = { "content-type": "application/json" };
 
-/** What `GET /api/themes` says for this person and project; null when themes are off (404), signed out or unreachable. */
-async function readView(projectId: string | null, locale: string): Promise<View | null> {
+/** What `GET /api/themes` says for this person and project: their view; `"gone"` when themes are off (404) or they are
+ *  signed out (401) — the section goes —; `"failed"` for anything else, which keeps whatever was on screen. */
+async function readView(projectId: string | null, locale: string): Promise<View | "gone" | "failed"> {
   const query = new URLSearchParams();
   if (projectId) query.set("project", projectId);
   query.set("locale", locale);
   try {
     const res = await fetch(`/api/themes?${query.toString()}`, { cache: "no-store" });
-    if (!res.ok) return null;
+    if (res.status === 404 || res.status === 401) return "gone";
+    if (!res.ok) return "failed";
     const body = (await res.json()) as Partial<View>;
-    return Array.isArray(body.available) ? { applied: body.applied ?? { everywhere: null, project: null }, available: body.available } : null;
+    return Array.isArray(body.available) ? { applied: body.applied ?? { everywhere: null, project: null }, available: body.available } : "failed";
   } catch {
-    return null;
+    return "failed";
   }
 }
 
@@ -46,20 +49,38 @@ export function ThemesSection({ projectId }: { projectId: string | null }) {
   const t = useTranslations("wsChrome");
   const locale = useLocale();
   const router = useRouter();
-  const { previewing, preview, reload } = useWorkspaceTheme(projectId);
+  // The tab's own preview store, read directly: this section has its own read of the themes, it needs no other.
+  const previewing = useThemePreview();
+  const preview = previewWorkspaceTheme;
+  const reload = reloadWorkspaceThemes;
   const [view, setView] = useState<View | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  /** The last read failed for a passing reason: the cards on screen may be behind. */
+  const [stale, setStale] = useState(false);
+
+  /** A read's answer, applied: a view replaces the one shown; «gone» takes the section away; a failure keeps it. */
+  const take = useCallback((next: View | "gone" | "failed") => {
+    if (next === "gone") {
+      setView(null);
+      setStale(false);
+    } else if (next === "failed") {
+      setStale(true);
+    } else {
+      setView(next);
+      setStale(false);
+    }
+  }, []);
 
   useEffect(() => {
     let live = true;
     void readView(projectId, locale).then((next) => {
-      if (live) setView(next);
+      if (live) take(next);
     });
     return () => {
       live = false;
     };
-  }, [projectId, locale]);
+  }, [projectId, locale, take]);
 
   // A preview is this tab's and lives in memory: leaving the page ends it.
   useEffect(() => () => preview(null), [preview]);
@@ -96,7 +117,7 @@ export function ThemesSection({ projectId }: { projectId: string | null }) {
       if (endsPreview) preview(null);
       reload();
     }
-    setView(await readView(projectId, locale));
+    take(await readView(projectId, locale));
     setBusy(null);
   }
 
@@ -126,6 +147,11 @@ export function ThemesSection({ projectId }: { projectId: string | null }) {
         </button>
       </div>
       {failed ? <p className="mt-2 text-[12px] text-[var(--nc-warn)]">{t("tools.page.failed")}</p> : null}
+      {stale && !failed ? (
+        <p className="mt-2 text-[12px] text-[var(--nc-warn)]" data-themes-stale="">
+          {t("themes.readFailed")}
+        </p>
+      ) : null}
 
       {groups.map((group) => (
         <div key={group.window} className="mt-4" data-theme-group={group.window}>
@@ -146,7 +172,7 @@ export function ThemesSection({ projectId }: { projectId: string | null }) {
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-3 pt-2.5 pb-1.5">
                     <p className="truncate text-[13.5px] font-semibold fg">{a.title}</p>
                     {a.blurb ? <p className="text-[12px] fg-muted">{a.blurb}</p> : null}
-                    {twinTitle ? <p className="text-[11px] fg-faint">{t("themes.twinOf", { title: twinTitle })}</p> : null}
+                    {twinTitle ? <p className="text-[11px] fg-faint">{t(a.window === "light" ? "themes.twinDark" : "themes.twinLight", { title: twinTitle })}</p> : null}
                     {onEverywhere || onProject ? (
                       <p className="mt-0.5 flex flex-wrap gap-1.5 text-[11px] fg-faint">
                         {onProject ? <span className="rounded border bd px-1.5">{t("themes.onInProject")}</span> : null}

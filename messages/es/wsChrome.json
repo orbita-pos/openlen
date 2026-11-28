@@ -863,16 +863,15 @@
     "title": "Temas",
     "hint": "Una escena detrás del espacio de trabajo. La vista previa sólo se ve en esta pestaña: no se guarda nada hasta que lo uses.",
     "preview": "Vista previa",
-    "stopPreview": "Dejar de ver",
-    "useEverywhere": "Usar en todo",
+    "stopPreview": "Salir de la vista previa",
+    "useEverywhere": "Usar en todas partes",
     "useInProject": "Usar en este proyecto",
     "off": "Desactivar",
     "remove": "Quitar",
     "newTheme": "Nuevo tema",
     "lightWindow": "Ventana clara",
     "darkWindow": "Ventana oscura",
-    "twinOf": "Gemelo: {title}",
-    "onEverywhere": "Activo en todo",
+    "onEverywhere": "Activo en todas partes",
     "onInProject": "Activo en este proyecto",
     "install": {
       "button": "Instalar",
@@ -887,7 +886,10 @@
         "glass_below_target": "{theme}: el texto puede leerse mal aun con el vidrio subido",
         "palette_pair": "{theme}: algunos colores de su paleta no contrastan lo suficiente"
       }
-    }
+    },
+    "twinLight": "Versión clara: {title}",
+    "twinDark": "Versión oscura: {title}",
+    "readFailed": "No se pudieron actualizar tus temas: puede que lo que ves no esté al día."
   },
   "space": {
     "title": "Tu espacio",

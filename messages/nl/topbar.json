@@ -60,7 +60,9 @@
   },
   "theme": {
     "lightMode": "Lichte modus",
-    "darkMode": "Donkere modus"
+    "darkMode": "Donkere modus",
+    "forcedDark": "Het thema van je werkruimte gebruikt een donker venster. Hier wijzig je je eigen instelling.",
+    "forcedLight": "Het thema van je werkruimte gebruikt een licht venster. Hier wijzig je je eigen instelling."
   },
   "account": {
     "fallbackName": "Account",

@@ -869,9 +869,8 @@
     "off": "끄기",
     "remove": "제거",
     "newTheme": "새 테마",
-    "lightWindow": "밝은 창",
-    "darkWindow": "어두운 창",
-    "twinOf": "짝 테마: {title}",
+    "lightWindow": "라이트 모드용",
+    "darkWindow": "다크 모드용",
     "onEverywhere": "모든 곳에서 사용 중",
     "onInProject": "이 프로젝트에서 사용 중",
     "install": {
@@ -887,7 +886,10 @@
         "glass_below_target": "{theme}: 유리를 강하게 해도 글자가 읽기 어려울 수 있습니다",
         "palette_pair": "{theme}: 팔레트의 일부 색상 대비가 충분하지 않습니다"
       }
-    }
+    },
+    "twinLight": "라이트 버전: {title}",
+    "twinDark": "다크 버전: {title}",
+    "readFailed": "테마를 새로고침하지 못했습니다. 보이는 내용이 최신이 아닐 수 있습니다."
   },
   "space": {
     "title": "내 공간",

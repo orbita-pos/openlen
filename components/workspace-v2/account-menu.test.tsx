@@ -133,3 +133,25 @@ describe("🔴 the credits in the account menu", () => {
     expect(host.querySelector("[data-credit-row]")).toBeNull();
   });
 });
+
+describe("the dark/light toggle while a workspace theme forces the window", () => {
+  afterEach(() => document.documentElement.removeAttribute("data-theme-forced-window"));
+  const toggle = (host: HTMLElement) => button(host, topbar.theme.darkMode)!;
+
+  it("keeps showing the person's own setting — what a click changes — and only says why, with no hint when nothing forces", async () => {
+    const plain = await openMenu();
+    expect(toggle(plain).getAttribute("title")).toBeNull();
+    for (const r of roots.splice(0)) act(() => r.unmount());
+    document.body.innerHTML = "";
+
+    // A dark theme over a light person: the class says dark, the toggle still says «Modo oscuro» (they are light).
+    document.documentElement.setAttribute("data-theme-forced-window", "dark");
+    const host = await openMenu();
+    expect(toggle(host)).toBeDefined();
+    expect(toggle(host).getAttribute("title")).toBe(topbar.theme.forcedDark);
+    expect(toggle(host).getAttribute("aria-description")).toBe(topbar.theme.forcedDark);
+    // The mark goes with the theme, and so does the hint.
+    await act(async () => document.documentElement.removeAttribute("data-theme-forced-window"));
+    expect(toggle(host).getAttribute("title")).toBeNull();
+  });
+});

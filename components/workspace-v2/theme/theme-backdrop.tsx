@@ -22,12 +22,13 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 import type { ResolvedTheme } from "@/lib/themes/resolve";
+import { personPrefersDark } from "@/lib/use-dark-mode";
 import { THEME_TOKENS, type ThemeFont, type ThemeGround, type ThemeWindow } from "@/lib/themes/types";
 
 import { detectRenderer, measureFps, prefersReducedMotion, shouldStayStill } from "./motion-guard";
+// The mark on <html> while a theme forces the window, so the dark/light toggle can say why (it keeps the person's setting).
+import { FORCED_WINDOW_ATTR } from "./use-forced-theme-window";
 import { useWorkspaceTheme } from "./use-workspace-theme";
-
-const DARK_KEY = "inari:dark";
 
 /** One generic stack per font a theme may ask for (`ThemeFont`); `code` is the monospace one. */
 export const FONT_STACKS: Readonly<Record<ThemeFont, string>> = {
@@ -41,15 +42,6 @@ export const FONT_STACKS: Readonly<Record<ThemeFont, string>> = {
 /** The three backgrounds the glass owns: under glass, a palette's value for them is left to the glass. */
 const GLASS_TOKENS = new Set<string>(["--bg", "--bg-sidebar", "--bg-elev"]);
 const PALETTE_TOKENS = new Set<string>(THEME_TOKENS);
-
-function readStoredDark(): boolean | null {
-  try {
-    const stored = window.localStorage.getItem(DARK_KEY);
-    return stored === null ? null : stored === "1";
-  } catch {
-    return null;
-  }
-}
 
 // ─── a still ground, as CSS ─────────────────────────────────────────────────
 
@@ -107,18 +99,29 @@ export function ThemeBackdrop({ projectId }: { projectId: string | null }) {
   const anchor = useRef<HTMLDivElement>(null);
   const { resolved, twin } = useWorkspaceTheme(projectId);
 
-  // The person's own mode: their saved setting, else what the pre-paint script put on <html> (read before any forcing).
-  // Unknown until mounted, so the server and the first paint draw no layer.
-  const forcing = useRef<{ prior: boolean } | null>(null);
+  // The person's own mode, decided exactly as the toggle decides it (`personPrefersDark`: their saved setting, else
+  // their system's preference) — one rule, so the layer and the toggle never disagree. Unknown until mounted, so the
+  // server and the first paint draw no layer.
   const [personDark, setPersonDark] = useState<boolean | null>(null);
   useEffect(() => {
     const html = document.documentElement;
-    const read = () => setPersonDark(readStoredDark() ?? (forcing.current ? forcing.current.prior : html.classList.contains("dark")));
+    const read = () => setPersonDark(personPrefersDark());
     read();
-    // The person may switch modes while a theme is on (the workspace's own toggle writes the class and the setting).
+    // The person may switch modes while a theme is on (the workspace's own toggle writes the class and the setting), or
+    // their system may (with nothing saved, that is their mode).
     const observer = new MutationObserver(read);
     observer.observe(html, { attributes: true, attributeFilter: ["class"] });
-    return () => observer.disconnect();
+    let media: MediaQueryList | null = null;
+    try {
+      media = window.matchMedia("(prefers-color-scheme: dark)");
+      media.addEventListener?.("change", read);
+    } catch {
+      media = null;
+    }
+    return () => {
+      observer.disconnect();
+      media?.removeEventListener?.("change", read);
+    };
   }, []);
 
   const personWindow: ThemeWindow | null = personDark === null ? null : personDark ? "dark" : "light";
@@ -130,16 +133,16 @@ export function ThemeBackdrop({ projectId }: { projectId: string | null }) {
         : resolved;
   const force = chosen && personWindow !== null && chosen.window !== personWindow ? chosen.window : null;
 
-  // Forcing the theme's window: the class only. Given back to the person's setting (or the class it had) on the way out.
+  // Forcing the theme's window: the class only, and a mark that says so (the toggle reads it for its hint). Given back
+  // to the person's own mode on the way out.
   useEffect(() => {
     if (!force) return;
     const html = document.documentElement;
-    forcing.current = { prior: html.classList.contains("dark") };
     html.classList.toggle("dark", force === "dark");
+    html.setAttribute(FORCED_WINDOW_ATTR, force);
     return () => {
-      const prior = forcing.current?.prior ?? false;
-      forcing.current = null;
-      html.classList.toggle("dark", readStoredDark() ?? prior);
+      html.removeAttribute(FORCED_WINDOW_ATTR);
+      html.classList.toggle("dark", personPrefersDark());
     };
   }, [force, personDark]);
 

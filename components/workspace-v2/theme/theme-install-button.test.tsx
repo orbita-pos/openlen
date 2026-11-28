@@ -51,7 +51,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-async function render(props: { isTheme?: boolean; themeOwner?: boolean } = {}) {
+async function render(props: { isTheme?: boolean; themeOwner?: boolean; themesEnabled?: boolean } = {}) {
   root = createRoot(document.body.appendChild(document.createElement("div")));
   await act(async () =>
     root!.render(<TopBar projectName="Estanque" projectId="p1" onPublish={() => {}} published={null} onRename={() => {}} {...props} />),
@@ -77,6 +77,12 @@ describe("TopBar · a theme project", () => {
 
   it("a member sees neither: no install, and no Publicar that would only 409", async () => {
     await render({ isTheme: true, themeOwner: false });
+    expect(installButton()).toBeNull();
+    expect(publishButton()).toBeNull();
+  });
+
+  it("with themes off on the server, the owner has no «Instalar» either (a plugin turned off has no commands), nor a Publicar", async () => {
+    await render({ isTheme: true, themeOwner: true, themesEnabled: false });
     expect(installButton()).toBeNull();
     expect(publishButton()).toBeNull();
   });

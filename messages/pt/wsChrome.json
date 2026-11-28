@@ -864,15 +864,14 @@
     "hint": "Uma cena atrás do espaço de trabalho. A pré-visualização só aparece nesta aba: nada é salvo até você usar o tema.",
     "preview": "Pré-visualizar",
     "stopPreview": "Parar pré-visualização",
-    "useEverywhere": "Usar em tudo",
+    "useEverywhere": "Usar em todos os lugares",
     "useInProject": "Usar neste projeto",
     "off": "Desativar",
     "remove": "Remover",
     "newTheme": "Novo tema",
     "lightWindow": "Janela clara",
     "darkWindow": "Janela escura",
-    "twinOf": "Gêmeo: {title}",
-    "onEverywhere": "Ativo em tudo",
+    "onEverywhere": "Ativo em todos os lugares",
     "onInProject": "Ativo neste projeto",
     "install": {
       "button": "Instalar",
@@ -887,7 +886,10 @@
         "glass_below_target": "{theme}: o texto pode ficar difícil de ler mesmo com o vidro reforçado",
         "palette_pair": "{theme}: algumas cores da paleta não têm contraste suficiente"
       }
-    }
+    },
+    "twinLight": "Versão clara: {title}",
+    "twinDark": "Versão escura: {title}",
+    "readFailed": "Não foi possível atualizar seus temas: o que você vê pode estar desatualizado."
   },
   "space": {
     "title": "Seu espaço",

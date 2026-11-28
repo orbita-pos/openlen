@@ -871,7 +871,6 @@
     "newTheme": "New theme",
     "lightWindow": "Light window",
     "darkWindow": "Dark window",
-    "twinOf": "Twin: {title}",
     "onEverywhere": "On everywhere",
     "onInProject": "On in this project",
     "install": {
@@ -887,7 +886,10 @@
         "glass_below_target": "{theme}: the text may be hard to read even with its glass raised",
         "palette_pair": "{theme}: some colours of its palette don't contrast enough"
       }
-    }
+    },
+    "twinLight": "Light version: {title}",
+    "twinDark": "Dark version: {title}",
+    "readFailed": "Couldn't refresh your themes: what you see may be out of date."
   },
   "space": {
     "title": "Your space",

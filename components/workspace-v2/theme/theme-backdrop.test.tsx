@@ -71,6 +71,8 @@ const state = (resolved: ResolvedTheme | null, twin: ResolvedTheme | null = null
 });
 
 let reducedMotion = false;
+/** What the system prefers (`prefers-color-scheme: dark`): with nothing saved, that is the person's mode. */
+let systemDark = false;
 const roots: Root[] = [];
 let host: HTMLDivElement;
 
@@ -81,6 +83,7 @@ beforeEach(() => {
   guard.renderer = null;
   guard.measured = 0;
   reducedMotion = false;
+  systemDark = false;
   window.localStorage.clear();
   document.documentElement.className = "";
   fetchMock = vi.fn(async (url: string) => {
@@ -92,7 +95,7 @@ beforeEach(() => {
   });
   vi.stubGlobal("fetch", fetchMock);
   window.matchMedia = ((query: string) => ({
-    matches: query.includes("prefers-reduced-motion") ? reducedMotion : false,
+    matches: query.includes("prefers-reduced-motion") ? reducedMotion : query.includes("prefers-color-scheme: dark") ? systemDark : false,
     media: query,
     addEventListener: () => {},
     removeEventListener: () => {},
@@ -209,6 +212,8 @@ describe("ThemeBackdrop", () => {
   });
 
   it("gives the class back on unmount too, and a light theme over a dark person forces light the same way", async () => {
+    // Nothing saved and a system that prefers dark: the pre-paint script put `.dark` on, and that is the person's mode.
+    systemDark = true;
     document.documentElement.classList.add("dark");
     answer = state(LAGOON);
     const { root } = await mount();
@@ -217,6 +222,32 @@ describe("ThemeBackdrop", () => {
     act(() => root.unmount());
     roots.splice(roots.indexOf(root), 1);
     expect(document.documentElement.classList.contains("dark")).toBe(true);
+  });
+
+  it("decides the person's mode as the toggle does: with nothing saved, the system's preference — never the class", async () => {
+    // The class says light but the system prefers dark and nothing is saved: `useDarkMode` calls that person dark, so the
+    // layer does too, and paints the dark twin without forcing anything.
+    systemDark = true;
+    answer = state(DAWN, DUSK);
+    const { ws } = await mount();
+    expect(ws.querySelector("img")!.getAttribute("src")).toBe(DUSK.sceneUrl);
+    // A saved setting wins over the system, for both.
+    window.localStorage.setItem("inari:dark", "0");
+    await act(async () => reloadWorkspaceThemes());
+    await act(async () => document.documentElement.classList.toggle("x"));
+    await settle();
+    expect(ws.querySelector("img")!.getAttribute("src")).toBe(DAWN.sceneUrl);
+  });
+
+  it("marks <html> with the window it forces while it forces it, and only then", async () => {
+    window.localStorage.setItem("inari:dark", "0");
+    answer = state(REEF);
+    await mount();
+    expect(document.documentElement.getAttribute("data-theme-forced-window")).toBe("dark");
+    answer = state(DAWN, DUSK);
+    await act(async () => reloadWorkspaceThemes());
+    await settle();
+    expect(document.documentElement.hasAttribute("data-theme-forced-window")).toBe(false);
   });
 
   it("palette and font are set as custom properties, never as a stylesheet", async () => {
@@ -522,6 +553,20 @@ describe("the client's canvas stays opaque", () => {
     const before = nested.find(([, selector]) => selector.trim().endsWith("::before"));
     expect(plain?.[2]).toMatch(/background-color:\s*transparent/);
     expect(before?.[2]).toMatch(/content:\s*none/);
+  });
+
+  it("the layer is the root's FIRST child in /new, and its <img> comes first in it: the glass's ::before outpaints it only by document order", async () => {
+    // A marked surface is positioned with no z-index: its ::before (-1) and the scene (-1) share the root's stacking
+    // context, and at equal z-index what comes first paints first. tokens.css says why.
+    const page = readFileSync(join(repo, "app/[locale]/new/page.tsx"), "utf8");
+    const afterRoot = page.split('<div className="workspace-v2 h-full flex flex-col">')[1] ?? "";
+    const firstElement = afterRoot.replace(/\{\/\*[\s\S]*?\*\/\}/g, "").trimStart();
+    expect(firstElement.startsWith("<ThemeBackdrop ")).toBe(true);
+    answer = state(LAGOON);
+    const { ws } = await mount();
+    const backdrop = ws.querySelector("[data-theme-backdrop]")!;
+    expect(ws.firstElementChild).toBe(backdrop);
+    expect(backdrop.firstElementChild?.tagName).toBe("IMG");
   });
 
   it("the canvas is `bg-preview-a` and the page's frame paints the page's own ground", () => {

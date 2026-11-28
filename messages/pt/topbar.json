@@ -60,7 +60,9 @@
   },
   "theme": {
     "lightMode": "Modo claro",
-    "darkMode": "Modo escuro"
+    "darkMode": "Modo escuro",
+    "forcedDark": "O tema do seu espaço de trabalho usa uma janela escura. Isto muda a sua própria configuração.",
+    "forcedLight": "O tema do seu espaço de trabalho usa uma janela clara. Isto muda a sua própria configuração."
   },
   "account": {
     "fallbackName": "Conta",

@@ -22,7 +22,7 @@ import { DELETE, GET } from "./route";
 
 const load = async () =>
   (await (await GET(new Request("http://localhost/api/projects/p1"), { params: Promise.resolve({ id: "p1" }) })).json()) as {
-    project: { artifacts: unknown };
+    project: { artifacts: unknown; themes: unknown };
   };
 
 beforeEach(() => {
@@ -38,6 +38,12 @@ describe("GET /api/projects/[id]", () => {
     expect((await load()).project.artifacts).toBe(false);
     vi.stubEnv("OPENLEN_ARTIFACTS", "1");
     expect((await load()).project.artifacts).toBe(true);
+  });
+
+  it("says whether workspace themes are on, so a theme project shows no «Instalar» when they are off", async () => {
+    expect((await load()).project.themes).toBe(true);
+    vi.stubEnv("OPENLEN_THEMES", "0");
+    expect((await load()).project.themes).toBe(false);
   });
 });
 

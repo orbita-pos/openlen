@@ -333,8 +333,8 @@
       "toolHeadline": "Welches Tool brauchst du?",
       "toolSubtitle": "Len baut es, und es bleibt in deinem OpenLen: in der Seitenleiste oder in deinen Projekten.",
       "toolPlaceholder": "Etwas, um die heutigen Reservierungen zu sehen und zu bestätigen…",
-      "theme": "Thema",
-      "themePlaceholder": "Ein Thema mit einem Teich in der Dämmerung, ruhig und langsam…",
+      "theme": "Theme",
+      "themePlaceholder": "Ein Theme mit einem Teich in der Dämmerung, ruhig und langsam…",
       "agent": "Agent",
       "agentHint": "Dein eigener Assistent für alles: ein Lehrer, ein Coach, ein Koch",
       "agentPlaceholder": "Wobei soll dir dein Agent helfen?",
@@ -871,23 +871,25 @@
     "newTheme": "Neues Theme",
     "lightWindow": "Helles Fenster",
     "darkWindow": "Dunkles Fenster",
-    "twinOf": "Gegenstück: {title}",
     "onEverywhere": "Überall aktiv",
     "onInProject": "In diesem Projekt aktiv",
     "install": {
       "button": "Installieren",
       "installing": "Wird installiert…",
-      "done": "Theme installiert: wähle es unter Themes",
+      "done": "Theme installiert: Wähle es unter Themes aus",
       "problems": "{count, plural, one {Das Theme wurde nicht installiert: # Problem} other {Das Theme wurde nicht installiert: # Probleme}}",
       "problem": "In {file}: {code}{detail}",
-      "inProgress": "Eine Installation von dir läuft noch: warte, bis sie fertig ist",
+      "inProgress": "Eine Installation von dir läuft noch: Warte, bis sie fertig ist",
       "failed": "Das Theme konnte nicht installiert werden. Versuch es noch einmal.",
       "warnings": {
         "glass_unmeasured": "{theme}: Der Kontrast konnte nicht gemessen werden, das Glas bleibt wie eingestellt",
         "glass_below_target": "{theme}: Der Text ist womöglich auch mit verstärktem Glas schwer lesbar",
         "palette_pair": "{theme}: Einige Farben der Palette haben zu wenig Kontrast"
       }
-    }
+    },
+    "twinLight": "Helle Version: {title}",
+    "twinDark": "Dunkle Version: {title}",
+    "readFailed": "Deine Themes konnten nicht aktualisiert werden: Was du siehst, ist vielleicht nicht mehr aktuell."
   },
   "space": {
     "title": "Dein Bereich",

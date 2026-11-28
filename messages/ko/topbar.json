@@ -60,7 +60,9 @@
   },
   "theme": {
     "lightMode": "라이트 모드",
-    "darkMode": "다크 모드"
+    "darkMode": "다크 모드",
+    "forcedDark": "작업 공간 테마가 어두운 창을 사용하고 있습니다. 여기서는 내 설정을 바꿉니다.",
+    "forcedLight": "작업 공간 테마가 밝은 창을 사용하고 있습니다. 여기서는 내 설정을 바꿉니다."
   },
   "account": {
     "fallbackName": "계정",

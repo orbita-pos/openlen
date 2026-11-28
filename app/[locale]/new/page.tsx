@@ -59,6 +59,7 @@ import { ToolsView } from "@/components/workspace-v2/tools/tools-view";
 import { useInstalledTools } from "@/components/workspace-v2/tools/use-installed-tools";
 import { artifactLens, newestArtifactId, useArtifactTurnSync, useLenArtifacts } from "@/components/workspace-v2/artifacts/use-len-artifacts";
 import { useGamesAvailable } from "@/components/workspace-v2/use-games-available";
+import { useThemesAvailable } from "@/components/workspace-v2/use-themes-available";
 import { ResultadosView } from "@/components/workspace-v2/resultados-view";
 import {
   LeftSidebar,
@@ -72,7 +73,7 @@ import { AccountMenu } from "@/components/workspace-v2/account-menu";
 import { HeroLenMark } from "@/components/marketing/hero-len";
 import { PastePanel } from "@/components/workspace-v2/panels/paste-panel";
 import type { NaceComo } from "@/components/workspace-v2/tarjetas-nace-como";
-import { homeHref, KIND_PARAM, kindFromParam, naceComoApp, naceComoDisponible } from "@/components/workspace-v2/chat/nace-como";
+import { homeHref, KIND_PARAM, kindFromParam, naceComoConEsqueleto, naceComoDisponible } from "@/components/workspace-v2/chat/nace-como";
 import { spaceRedirectOf } from "@/lib/space/href";
 import { ejecutarUndo } from "@/components/workspace-v2/panels/undo-turn";
 import { planDeDeshacerDelTaller } from "@/components/workspace-v2/deshacer-del-taller";
@@ -239,6 +240,8 @@ interface LoadedProject {
   /** LEN 3.0: este servidor tiene los entregables encendidos (`OPENLEN_ARTIFACTS`).
    *  Apagados, la campana ni se monta: no pregunta a una API que sólo diría 404. */
   artifacts: boolean;
+  /** Workspace themes are on on this server (`OPENLEN_THEMES`): off, a theme project has no «Instalar» at all. */
+  themesOn: boolean;
 }
 
 /** Las frases concretas de un código de degradación, sin repetir.
@@ -362,6 +365,7 @@ function NewV2Inner() {
   const installedTools = useInstalledTools(locale);
   // THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.2): the «Juego» card, unless games are off here.
   const juegosDisponibles = useGamesAvailable();
+  const temasDisponibles = useThemesAvailable();
   const [dark, toggleDark] = useDarkMode();
   // The start rail's drawer on a phone (06/11: without a project, the start frame).
   const [startMenuOpen, setStartMenuOpen] = useState(false);
@@ -1063,10 +1067,11 @@ function NewV2Inner() {
     setNaceComo(kindFromUrl.current);
     if (projectParam) kindFromUrl.current = "pagina";
   }, [projectParam]);
-  // A «Juego» asked for while games are off here (a stale kind=game link) is a page, as the server makes it.
+  // A «Juego» asked for while games are off here (a stale kind=game link) is a page, as the server makes it; so is a
+  // «Tema» while themes are off.
   useEffect(() => {
-    setNaceComo((v) => naceComoDisponible(v, juegosDisponibles));
-  }, [juegosDisponibles]);
+    setNaceComo((v) => naceComoDisponible(v, juegosDisponibles, temasDisponibles));
+  }, [juegosDisponibles, temasDisponibles]);
   // EL ESTADO VACÍO DEL CHAT DE LEN: un proyecto en blanco no tiene lienzo que
   // enseñar todavía. Como el «Session Intent hero» de DeepSeek, el centro es el
   // compositor, y enviar es el primer mensaje.
@@ -1108,7 +1113,7 @@ function NewV2Inner() {
       setPendingChatAttachments({
         images: subidas.images,
         ...(files.length > 0 ? { files } : {}),
-        ...(naceComoApp(kind) ? { naceComo: kind, idioma: locale } : {}),
+        ...(naceComoConEsqueleto(kind) ? { naceComo: kind, idioma: locale } : {}),
       });
       setPendingChatDraft(brief);
       setPendingChatAutoSend(true);
@@ -1403,6 +1408,7 @@ function NewV2Inner() {
               };
               rol?: "dueno" | "editor" | "lector";
               artifacts?: boolean;
+              themes?: boolean;
             };
           }
         | null;
@@ -1455,6 +1461,7 @@ function NewV2Inner() {
         theme: !!p.data?.theme,
         rol: p.rol ?? "dueno",
         artifacts: p.artifacts === true,
+        themesOn: p.themes !== false,
       });
       setProjectName(p.title);
       setProjectLoadFailure(null);
@@ -3685,6 +3692,7 @@ function NewV2Inner() {
         isTool={loadedProject?.tool === true}
         isTheme={loadedProject?.theme === true}
         themeOwner={loadedProject?.rol === "dueno"}
+        themesEnabled={loadedProject?.themesOn !== false}
         artifactsEnabled={loadedProject?.artifacts === true}
         artifactsReadOnly={soloLector}
         artifactsData={artifactsOn ? artifacts : undefined}

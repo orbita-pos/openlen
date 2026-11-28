@@ -60,7 +60,9 @@
   },
   "theme": {
     "lightMode": "浅色模式",
-    "darkMode": "深色模式"
+    "darkMode": "深色模式",
+    "forcedDark": "你的工作区主题使用深色窗口。这里更改的是你自己的设置。",
+    "forcedLight": "你的工作区主题使用浅色窗口。这里更改的是你自己的设置。"
   },
   "account": {
     "fallbackName": "账户",

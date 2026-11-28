@@ -4,6 +4,27 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const STORAGE_KEY = "inari:dark";
 
+/**
+ * The person's OWN mode: what they saved, else what their system prefers — the one rule both the toggle (`useDarkMode`)
+ * and the workspace's theme layer (`theme-backdrop.tsx`) decide by, so the two never disagree about which window is
+ * the person's. Never the `.dark` class: a theme may be forcing that. Storage can be missing or throw (private window,
+ * blocked site data): then the system's preference decides.
+ */
+export function personPrefersDark(): boolean {
+  let stored: string | null = null;
+  try {
+    stored = window.localStorage.getItem(STORAGE_KEY);
+  } catch {
+    stored = null;
+  }
+  if (stored !== null) return stored === "1";
+  try {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  } catch {
+    return false;
+  }
+}
+
 // Dark mode is applied pre-paint by the inline script in app/layout.tsx — it
 // sets the `.dark` class on <html> from localStorage before React mounts, so
 // there's no flash and no flip when navigating between routes. This hook only
@@ -14,12 +35,7 @@ export function useDarkMode(): [boolean, () => void] {
 
   // Sync state to the resolved preference once mounted.
   useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    setDark(
-      stored === null
-        ? window.matchMedia("(prefers-color-scheme: dark)").matches
-        : stored === "1",
-    );
+    setDark(personPrefersDark());
   }, []);
 
   // Apply + persist on real changes only. Skipping the first run is what

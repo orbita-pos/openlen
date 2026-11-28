@@ -99,6 +99,11 @@
    `left-sidebar.tsx`) hace del elemento el bloque contenedor de sus hijos `position: fixed`, y el chat flotante de Len
    vive dentro del riel. El seudoelemento está en `z-index: -1` dentro de una superficie posicionada, así que se pinta
    detrás de su contenido y no contiene a nadie.
+   ⚠️ Y queda ENCIMA de la escena sólo por el ORDEN DEL DOCUMENTO: la superficie está posicionada pero sin `z-index`, así
+   que no abre contexto de apilamiento propio; su `::before` en -1 y el `<img>` de la capa en -1 comparten el de la raíz
+   (`isolation`), y a igual `z-index` pinta antes lo que va antes. Por eso la capa es el PRIMER hijo de la raíz
+   (`theme-backdrop.tsx`, montada así en `page.tsx`; lo fija `theme-backdrop.test.tsx`): moverla detrás de una
+   superficie dejaría la escena encima de su desenfoque.
 
    Dentro de una superficie marcada `--bg` y `--bg-sidebar` son transparentes: lo que dentro pinta el fondo del taller o
    de la barra (el panel de Len, sus cabeceras) deja ver el cristal en vez de taparlo. `--bg-elev` sigue opaco: tarjetas

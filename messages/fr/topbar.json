@@ -60,7 +60,9 @@
   },
   "theme": {
     "lightMode": "Mode clair",
-    "darkMode": "Mode sombre"
+    "darkMode": "Mode sombre",
+    "forcedDark": "Le thème de votre espace de travail utilise une fenêtre sombre. Ce bouton change votre propre réglage.",
+    "forcedLight": "Le thème de votre espace de travail utilise une fenêtre claire. Ce bouton change votre propre réglage."
   },
   "account": {
     "fallbackName": "Compte",

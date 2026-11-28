@@ -129,6 +129,9 @@ interface TopBarProps {
    *  in «Publicar»'s place (`themeOwner`); anyone else gets neither. */
   isTheme?: boolean;
   themeOwner?: boolean;
+  /** Workspace themes are on on this server (`GET /api/projects/[id]` → `themes`). Off, a theme project has no «Instalar»
+   *  — as a Claude Code plugin turned off has no commands — and, being a theme, no «Publicar» either. */
+  themesEnabled?: boolean;
   /** Len 3.0's deliverables are on on this server (`GET /api/projects/[id]`). */
   artifactsEnabled?: boolean;
   artifactsReadOnly?: boolean;
@@ -168,6 +171,7 @@ export function TopBar({
   isTool = false,
   isTheme = false,
   themeOwner = false,
+  themesEnabled = true,
   artifactsEnabled = false,
   artifactsReadOnly = false,
   artifactsData,
@@ -749,7 +753,7 @@ export function TopBar({
             publish is handled by PublishModal which the parent renders;
             we only toggle it. Hidden entirely when no project is loaded
             (onPublish is undefined) — nothing to publish yet. */}
-        {onPublish && isTheme && themeOwner && projectId ? (
+        {onPublish && isTheme && themeOwner && themesEnabled && projectId ? (
           <>
             <ThemeInstallButton projectId={projectId} />
             <span className="hidden md:inline-block h-5 w-px bg-[color:var(--border)] mx-1.5" />

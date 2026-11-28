@@ -17,9 +17,10 @@ import { dropFirstMessage, leaveFirstMessage } from "@/lib/marketing/first-messa
 import { dropFilesInTransit, leaveFilesInTransit } from "@/lib/marketing/files-in-transit";
 import { registrarUso } from "@/lib/uso/cliente";
 import type { NaceComo } from "@/components/workspace-v2/tarjetas-nace-como";
-import { homeArrival, KIND_PARAM, newProjectHref } from "@/components/workspace-v2/chat/nace-como";
+import { homeArrival, KIND_PARAM, naceComoDisponible, newProjectHref } from "@/components/workspace-v2/chat/nace-como";
 import { prepareGenerationBriefInput } from "@/lib/generation/brief-contract";
 import { useGamesAvailable } from "@/components/workspace-v2/use-games-available";
+import { useThemesAvailable } from "@/components/workspace-v2/use-themes-available";
 import { PromptBox, type PromptBoxPhoto } from "@/components/prompt-box";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -53,6 +54,11 @@ export function HeroPromptInput({ tools = false, agents = false }: { tools?: boo
   const [kind, setKind] = useState<NaceComo>("pagina");
   // THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.2): Juego in the pill, unless games are off here.
   const juegos = useGamesAvailable();
+  // WORKSPACE THEMES: a «Tema» that arrived by link is a page while themes are off here (OPENLEN_THEMES=0).
+  const temas = useThemesAvailable();
+  useEffect(() => {
+    if (!temas) setKind((v) => naceComoDisponible(v, true, temas));
+  }, [temas]);
   // THE PHOTOS, up to `MAX_REFERENCIAS`. Several are fine: Len's context says how to read each one
   // (`attachedImagesBlock`, lib/agent/context.ts) — the logo, the shop and a mood board are three different things.
   const [photos, setPhotos] = useState<readonly PromptBoxPhoto[]>([]);
