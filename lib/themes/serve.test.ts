@@ -18,17 +18,27 @@ const CSP = "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandb
 
 describe("sceneResponse", () => {
   it("serves an SVG that cannot run", async () => {
-    const res = sceneResponse(CHECKED, { still: false, immutable: true });
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toBe("image/svg+xml; charset=utf-8");
-    expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
-    expect(res.headers.get("Content-Security-Policy")).toBe(CSP);
-    expect(res.headers.get("Cache-Control")).toBe("public, max-age=31536000, immutable");
-    expect(await res.text()).toBe(CHECKED);
+    for (const cache of ["bundled", "installed-versioned", "no-cache"] as const) {
+      const res = sceneResponse(CHECKED, { still: false, cache });
+      expect(res.status, cache).toBe(200);
+      expect(res.headers.get("Content-Type"), cache).toBe("image/svg+xml; charset=utf-8");
+      expect(res.headers.get("X-Content-Type-Options"), cache).toBe("nosniff");
+      expect(res.headers.get("Content-Security-Policy"), cache).toBe(CSP);
+      expect(await res.text(), cache).toBe(CHECKED);
+    }
+  });
+
+  it("keeps a bundled scene for a day anywhere, an installed one for a year in its owner's own cache, and the rest nowhere", () => {
+    expect(sceneResponse(CHECKED, { still: false, cache: "bundled" }).headers.get("Cache-Control")).toBe("public, max-age=86400");
+    // Owner-gated: never public, so no shared cache can hand it to someone the 404 gate would have refused.
+    expect(sceneResponse(CHECKED, { still: false, cache: "installed-versioned" }).headers.get("Cache-Control")).toBe(
+      "private, max-age=31536000, immutable",
+    );
+    expect(sceneResponse(CHECKED, { still: false, cache: "no-cache" }).headers.get("Cache-Control")).toBe("private, no-cache");
   });
 
   it("serves the still scene for still=1", async () => {
-    const res = sceneResponse(CHECKED, { still: true, immutable: true });
+    const res = sceneResponse(CHECKED, { still: true, cache: "bundled" });
     const body = await res.text();
     expect(body).toBe(stillScene(CHECKED));
     expect(body).not.toBe(CHECKED);
@@ -38,12 +48,6 @@ describe("sceneResponse", () => {
     // Same guards on the still one.
     expect(res.headers.get("Content-Security-Policy")).toBe(CSP);
     expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
-  });
-
-  it("is not kept for a year when the URL carries no version", () => {
-    const res = sceneResponse(CHECKED, { still: false, immutable: false });
-    expect(res.headers.get("Cache-Control")).toBe("private, no-cache");
-    expect(res.headers.get("Content-Security-Policy")).toBe(CSP);
   });
 });
 
@@ -114,7 +118,7 @@ describe("serveThemeScene: bundled", () => {
     const res = await get("bundled:aurora", d, { v: null });
     expect(res.status).toBe(200);
     expect(await res.text()).toBe(CHECKED);
-    expect(res.headers.get("Cache-Control")).toBe("public, max-age=31536000, immutable");
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=86400");
     expect(d.sessionPersonId).not.toHaveBeenCalled();
     expect(d.listInstallations).not.toHaveBeenCalled();
   });
@@ -132,12 +136,12 @@ describe("serveThemeScene: bundled", () => {
 });
 
 describe("serveThemeScene: installed", () => {
-  it("serves the installation's own theme from its current version, kept for a year when the URL names a version", async () => {
+  it("serves the installation's own theme from its current version, kept for a year in its owner's cache when the URL names that version", async () => {
     const d = deps();
     const res = await get("installed:inst1:estanque", d);
     expect(res.status).toBe(200);
     expect(await res.text()).toBe(CHECKED);
-    expect(res.headers.get("Cache-Control")).toBe("public, max-age=31536000, immutable");
+    expect(res.headers.get("Cache-Control")).toBe("private, max-age=31536000, immutable");
     expect(res.headers.get("Content-Security-Policy")).toBe(CSP);
     expect(d.readRelease).toHaveBeenCalledWith("sha-current");
   });
@@ -147,9 +151,10 @@ describe("serveThemeScene: installed", () => {
     expect(await res.text()).toBe(stillScene(CHECKED));
   });
 
-  it("takes `v` as a cache key only: the version served is the installation's, whatever `v` says", async () => {
+  it("does not look up by `v`: the version served is the installation's, whatever `v` says", async () => {
     const d = deps({ releases: [release("sha-current"), release("sha-old", [{ ...POND, scene: CHECKED.replace("#4488cc", "#000000") }])] });
     const res = await get("installed:inst1:estanque", d, { v: "sha-old" });
+    expect(res.status).toBe(200);
     expect(await res.text()).toBe(CHECKED);
     expect(d.readRelease).toHaveBeenCalledWith("sha-current");
     expect(d.readRelease).not.toHaveBeenCalledWith("sha-old");
@@ -163,13 +168,38 @@ describe("serveThemeScene: installed", () => {
     }
   });
 
+  it("is not kept for a year when `v` is not the installation's current version (an old URL, or one made up)", async () => {
+    const d = deps({ releases: [release("sha-current"), release("sha-old", [{ ...POND, scene: CHECKED.replace("#4488cc", "#000000") }])] });
+    for (const v of ["sha-old", "whatever", "SHA-CURRENT", "sha-current "]) {
+      const res = await get("installed:inst1:estanque", d, { v });
+      expect(res.status, v).toBe(200);
+      expect(res.headers.get("Cache-Control"), v).toBe("private, no-cache");
+      // It still answers with the current scene: the old URL is not kept, not refused.
+      expect(await res.text(), v).toBe(CHECKED);
+    }
+  });
+
+  it("stops keeping the old URL of an installation that was reinstalled", async () => {
+    const d = deps({ rows: [{ ...ROW, releaseSha: "sha-new" }], releases: [release("sha-current"), release("sha-new")] });
+    expect((await get("installed:inst1:estanque", d, { v: "sha-current" })).headers.get("Cache-Control")).toBe("private, no-cache");
+    expect((await get("installed:inst1:estanque", d, { v: "sha-new" })).headers.get("Cache-Control")).toBe("private, max-age=31536000, immutable");
+  });
+
+  it("gives the still scene the cache of the moving one: its URL names the version too", async () => {
+    const res = await get("installed:inst1:estanque", deps(), { still: true });
+    expect(res.headers.get("Cache-Control")).toBe("private, max-age=31536000, immutable");
+    expect((await get("installed:inst1:estanque", deps(), { still: true, v: "sha-old" })).headers.get("Cache-Control")).toBe("private, no-cache");
+  });
+
   it("serves a reinstall's new version from the same installation id", async () => {
     const newer = CHECKED.replace("#4488cc", "#112233");
     const d = deps({
       rows: [{ ...ROW, releaseSha: "sha-new" }],
       releases: [release("sha-current"), release("sha-new", [{ ...POND, scene: newer }])],
     });
-    expect(await (await get("installed:inst1:estanque", d, { v: "sha-new" })).text()).toBe(newer);
+    const res = await get("installed:inst1:estanque", d, { v: "sha-new" });
+    expect(await res.text()).toBe(newer);
+    expect(res.headers.get("Cache-Control")).toBe("private, max-age=31536000, immutable");
   });
 
   it("is a 404, with nothing said, to anyone who is not the installation's person", async () => {

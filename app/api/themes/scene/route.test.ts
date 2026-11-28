@@ -27,7 +27,7 @@ describe("GET /api/themes/scene", () => {
     expect(res.headers.get("Content-Type")).toBe("image/svg+xml; charset=utf-8");
     expect(res.headers.get("Content-Security-Policy")).toBe("default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox");
     expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
-    expect(res.headers.get("Cache-Control")).toBe("public, max-age=31536000, immutable");
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=86400");
     const body = await res.text();
     expect(body.startsWith("<svg")).toBe(true);
     expect(body).toContain(REDUCED_MOTION_RULE);

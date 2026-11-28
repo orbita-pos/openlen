@@ -9,9 +9,15 @@
 // WHO MAY SEE WHAT. `bundled:<id>` is OpenLen's own gallery: anyone. `installed:<installationId>:<themeId>` is served to
 // the person whose installation it is, and only while it is not removed, from the installation's CURRENT version; to
 // anyone else — another person, nobody, a removed one, a theme that is not there, a theme with no scene — it is a 404
-// with an empty body that says nothing about which of those it was. `v` is a cache key and nothing else: the URL the
-// workspace builds (`?v=<releaseSha>`) changes with the version, so a year of `immutable` is safe; without it the answer
-// may change under the same URL, so it is not kept.
+// with an empty body that says nothing about which of those it was.
+//
+// CACHING (controller ruling R16). The 404 gate is only worth something if no shared cache can answer around it, so an
+// installed scene is never `public`. `v` is never what is looked up — the version served is the installation's — it is
+// only what decides how long the answer is kept: the URL the workspace builds (`?v=<releaseSha>`) changes with the
+// version, so when `v` IS the installation's current releaseSha the answer under that URL can never change and the
+// person's own cache keeps it a year (`private, immutable`). Without `v`, or with one that is not the current version
+// (an old URL after a reinstall, or a made-up one), the answer may change under that URL, so it is not kept
+// (`private, no-cache`). The gallery's scenes are OpenLen's own and public: a day, in any cache.
 import "server-only";
 
 import { bundledSceneSvg } from "./bundled";
@@ -25,15 +31,26 @@ const SCENE_CSP = "default-src 'none'; style-src 'unsafe-inline'; img-src data:;
 /** A ref no longer than this is not one of ours (`installed:<uuid>:<a theme id>` is under 100). */
 const REF_MAX_LENGTH = 200;
 
-/** The scene as an SVG response. With `still`, the scene that does not move; with `immutable`, kept for a year. */
-export function sceneResponse(svg: string, o: { still: boolean; immutable: boolean }): Response {
+/** How long, and by whom, a scene may be kept. */
+export type SceneCache = "bundled" | "installed-versioned" | "no-cache";
+
+const CACHE_CONTROL: Readonly<Record<SceneCache, string>> = {
+  // OpenLen's own gallery, the same bytes for everyone: any cache, for a day (a regenerated scene reaches people tomorrow).
+  bundled: "public, max-age=86400",
+  // An owner-gated scene under a URL that names its version: only the owner's own browser, for a year.
+  "installed-versioned": "private, max-age=31536000, immutable",
+  "no-cache": "private, no-cache",
+};
+
+/** The scene as an SVG response. With `still`, the scene that does not move; `cache` says how it may be kept. */
+export function sceneResponse(svg: string, o: { still: boolean; cache: SceneCache }): Response {
   return new Response(o.still ? stillScene(svg) : svg, {
     status: 200,
     headers: {
       "Content-Type": "image/svg+xml; charset=utf-8",
       "X-Content-Type-Options": "nosniff",
       "Content-Security-Policy": SCENE_CSP,
-      "Cache-Control": o.immutable ? "public, max-age=31536000, immutable" : "private, no-cache",
+      "Cache-Control": CACHE_CONTROL[o.cache],
     },
   });
 }
@@ -107,8 +124,7 @@ export async function serveThemeScene(
 
   if (ref.kind === "bundled") {
     const svg = deps.bundledScene(ref.id);
-    // The gallery's scenes are frozen with the build: a year is safe without a version in the URL.
-    return svg === null ? notFound() : sceneResponse(svg, { still: input.still, immutable: true });
+    return svg === null ? notFound() : sceneResponse(svg, { still: input.still, cache: "bundled" });
   }
 
   const personId = await deps.sessionPersonId();
@@ -118,5 +134,6 @@ export async function serveThemeScene(
   const release = await deps.readRelease(installation.releaseSha);
   const scene = release?.themes.find((theme) => theme.id === ref.themeId)?.scene;
   if (!scene) return notFound();
-  return sceneResponse(scene, { still: input.still, immutable: input.v !== null && input.v.length > 0 });
+  // `v` decides only how long the answer is kept: a year when it names the version being served, never otherwise.
+  return sceneResponse(scene, { still: input.still, cache: input.v === installation.releaseSha ? "installed-versioned" : "no-cache" });
 }
