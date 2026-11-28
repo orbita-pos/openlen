@@ -388,6 +388,10 @@ export interface AssistantRequestOrigin {
   /** With `message`: one of the messages the turn claimed carries the owner's own words, passed on verbatim. Without it,
    *  the turn has no owner in it and refuses what needs their words (lib/assistants/messages/woken.ts). */
   withOwnerWords?: true;
+  /** `ask_len` passed on what the owner TYPED to their own assistant in this turn: the owner asked, through their
+   *  assistant, so Len's turn is attended (`set_theme` works). Never on a request from her scheduled task, a message,
+   *  or a visitors' card («Que Len lo haga»): nobody asked just now. */
+  ownerAsked?: true;
 }
 
 /** A message from Len to one of the person's agents (spec local 2026-11-21-len-y-el-agente-conversan): the agent's turn

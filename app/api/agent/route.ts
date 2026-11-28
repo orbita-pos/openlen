@@ -6,6 +6,7 @@ import { hiloDelProyecto, mencionesValidas, personasDelProyecto, respuestaDeLen 
 import { apuntarMencionesDelTurno, nombresDeUsuarios, proyectoCompartido } from "@/lib/projects/chat-equipo";
 import { mencionesDe } from "@/lib/workspace-v2/menciones";
 import { launchSubagentNoticeTurn, registrarCorredorDeTurnos, type EmailRequest, type PedidoDelHilo, type ScheduledRequest } from "@/lib/agent/turnos-desde-el-servidor";
+import { isUnattendedTurn } from "@/lib/agent/unattended";
 import { cabeEnElTope, margenDeMiembros, sumarGasto } from "@/lib/projects/miembros";
 import { correoDelUsuario } from "@/lib/movil/llaves";
 import type { InlineImage } from "@/lib/ai-gateway";
@@ -1790,8 +1791,11 @@ async function correrTurno(
     // Len Watch works in a COPY of the project and writes in the parent's chat: what belongs to the project itself, like an
     // artifact's row, is refused there (spec local 2026-11-22-artifacts-de-len, §1).
     ...(proyectoDelChat !== projectId ? { inProjectCopy: true as const } : {}),
-    // Nobody started it in a chat (a scheduled task, Len Watch, «Hazlo», a goal round): `set_theme` refuses (ruling R24).
-    ...(opts.scheduled || opts.round ? { unattended: true as const } : {}),
+    // Nobody started it (ruling R24): a goal round, or a turn the server started — a scheduled task, Len Watch, «Hazlo»
+    // (launchEventTaskTurn: a press on an event card that approves only the card's action), the subagents' notices, a
+    // message, a visitors' card. `set_theme` refuses there. Not `ask_len` with what the owner typed to their own
+    // assistant: the owner asked (lib/agent/unattended.ts).
+    ...(isUnattendedTurn(opts) ? { unattended: true as const } : {}),
     mode,
     app: appDelTurno,
     tool: toolDelTurno,

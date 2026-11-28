@@ -28,6 +28,22 @@ describe("ask_len", () => {
     expect(typeof p.filaId).toBe("string");
   });
 
+  it("marks the request the owner TYPED this turn as theirs (`ownerAsked`): Len's turn is attended; one with no typed words is not", async () => {
+    const typed = vi.fn();
+    await runAskLen({ ...ASSISTANT_SESSION, mensajeDelUsuario: "dile a Len que me ponga el tema del estanque" } as unknown as AgentSession, { request: "pon el tema del estanque" }, typed);
+    expect(typed.mock.calls[0]![0].origin).toEqual({ kind: "assistant", assistantId: "a1", assistantName: "Lucía", ownerAsked: true });
+    const scheduledTask = vi.fn();
+    await runAskLen(
+      { ...ASSISTANT_SESSION, mensajeDelUsuario: "cada lunes, el informe", assistant: { id: "a1", name: "Lucía", serverStarted: true } } as unknown as AgentSession,
+      { request: "haz el informe" },
+      scheduledTask,
+    );
+    expect(scheduledTask.mock.calls[0]![0].origin).toEqual({ kind: "assistant", assistantId: "a1", assistantName: "Lucía" });
+    const none = vi.fn();
+    await runAskLen(ASSISTANT_SESSION, { request: "algo" }, none);
+    expect(none.mock.calls[0]![0].origin.ownerAsked).toBeUndefined();
+  });
+
   it("goes to the project on the owner's phone when she serves several and none is named", async () => {
     const session = { ...ASSISTANT_SESSION, assistant: { id: "a1", name: "Lucía", projects: [{ id: "p1", title: "Pan" }, { id: "p2", title: "Café" }], viewing: { id: "p2", title: "Café", served: true } } } as AgentSession;
     const launch = vi.fn();

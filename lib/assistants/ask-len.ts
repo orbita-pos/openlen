@@ -309,7 +309,8 @@ async function passToLen(
       projectId: target.id,
       texto: request,
       framing,
-      origin: { kind: "assistant", assistantId: assistant.id, assistantName: assistant.name },
+      // `ownerAsked`: the owner typed it this turn, so Len's turn counts as one they started (lib/agent/unattended.ts).
+      origin: { kind: "assistant", assistantId: assistant.id, assistantName: assistant.name, ...(owner && "typed" in owner ? { ownerAsked: true as const } : {}) },
       timeZone: session.zonaHoraria ?? "UTC",
       locale: session.uiLocale ?? "en",
       filaId,

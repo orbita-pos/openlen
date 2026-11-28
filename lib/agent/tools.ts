@@ -1502,7 +1502,8 @@ export interface AgentSession {
   /** A turn that works on a COPY of the project (a Len Watch turn in its worktree, spec local 2026-10-31-len-watch):
    *  what belongs to the project itself, like an artifact's row (spec local 2026-11-22-artifacts-de-len, §1), is refused. */
   inProjectCopy?: true;
-  /** Nobody started this turn in a chat (a scheduled task, Len Watch, «Hazlo», a goal round): set by the route. What only
+  /** Nobody started this turn (`lib/agent/unattended.ts`: a goal round, or one the server started — a scheduled task, Len Watch,
+   *  «Hazlo», a message — except `ask_len` with the owner's typed words): set by the route. What only
    *  changes how OpenLen looks to a person (`set_theme`, ruling R24) is refused. Absent in a turn a person started. */
   unattended?: true;
   /** Una línea que va delante de la salida del siguiente comando: la terminal de

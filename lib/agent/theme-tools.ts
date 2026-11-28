@@ -73,7 +73,7 @@ export async function runSetTheme(session: AgentSession, args: Record<string, un
   if (scope !== "everywhere" && scope !== "project") return { response: { ok: false, error: "bad_scope", message: 'scope is "everywhere" or "project".' } };
   // Ruling R24: a theme changes a person's view only in a turn they started — never in a scheduled task, Len Watch, a goal
   // round, a turn an agent's message woke, or one on a copy of the project. The person's own assistant talking with its
-  // owner is a turn they started.
+  // owner is a turn they started, and so is the Len turn its `ask_len` starts with what the owner typed (`ownerAsked`).
   if (session.unattended || session.wokenByAgent || session.inProjectCopy) {
     return { response: { ok: false, error: "unattended", message: "A theme is applied only in a turn the person started: tell them how to apply it instead." } };
   }
