@@ -873,7 +873,21 @@
     "darkWindow": "暗いウィンドウ",
     "twinOf": "対になるテーマ：{title}",
     "onEverywhere": "すべてで使用中",
-    "onInProject": "このプロジェクトで使用中"
+    "onInProject": "このプロジェクトで使用中",
+    "install": {
+      "button": "インストール",
+      "installing": "インストール中…",
+      "done": "テーマをインストールしました。「テーマ」で選べます",
+      "problems": "{count, plural, other {テーマはインストールされませんでした: 問題 # 件}}",
+      "problem": "{file}: {code}{detail}",
+      "inProgress": "インストールがまだ進行中です。終わるまでお待ちください",
+      "failed": "テーマをインストールできませんでした。もう一度お試しください。",
+      "warnings": {
+        "glass_unmeasured": "{theme}: コントラストを測定できなかったため、ガラスは設定どおりのままです",
+        "glass_below_target": "{theme}: ガラスを強めても文字が読みにくい可能性があります",
+        "palette_pair": "{theme}: パレットの一部の色のコントラストが不足しています"
+      }
+    }
   },
   "space": {
     "title": "あなたのスペース",

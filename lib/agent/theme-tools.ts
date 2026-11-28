@@ -70,29 +70,29 @@ function refFor(name: string, available: readonly UsableTheme[]): { ref: string 
 
 export async function runSetTheme(session: AgentSession, args: Record<string, unknown>, deps?: SetThemeDeps): Promise<ToolOutcome> {
   const scope = args.scope;
-  if (scope !== "everywhere" && scope !== "project") return { response: { error: "bad_scope", message: 'scope is "everywhere" or "project".' } };
+  if (scope !== "everywhere" && scope !== "project") return { response: { ok: false, error: "bad_scope", message: 'scope is "everywhere" or "project".' } };
   // Ruling R24: a theme changes a person's view only in a turn they started — never in a scheduled task, Len Watch, a goal
   // round, a turn an agent's message woke, or one on a copy of the project. The person's own assistant talking with its
   // owner is a turn they started.
   if (session.unattended || session.wokenByAgent || session.inProjectCopy) {
-    return { response: { error: "unattended", message: "A theme is applied only in a turn the person started: tell them how to apply it instead." } };
+    return { response: { ok: false, error: "unattended", message: "A theme is applied only in a turn the person started: tell them how to apply it instead." } };
   }
   const theme = typeof args.theme === "string" ? args.theme.trim() : "";
-  if (!theme) return { response: { error: "unknown_theme" } };
+  if (!theme) return { response: { ok: false, error: "unknown_theme" } };
   const d = deps ?? (await realSetThemeDeps());
-  if (!d.enabled()) return { response: { error: "themes_off" } };
+  if (!d.enabled()) return { response: { ok: false, error: "themes_off" } };
 
   const personId = personOf(session);
   const where: { scope: "everywhere" | "project"; projectId?: string } = scope === "project" ? { scope, projectId: session.projectId } : { scope };
   let themeRef: string | null = null;
   if (theme.toLowerCase() !== "off") {
     const found = refFor(theme, await d.available(personId, session.projectId, session.uiLocale ?? "en"));
-    if (found && "ambiguous" in found) return { response: { error: "ambiguous_theme", refs: found.ambiguous } };
+    if (found && "ambiguous" in found) return { response: { ok: false, error: "ambiguous_theme", refs: found.ambiguous } };
     // A ref nobody lists still goes to the door, which says unknown_theme without saying which way it is not.
     themeRef = found ? found.ref : theme;
   }
   const chosen = await d.choose(personId, { ...where, themeRef });
-  if (!chosen.ok) return { response: { error: chosen.error } };
+  if (!chosen.ok) return { response: { ok: false, error: chosen.error } };
   return { response: { applied: themeRef, scope } };
 }
 

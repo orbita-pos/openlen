@@ -873,7 +873,21 @@
     "darkWindow": "Ventana oscura",
     "twinOf": "Gemelo: {title}",
     "onEverywhere": "Activo en todo",
-    "onInProject": "Activo en este proyecto"
+    "onInProject": "Activo en este proyecto",
+    "install": {
+      "button": "Instalar",
+      "installing": "Instalando…",
+      "done": "Tema instalado: elígelo en Temas",
+      "problems": "{count, plural, one {El tema no se instaló: # problema} other {El tema no se instaló: # problemas}}",
+      "problem": "En {file}: {code}{detail}",
+      "inProgress": "Tienes una instalación en curso: espera a que termine",
+      "failed": "No se pudo instalar el tema. Inténtalo de nuevo.",
+      "warnings": {
+        "glass_unmeasured": "{theme}: no se pudo medir su contraste, así que su vidrio queda como lo pusiste",
+        "glass_below_target": "{theme}: el texto puede leerse mal aun con el vidrio subido",
+        "palette_pair": "{theme}: algunos colores de su paleta no contrastan lo suficiente"
+      }
+    }
   },
   "space": {
     "title": "Tu espacio",

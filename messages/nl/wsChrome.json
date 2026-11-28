@@ -873,7 +873,21 @@
     "darkWindow": "Donker venster",
     "twinOf": "Tegenhanger: {title}",
     "onEverywhere": "Overal actief",
-    "onInProject": "In dit project actief"
+    "onInProject": "In dit project actief",
+    "install": {
+      "button": "Installeren",
+      "installing": "Installeren…",
+      "done": "Thema geïnstalleerd: kies het bij Thema's",
+      "problems": "{count, plural, one {Het thema is niet geïnstalleerd: # probleem} other {Het thema is niet geïnstalleerd: # problemen}}",
+      "problem": "In {file}: {code}{detail}",
+      "inProgress": "Er loopt nog een installatie van je: wacht tot die klaar is",
+      "failed": "Het thema kon niet worden geïnstalleerd. Probeer het opnieuw.",
+      "warnings": {
+        "glass_unmeasured": "{theme}: het contrast kon niet worden gemeten, dus het glas blijft zoals je het instelde",
+        "glass_below_target": "{theme}: de tekst is misschien moeilijk leesbaar, zelfs met versterkt glas",
+        "palette_pair": "{theme}: sommige kleuren van het palet hebben te weinig contrast"
+      }
+    }
   },
   "space": {
     "title": "Jouw ruimte",

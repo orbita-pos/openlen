@@ -65,6 +65,8 @@ import { terminalEnVivo } from "@/lib/workspace-v2/terminal-en-vivo";
 import { subagentRefFrom } from "@/lib/agent/subagents/card";
 import { subagentsLive } from "./subagents-live";
 import { toolCardsLive } from "../tools/use-tool-cards";
+import { themesChangedBy } from "../theme/themes-changed";
+import { reloadWorkspaceThemes } from "../theme/use-workspace-theme";
 import { leerCambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
 import {
   MAX_PROMPT,
@@ -1841,6 +1843,8 @@ export function useAgentChat({
                 if (tool === SHOW_WIDGET && status !== "running") updateTurn(turnId, { liveWidget: undefined });
                 // Su tarjeta llegó: ya no espera.
                 if (asksTheOwner(tool) && status !== "running") updateTurn(turnId, { pendingQuestions: undefined, answeredLive: undefined });
+                // Len's `set_theme`, or his `publish` installing a theme: the workspace reads its themes again and repaints.
+                if (themesChangedBy(tool, status)) reloadWorkspaceThemes();
                 if (tool) {
                   const action: AgentAction = {
                     tool,

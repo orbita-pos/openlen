@@ -873,7 +873,21 @@
     "darkWindow": "深色窗口",
     "twinOf": "配对主题：{title}",
     "onEverywhere": "已在所有地方启用",
-    "onInProject": "已在此项目中启用"
+    "onInProject": "已在此项目中启用",
+    "install": {
+      "button": "安装",
+      "installing": "正在安装…",
+      "done": "主题已安装：在“主题”中选择它",
+      "problems": "{count, plural, other {主题未安装：# 个问题}}",
+      "problem": "{file}：{code}{detail}",
+      "inProgress": "你的一次安装仍在进行：请等它完成",
+      "failed": "无法安装主题，请重试。",
+      "warnings": {
+        "glass_unmeasured": "{theme}：无法测量其对比度，玻璃保持你的设置",
+        "glass_below_target": "{theme}：即使加强玻璃，文字也可能难以阅读",
+        "palette_pair": "{theme}：其调色板中的部分颜色对比度不足"
+      }
+    }
   },
   "space": {
     "title": "你的空间",

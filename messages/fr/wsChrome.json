@@ -873,7 +873,21 @@
     "darkWindow": "Fenêtre sombre",
     "twinOf": "Jumeau : {title}",
     "onEverywhere": "Actif partout",
-    "onInProject": "Actif dans ce projet"
+    "onInProject": "Actif dans ce projet",
+    "install": {
+      "button": "Installer",
+      "installing": "Installation…",
+      "done": "Thème installé : choisissez-le dans Thèmes",
+      "problems": "{count, plural, one {Le thème n'a pas été installé : # problème} other {Le thème n'a pas été installé : # problèmes}}",
+      "problem": "Dans {file} : {code}{detail}",
+      "inProgress": "Une de vos installations est en cours : attendez qu'elle se termine",
+      "failed": "Impossible d'installer le thème. Réessayez.",
+      "warnings": {
+        "glass_unmeasured": "{theme} : son contraste n'a pas pu être mesuré, son verre reste tel que vous l'avez réglé",
+        "glass_below_target": "{theme} : le texte peut être difficile à lire même avec le verre renforcé",
+        "palette_pair": "{theme} : certaines couleurs de sa palette ne contrastent pas assez"
+      }
+    }
   },
   "space": {
     "title": "Votre espace",

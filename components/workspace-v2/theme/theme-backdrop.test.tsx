@@ -368,6 +368,10 @@ describe("the client's canvas stays opaque", () => {
   // The rules only: a comment may name what a rule must not touch.
   const tokens = readFileSync(join(repo, "app/[locale]/new/tokens.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
   const glassRules = [...tokens.matchAll(/([^{}]*\[data-theme-glass\][^{}]*)\{([^}]*)\}/g)];
+  // The glass lives inside one `@media (min-width: 768px)`; jsdom applies no media query, so a document that has to
+  // compute the glass gets the rules as a desktop-wide window sees them.
+  const DESKTOP_ONLY = /@media\s*\(min-width:\s*768px\)\s*\{((?:[^{}]*\{[^}]*\})*)\s*\}/;
+  const desktopTokens = tokens.replace(DESKTOP_ONLY, (_all, inner: string) => inner);
 
   it("the glass never redefines the canvas's own background", () => {
     expect(glassRules.length).toBeGreaterThan(0);
@@ -403,6 +407,20 @@ describe("the client's canvas stays opaque", () => {
     expect(rootRule![2]).toMatch(/--glass-fallback:\s*var\(--bg\)/);
   });
 
+  it("no glass on a phone: every rule that tints or blurs a marked surface is inside @media (min-width: 768px)", () => {
+    // On a phone the open rail panel lies OVER the client's canvas (`max-md:absolute`): there it keeps its opaque tokens.
+    const media = DESKTOP_ONLY.exec(tokens);
+    expect(media).not.toBeNull();
+    const inside = media![1]!;
+    const outside = tokens.replace(media![0], "");
+    const surfaceRules = glassRules.filter(([, selector]) => selector.includes("[data-glass-surface]"));
+    expect(surfaceRules.length).toBe(4);
+    for (const [whole] of surfaceRules) expect(inside, whole).toContain(whole.trim());
+    expect(outside).not.toContain("[data-glass-surface]");
+    // What stays outside is only the root's fallback tint, which paints nothing by itself.
+    expect(outside).toMatch(/\.workspace-v2\[data-theme-glass\]\s*\{\s*--glass-fallback:\s*var\(--bg\);\s*\}/);
+  });
+
   it("the blur sits on a ::before, never on the surface: a position: fixed child is not trapped", () => {
     const withBlur = [...tokens.matchAll(/([^{}]*)\{([^}]*backdrop-filter[^}]*)\}/g)].filter(([, selector]) => selector.includes("data-theme"));
     expect(withBlur.length).toBe(1);
@@ -418,7 +436,7 @@ describe("the client's canvas stays opaque", () => {
 
   it("in a document with the theme's rules, the fixed chat inside the glass rail has no blurred or transformed ancestor", async () => {
     const sheet = document.createElement("style");
-    sheet.textContent = tokens;
+    sheet.textContent = desktopTokens;
     document.head.appendChild(sheet);
     try {
       answer = state(LAGOON);

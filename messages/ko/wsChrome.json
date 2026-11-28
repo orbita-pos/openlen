@@ -873,7 +873,21 @@
     "darkWindow": "어두운 창",
     "twinOf": "짝 테마: {title}",
     "onEverywhere": "모든 곳에서 사용 중",
-    "onInProject": "이 프로젝트에서 사용 중"
+    "onInProject": "이 프로젝트에서 사용 중",
+    "install": {
+      "button": "설치",
+      "installing": "설치 중…",
+      "done": "테마를 설치했습니다. 테마에서 선택하세요",
+      "problems": "{count, plural, other {테마가 설치되지 않았습니다: 문제 #개}}",
+      "problem": "{file}: {code}{detail}",
+      "inProgress": "설치가 아직 진행 중입니다. 끝날 때까지 기다려 주세요",
+      "failed": "테마를 설치할 수 없습니다. 다시 시도하세요.",
+      "warnings": {
+        "glass_unmeasured": "{theme}: 대비를 측정할 수 없어 유리는 설정한 그대로 유지됩니다",
+        "glass_below_target": "{theme}: 유리를 강하게 해도 글자가 읽기 어려울 수 있습니다",
+        "palette_pair": "{theme}: 팔레트의 일부 색상 대비가 충분하지 않습니다"
+      }
+    }
   },
   "space": {
     "title": "내 공간",

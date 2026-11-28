@@ -873,7 +873,21 @@
     "darkWindow": "Dunkles Fenster",
     "twinOf": "Gegenstück: {title}",
     "onEverywhere": "Überall aktiv",
-    "onInProject": "In diesem Projekt aktiv"
+    "onInProject": "In diesem Projekt aktiv",
+    "install": {
+      "button": "Installieren",
+      "installing": "Wird installiert…",
+      "done": "Theme installiert: wähle es unter Themes",
+      "problems": "{count, plural, one {Das Theme wurde nicht installiert: # Problem} other {Das Theme wurde nicht installiert: # Probleme}}",
+      "problem": "In {file}: {code}{detail}",
+      "inProgress": "Eine Installation von dir läuft noch: warte, bis sie fertig ist",
+      "failed": "Das Theme konnte nicht installiert werden. Versuch es noch einmal.",
+      "warnings": {
+        "glass_unmeasured": "{theme}: Der Kontrast konnte nicht gemessen werden, das Glas bleibt wie eingestellt",
+        "glass_below_target": "{theme}: Der Text ist womöglich auch mit verstärktem Glas schwer lesbar",
+        "palette_pair": "{theme}: Einige Farben der Palette haben zu wenig Kontrast"
+      }
+    }
   },
   "space": {
     "title": "Dein Bereich",

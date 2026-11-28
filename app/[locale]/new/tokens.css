@@ -109,29 +109,34 @@
 .workspace-v2[data-theme-glass] {
   --glass-fallback: var(--bg);
 }
-.workspace-v2[data-theme-glass] [data-glass-surface] {
-  --bg: transparent;
-  --bg-sidebar: transparent;
-  background-color: color-mix(in oklch, var(--glass-tint, var(--glass-fallback)) calc(var(--glass-opacity) * 100%), transparent);
-}
-.workspace-v2[data-theme-glass] [data-glass-surface]::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  border-radius: inherit;
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  backdrop-filter: blur(var(--glass-blur));
-}
+/* 🔴 Sólo desde `md` (768 px, el `md:` de Tailwind). En un teléfono el panel abierto del riel se pone ENCIMA del lienzo
+   del cliente (`max-md:absolute`, `left-sidebar.tsx`): un cristal translúcido ahí sería la página del cliente leyéndose a
+   través del chat. Por debajo de 768 px las superficies marcadas no tiñen, no desenfocan y conservan sus tokens opacos. */
+@media (min-width: 768px) {
+  .workspace-v2[data-theme-glass] [data-glass-surface] {
+    --bg: transparent;
+    --bg-sidebar: transparent;
+    background-color: color-mix(in oklch, var(--glass-tint, var(--glass-fallback)) calc(var(--glass-opacity) * 100%), transparent);
+  }
+  .workspace-v2[data-theme-glass] [data-glass-surface]::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    border-radius: inherit;
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    backdrop-filter: blur(var(--glass-blur));
+  }
 
-/* Una superficie marcada DENTRO de otra (la página de Herramientas o Mis páginas dentro del centro de inicio) no vuelve a
-   teñir ni a desenfocar: dos capas de tinte dejarían el cristal casi opaco. Se ve el de fuera. */
-.workspace-v2[data-theme-glass] [data-glass-surface] [data-glass-surface] {
-  background-color: transparent;
-}
-.workspace-v2[data-theme-glass] [data-glass-surface] [data-glass-surface]::before {
-  content: none;
+  /* Una superficie marcada DENTRO de otra (la página de Herramientas o Mis páginas dentro del centro de inicio) no vuelve a
+     teñir ni a desenfocar: dos capas de tinte dejarían el cristal casi opaco. Se ve el de fuera. */
+  .workspace-v2[data-theme-glass] [data-glass-surface] [data-glass-surface] {
+    background-color: transparent;
+  }
+  .workspace-v2[data-theme-glass] [data-glass-surface] [data-glass-surface]::before {
+    content: none;
+  }
 }
 
 /* El lienzo, con tema: su color encima de una base OPACA (`--bg-preview-base`), por si una paleta le diera un color con

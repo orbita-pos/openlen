@@ -873,7 +873,21 @@
     "darkWindow": "Janela escura",
     "twinOf": "Gêmeo: {title}",
     "onEverywhere": "Ativo em tudo",
-    "onInProject": "Ativo neste projeto"
+    "onInProject": "Ativo neste projeto",
+    "install": {
+      "button": "Instalar",
+      "installing": "Instalando…",
+      "done": "Tema instalado: escolha-o em Temas",
+      "problems": "{count, plural, one {O tema não foi instalado: # problema} other {O tema não foi instalado: # problemas}}",
+      "problem": "Em {file}: {code}{detail}",
+      "inProgress": "Há uma instalação sua em andamento: espere terminar",
+      "failed": "Não foi possível instalar o tema. Tente de novo.",
+      "warnings": {
+        "glass_unmeasured": "{theme}: não foi possível medir o contraste, então o vidro fica como você definiu",
+        "glass_below_target": "{theme}: o texto pode ficar difícil de ler mesmo com o vidro reforçado",
+        "palette_pair": "{theme}: algumas cores da paleta não têm contraste suficiente"
+      }
+    }
   },
   "space": {
     "title": "Seu espaço",

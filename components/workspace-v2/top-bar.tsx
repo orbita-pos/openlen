@@ -16,6 +16,7 @@
 import { useEffect, useRef, useState, type ComponentProps } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ToolInstallButton } from "./tools/install-button";
+import { ThemeInstallButton } from "./theme/theme-install-button";
 import { DesktopMenuItems } from "./desktop-apps/desktop-menu-items";
 import { Link, useRouter } from "@/i18n/navigation";
 import { PUBLISHED_BASE_HOST, publishedUrl } from "@/lib/publish/base-host";
@@ -124,6 +125,10 @@ interface TopBarProps {
   projectId?: string;
   /** A TOOL project (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): «Instalar» takes «Publicar»'s place. */
   isTool?: boolean;
+  /** A THEME project (spec local 2026-11-27-temas-del-workspace, §4.2): never published as a site. Its owner gets «Instalar»
+   *  in «Publicar»'s place (`themeOwner`); anyone else gets neither. */
+  isTheme?: boolean;
+  themeOwner?: boolean;
   /** Len 3.0's deliverables are on on this server (`GET /api/projects/[id]`). */
   artifactsEnabled?: boolean;
   artifactsReadOnly?: boolean;
@@ -161,6 +166,8 @@ export function TopBar({
   published,
   projectId,
   isTool = false,
+  isTheme = false,
+  themeOwner = false,
   artifactsEnabled = false,
   artifactsReadOnly = false,
   artifactsData,
@@ -742,13 +749,19 @@ export function TopBar({
             publish is handled by PublishModal which the parent renders;
             we only toggle it. Hidden entirely when no project is loaded
             (onPublish is undefined) — nothing to publish yet. */}
-        {onPublish && isTool && projectId ? (
+        {onPublish && isTheme && themeOwner && projectId ? (
+          <>
+            <ThemeInstallButton projectId={projectId} />
+            <span className="hidden md:inline-block h-5 w-px bg-[color:var(--border)] mx-1.5" />
+          </>
+        ) : null}
+        {onPublish && !isTheme && isTool && projectId ? (
           <>
             <ToolInstallButton projectId={projectId} title={projectName} desktop={desktopApps} />
             <span className="hidden md:inline-block h-5 w-px bg-[color:var(--border)] mx-1.5" />
           </>
         ) : null}
-        {onPublish && !isTool && (
+        {onPublish && !isTool && !isTheme && (
         <>
         <div className="relative ml-0.5" ref={deployRef}>
           <button

@@ -873,7 +873,21 @@
     "darkWindow": "Dark window",
     "twinOf": "Twin: {title}",
     "onEverywhere": "On everywhere",
-    "onInProject": "On in this project"
+    "onInProject": "On in this project",
+    "install": {
+      "button": "Install",
+      "installing": "Installing…",
+      "done": "Theme installed: pick it in Themes",
+      "problems": "{count, plural, one {The theme wasn't installed: # problem} other {The theme wasn't installed: # problems}}",
+      "problem": "In {file}: {code}{detail}",
+      "inProgress": "An install of yours is still running: wait for it to finish",
+      "failed": "The theme couldn't be installed. Try again.",
+      "warnings": {
+        "glass_unmeasured": "{theme}: its contrast couldn't be measured, so its glass stays as you set it",
+        "glass_below_target": "{theme}: the text may be hard to read even with its glass raised",
+        "palette_pair": "{theme}: some colours of its palette don't contrast enough"
+      }
+    }
   },
   "space": {
     "title": "Your space",

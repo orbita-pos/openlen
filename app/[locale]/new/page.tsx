@@ -230,6 +230,8 @@ interface LoadedProject {
   tool: boolean;
   /** A GAME (`data.game`, spec local 2026-11-05-modo-juego-design): an app whose preview lens is called «Juego». */
   game: boolean;
+  /** A THEME project (`data.theme`, spec local 2026-11-27-temas-del-workspace): installed into the workspace, never published. */
+  theme: boolean;
   /** COMPARTIR EL PROYECTO (lib/projects/acceso.ts): tú eres el dueño, un
    *  editor o un lector. Un lector no edita nada; el servidor lo hace cumplir,
    *  esto sólo esconde lo que no podría hacer. */
@@ -1396,6 +1398,7 @@ function NewV2Inner() {
                 app?: AppDeProyecto;
                 tool?: { bornAt: string };
                 game?: { bornAt: string };
+                theme?: { bornAt: string };
                 space?: unknown;
               };
               rol?: "dueno" | "editor" | "lector";
@@ -1449,6 +1452,7 @@ function NewV2Inner() {
         app: p.data?.app ?? null,
         tool: !!p.data?.tool,
         game: !!p.data?.game,
+        theme: !!p.data?.theme,
         rol: p.rol ?? "dueno",
         artifacts: p.artifacts === true,
       });
@@ -3679,6 +3683,8 @@ function NewV2Inner() {
         published={published}
         projectId={loadedProject?.id}
         isTool={loadedProject?.tool === true}
+        isTheme={loadedProject?.theme === true}
+        themeOwner={loadedProject?.rol === "dueno"}
         artifactsEnabled={loadedProject?.artifacts === true}
         artifactsReadOnly={soloLector}
         artifactsData={artifactsOn ? artifacts : undefined}

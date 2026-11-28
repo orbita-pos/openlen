@@ -69,7 +69,7 @@ describe("set_theme", () => {
   it("a ref the speaker can't use is unknown_theme, and nothing is saved", async () => {
     const { d } = deps();
     const out = await runSetTheme(owner, { theme: "installed:someone-elses:scene", scope: "everywhere" }, d);
-    expect(out.response).toEqual({ error: "unknown_theme" });
+    expect(out.response).toEqual({ ok: false, error: "unknown_theme" });
   });
 
   it("a scope that isn't one is refused before anything is read", async () => {
@@ -81,7 +81,7 @@ describe("set_theme", () => {
 
   it("with themes off it does nothing", async () => {
     const { d, choose } = deps({ enabled: () => false });
-    expect((await runSetTheme(owner, { theme: "bundled:honu-lagoon", scope: "everywhere" }, d)).response).toEqual({ error: "themes_off" });
+    expect((await runSetTheme(owner, { theme: "bundled:honu-lagoon", scope: "everywhere" }, d)).response).toEqual({ ok: false, error: "themes_off" });
     expect(choose).not.toHaveBeenCalled();
   });
 
