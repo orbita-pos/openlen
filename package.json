@@ -124,6 +124,7 @@
     "tools:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/tools-migrate.ts",
     "desktop-apps:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/desktop-apps-migrate.ts",
     "themes:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/themes-migrate.ts",
+    "themes:bundle": "node --experimental-strip-types --no-warnings scripts/themes-bundle.mjs",
     "len-memory:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-memory-migrate.ts",
     "len-skills:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-skills-migrate.ts",
     "chat-equipo:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/chat-equipo-migrate.ts",
