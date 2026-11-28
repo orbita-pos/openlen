@@ -9,10 +9,13 @@ export const CREATE_THEMES: readonly string[] = [
     "themes" jsonb NOT NULL,
     "costs" jsonb NOT NULL DEFAULT '{}'::jsonb,
     "glassAdjusted" jsonb NOT NULL DEFAULT '{}'::jsonb,
+    "measured" jsonb NOT NULL DEFAULT '{}'::jsonb,
     "createdAt" timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT "themeReleases_projectId_projects_id_fk"
       FOREIGN KEY ("projectId") REFERENCES "projects"("id") ON DELETE CASCADE
   );`,
+  // A table made before the column existed gets it: what each scene measured, by its sha256 (a reinstall reuses it).
+  `ALTER TABLE "themeReleases" ADD COLUMN IF NOT EXISTS "measured" jsonb NOT NULL DEFAULT '{}'::jsonb;`,
   `CREATE TABLE IF NOT EXISTS "themeInstallations" (
     "id" text PRIMARY KEY,
     "personId" text NOT NULL,

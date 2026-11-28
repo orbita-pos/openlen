@@ -21,11 +21,23 @@ const REF_MAX = 500;
 const Body = z
   .object({
     scope: z.enum(["everywhere", "project"]),
-    projectId: z.string().min(1).max(PROJECT_ID_MAX).optional(),
+    // `null` is the same as leaving it out (a client with no project open sends what it has).
+    projectId: z
+      .string()
+      .min(1)
+      .max(PROJECT_ID_MAX)
+      .nullish()
+      .transform((v) => v ?? undefined),
     // Any string a person could send: a ref that is not one of theirs is the 404 below, not a malformed body.
     themeRef: z.string().max(REF_MAX).nullable(),
   })
   .refine((b) => b.scope === "everywhere" || b.projectId !== undefined, { message: "projectId is required for scope «project»", path: ["projectId"] });
+
+/** Whether themes are on here, and nothing else (no session, no read): what the start pages ask before they offer a
+ *  theme's birth — 404 with OPENLEN_THEMES=0, as every theme route answers then. */
+export async function HEAD(): Promise<Response> {
+  return new Response(null, { status: themesEnabled() ? 204 : 404, headers: { "cache-control": "no-store" } });
+}
 
 export async function GET(req: Request): Promise<Response> {
   if (!themesEnabled()) return json({ error: "themes_off" }, 404);

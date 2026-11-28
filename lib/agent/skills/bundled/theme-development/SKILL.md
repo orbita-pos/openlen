@@ -39,7 +39,7 @@ The themes are the list under `openlen.theme.themes`:
 ```
 
 - `id`: lowercase letters, digits, `-` or `_`, starting with a letter or digit; unique in the project. Up to 64 themes.
-- `twin`: another theme of this project, of the other window.
+- `twin`: another theme of this project, of the other window, whose own `twin` names this one back.
 - `scene`: an absolute path to an `.svg` in the project.
 - `glass`: `blur` in points from 0 to 64, `opacity` from 0 to 1, `tint` a raw colour (`#hex`, `rgb()`, `rgba()`, `hsl()`, `hsla()` of plain numbers). Left out, a scene gets `{ blur: 16, opacity: 0.6 }`; `false` means no glass. Glass is only for a scene.
 - Without a scene, a theme can be a still `ground` — exactly one of:
@@ -59,7 +59,7 @@ A theme is any one of a scene, a ground, a palette or a font (or several of them
               "pond-night": { "title": "Pond, Night", "blurb": "The same pond under the moon." } } }
 ```
 
-Every theme needs a title (≤ 60 characters) and a blurb (≤ 200) in English and in the person's language. Write them properly: the skeleton's are placeholders.
+Every theme needs a title (≤ 60 characters) and a blurb (≤ 200) in English; any other language falls back to the English one, so add the person's language too (and any other) for them to read it in theirs. Write them properly: the skeleton's are placeholders.
 
 ## The scene — `/themes/*.svg`
 

@@ -59,6 +59,7 @@ const release = (over: Partial<ThemeRelease> = {}): ThemeRelease => ({
   themes: THEMES,
   costs: { estanque: { elements: 700, animated: 50, heavy: true }, "estanque-noche": { elements: 20, animated: 1, heavy: false } },
   glassAdjusted: { estanque: 0.62 },
+  measured: {},
   createdAt: new Date("2026-11-27T10:00:00Z"),
   ...over,
 });
@@ -78,7 +79,13 @@ function deps(w: World = {}) {
   return {
     choicesOf: vi.fn(async () => choices),
     listInstallations: vi.fn(async (personId: string) => rows.filter((r) => r.personId === personId)),
-    readRelease: vi.fn(async (sha: string) => releases.find((r) => r.sha === sha) ?? null),
+    // What the store's read gives: each theme without its scene's text, and whether it had one.
+    readReleaseMeta: vi.fn(async (sha: string) => {
+      const found = releases.find((r) => r.sha === sha);
+      return found
+        ? { ...found, themes: found.themes.map(({ scene, ...rest }) => ({ ...rest, hasScene: scene !== undefined })) }
+        : null;
+    }),
     setChoice: vi.fn(async () => undefined),
     canSee: vi.fn(async (projectId: string) => visible.includes(projectId)),
   } satisfies ThemeDeps;
@@ -426,8 +433,16 @@ describe("chooseTheme", () => {
   it("a project they cannot see is no_access (any role that can see it may choose: it is their own view), and nothing is written", async () => {
     const d = deps({ visible: [] });
     expect(await chooseTheme("u1", { scope: "project", projectId: "p1", themeRef: "bundled:aurora" }, d)).toEqual({ ok: false, error: "no_access" });
-    expect(await chooseTheme("u1", { scope: "project", projectId: "p1", themeRef: null }, d)).toEqual({ ok: false, error: "no_access" });
     expect(d.setChoice).not.toHaveBeenCalled();
+  });
+
+  it("clearing the pick of a project they lost needs no access: it deletes only their own row", async () => {
+    const d = deps({ visible: [] });
+    expect(await chooseTheme("u1", { scope: "project", projectId: "gone", themeRef: null }, d)).toEqual({ ok: true });
+    expect(d.canSee).not.toHaveBeenCalled();
+    expect(d.setChoice).toHaveBeenCalledWith("u1", "gone", null);
+    // Still never «everywhere»'s row through a project named so.
+    expect(await chooseTheme("u1", { scope: "project", projectId: "everywhere", themeRef: null }, d)).toEqual({ ok: false, error: "no_access" });
   });
 
   it("a project scope with no project, or one named «everywhere» (which would overwrite everywhere's pick), is no_access", async () => {
@@ -443,5 +458,42 @@ describe("chooseTheme", () => {
     expect(await chooseTheme("u1", { scope: "everywhere", projectId: "p9", themeRef: "bundled:aurora" }, d)).toEqual({ ok: true });
     expect(d.canSee).not.toHaveBeenCalled();
     expect(d.setChoice).toHaveBeenCalledWith("u1", "everywhere", "bundled:aurora");
+  });
+});
+
+describe("the gallery's glass, raised by the same gate as an install", () => {
+  it("every bundled theme was measured, and the opacity it resolves to is the gate's for that colour", async () => {
+    const { glassFit, glassInks } = await import("./contrast");
+    for (const def of BUNDLED_THEMES) {
+      expect(def.measured, def.id).toMatch(/^#[0-9a-f]{6}$/);
+      const { theme } = await resolveTheme("u1", null, "en", deps({ choices: { project: null, everywhere: `bundled:${def.id}` } }));
+      if (!theme || theme.glass === false || !def.glass) throw new Error(`${def.id}: no glass resolved`);
+      const fit = glassFit({ ...glassInks(def, def.glass), under: def.measured!, opacity: def.glass.opacity });
+      expect(theme.glass.opacity, def.id).toBe(fit.opacity);
+      expect(def.glassAdjusted, def.id).toBe(fit.opacity > def.glass.opacity ? fit.opacity : undefined);
+    }
+  });
+
+  it("at that opacity --fg and --fg-muted read at 4.5:1 over the measured colour — except where no opacity could", async () => {
+    const { READABLE, WORKSPACE_COLORS: own, glassFit } = await import("./contrast");
+    const unfixable: string[] = [];
+    for (const def of BUNDLED_THEMES) {
+      const { theme } = await resolveTheme("u1", null, "en", deps({ choices: { project: null, everywhere: `bundled:${def.id}` } }));
+      if (!theme || theme.glass === false || !def.glass) throw new Error(`${def.id}: no glass resolved`);
+      const inks = [own[def.window]["--fg"], own[def.window]["--fg-muted"]];
+      // At the resolved opacity, with nothing raised further: what the panel's main text gets.
+      const at = glassFit({ fg: inks, tint: theme.glass.tint!, under: def.measured!, opacity: theme.glass.opacity });
+      expect(at.opacity, def.id).toBe(theme.glass.opacity);
+      if (at.ratio >= READABLE) continue;
+      // It does not read: then no opacity from Claude Code's up to the cap reads either (the gate went as far as it goes,
+      // and an install would report it as glass_below_target) — the tint is lighter than the scene under light text.
+      for (let o = def.glass.opacity; o <= 0.95 + 1e-9; o += 0.02) {
+        expect(glassFit({ fg: inks, tint: theme.glass.tint!, under: def.measured!, opacity: o }).ratio < READABLE, `${def.id} at ${o}`).toBe(true);
+      }
+      unfixable.push(def.id);
+    }
+    // Measured 27/11: paper-garden-kraft's kraft tint (#35312a) over its darker paper only gets lighter as it thickens,
+    // and deep-water's glass is at the cap (0.95) with its muted text just under 4.5 on the teal it leaves.
+    expect(unfixable.sort()).toEqual(["deep-water", "paper-garden-kraft"]);
   });
 });

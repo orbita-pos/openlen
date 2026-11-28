@@ -9,6 +9,7 @@ import {
   WORKSPACE_COLORS,
   contrastRatio,
   glassFit,
+  glassInks,
   glassOpacityFor,
   paletteWarnings,
   parseRawColor,
@@ -166,7 +167,7 @@ describe("WORKSPACE_COLORS", () => {
   for (const window of ["light", "dark"] as const) {
     it(`is what tokens.css says for the ${window} window`, () => {
       const pinned = WORKSPACE_COLORS[window];
-      expect(Object.keys(pinned).sort()).toEqual(["--bg", "--bg-elev", "--bg-sidebar", "--fg", "--fg-muted"]);
+      expect(Object.keys(pinned).sort()).toEqual(["--bg", "--bg-elev", "--bg-sidebar", "--fg", "--fg-faint", "--fg-muted"]);
       for (const [token, hex] of Object.entries(pinned)) {
         const fromFile = files[window][token];
         expect(fromFile, `${token} in the ${window} block of tokens.css`).toBeDefined();
@@ -183,7 +184,30 @@ describe("WORKSPACE_COLORS", () => {
       for (const bg of ["--bg", "--bg-sidebar", "--bg-elev"] as const) {
         expect(contrastRatio(c["--fg"], c[bg])).toBeGreaterThanOrEqual(READABLE);
         expect(contrastRatio(c["--fg-muted"], c[bg])).toBeGreaterThanOrEqual(READABLE);
+        expect(contrastRatio(c["--fg-faint"], c[bg])).toBeGreaterThanOrEqual(READABLE);
       }
     }
+  });
+});
+
+describe("glassFit with every ink of the panel", () => {
+  it("is raised for the STRICTEST ink, and says which one is weakest", () => {
+    const alone = glassFit({ fg: "#000000", tint: "#ffffff", under: "#808080", opacity: 0.3 });
+    const both = glassFit({ fg: ["#000000", "#6b6b6b"], tint: "#ffffff", under: "#808080", opacity: 0.3 });
+    expect(alone.opacity).toBe(0.3);
+    expect(both.opacity).toBeGreaterThan(0.3);
+    expect(both.ink).toBe(1);
+    expect(both.ratio).toBeGreaterThanOrEqual(READABLE);
+    // The weakest ink at the returned opacity reads; so does every other.
+    const channel = Math.round(255 * both.opacity + 128 * (1 - both.opacity));
+    expect(contrastRatio("#6b6b6b", `rgb(${channel}, ${channel}, ${channel})`)).toBeGreaterThanOrEqual(READABLE - 0.05);
+  });
+
+  it("glassInks hands over --fg, --fg-muted and --fg-faint, the theme's own where it has them", () => {
+    expect(glassInks({ window: "light" }, {}).fg).toEqual([WORKSPACE_COLORS.light["--fg"], WORKSPACE_COLORS.light["--fg-muted"], WORKSPACE_COLORS.light["--fg-faint"]]);
+    expect(glassInks({ window: "dark", colors: { "--fg-muted": "#aaaaaa" } }, { tint: "#000000" })).toEqual({
+      fg: [WORKSPACE_COLORS.dark["--fg"], "#aaaaaa", WORKSPACE_COLORS.dark["--fg-faint"]],
+      tint: "#000000",
+    });
   });
 });

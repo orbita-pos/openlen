@@ -102,6 +102,18 @@ export interface StoredThemeDefinition extends Omit<ThemeDefinition, "scene"> {
   scene?: string;
 }
 
+/**
+ * A theme of the gallery that comes with OpenLen (`lib/themes/bundled/index.ts`, generated): a `ThemeDefinition` whose
+ * scene is a file of that folder, plus what the contrast gate made of it when the gallery was generated — the same
+ * meter and the same sum an install runs (`scripts/themes-bundle.mjs`).
+ */
+export interface BundledThemeDefinition extends ThemeDefinition {
+  /** The colour the scene's still measured under Len's panel, `#rrggbb`. */
+  measured?: string;
+  /** The glass opacity the gate raised it to, over the one Claude Code wrote; absent = as written. */
+  glassAdjusted?: number;
+}
+
 /** The `scope` of a choice that holds for all of a person's OpenLen; any other scope is a project's id. */
 export const EVERYWHERE_SCOPE = "everywhere";
 

@@ -64,7 +64,7 @@ const STILLS = [
   "star-chart",
 ];
 
-/** Scenes that move and whose own reduced-motion rule also hides some details at rest, which `addedReducedMotion` does not read as the plain one. */
+/** Scenes that move and whose own reduced-motion block also hides some details at rest. */
 const HIDE_DETAILS_AT_REST = ["koi-mosaic", "dither-dunes", "dither-dunes-night"];
 
 const byId = new Map(BUNDLED_THEMES.map((t) => [t.id, t]));
@@ -145,7 +145,7 @@ describe("the bundled gallery", () => {
       "/locale/en.json": JSON.stringify(locale),
       ...Object.fromEntries(BUNDLED_THEMES.map((t) => [`/themes/${t.scene}`, sceneOf(t.id)])),
     };
-    const result = readThemeManifest(files, { personLocale: "en" });
+    const result = readThemeManifest(files);
     if (!result.ok) throw new Error(`the gallery is not a manifest: ${JSON.stringify(result.problems)}`);
     expect(result.themes).toHaveLength(29);
     for (const read of result.themes) {
@@ -166,9 +166,17 @@ describe("the bundled gallery", () => {
       // Claude Code's scenes that move stop when the system asks for less motion: the file has the rule, so none of
       // them needs the gate's to be put into the file (it is put in when the scene is served, whatever they say).
       expect(svg, theme.id).toMatch(/prefers-reduced-motion\s*:\s*reduce/);
-      // The gate's report of `addedReducedMotion` looks for the plain rule `*{animation:none!important}` and nothing
-      // else in the block: three scenes also hide a few details in theirs (`.grain{opacity:0}`), so it reports those.
-      if (!HIDE_DETAILS_AT_REST.includes(theme.id)) expect(result.addedReducedMotion, theme.id).toBe(false);
+      // `addedReducedMotion` reads any reduced-motion block with `animation: none` in it as the scene's own rule — also
+      // the three that hide a few details at rest beside it (`.grain{opacity:0}`).
+      expect(result.addedReducedMotion, theme.id).toBe(false);
+    }
+  });
+
+  it("reads the scene's own rule beside other declarations: the three that hide details at rest, and honu-lagoon's plain one", () => {
+    for (const id of [...HIDE_DETAILS_AT_REST, "honu-lagoon"]) {
+      const result = checkScene(sceneOf(id), `${id}.svg`);
+      if (!result.ok) throw new Error(`${id} fails the gate`);
+      expect(result.addedReducedMotion, id).toBe(false);
     }
   });
 

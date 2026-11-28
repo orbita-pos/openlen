@@ -6,7 +6,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import { and, asc, eq, inArray, notInArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, notInArray, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 
@@ -15,18 +15,32 @@ import { EVERYWHERE_SCOPE, type StoredThemeDefinition, type ThemeChoices } from 
 
 export type ThemeInstallationRow = typeof schema.themeInstallations.$inferSelect;
 
-/** What an install writes: the manifest's themes with each scene as its checked SVG text, what each scene costs, and the
- *  glass opacity the contrast gate raised (by theme id; absent = as the manifest declared). */
+/** What an install writes: the manifest's themes with each scene as its checked SVG text, what each scene costs, the
+ *  glass opacity the contrast gate raised (by theme id; absent = as the manifest declared), and what each scene measured
+ *  under Len's panel (by the sha256 of its checked SVG; absent = not measured). */
 export interface ThemeReleaseInput {
   sha: string;
   projectId: string;
   themes: StoredThemeDefinition[];
   costs: Record<string, SceneCost>;
   glassAdjusted: Record<string, number>;
+  measured: Record<string, string>;
 }
 
 export interface ThemeRelease extends ThemeReleaseInput {
   createdAt: Date;
+}
+
+/** A stored theme as the LIST needs it: everything but the scene's text, and whether it has one. */
+export type ThemeMeta = Omit<StoredThemeDefinition, "scene"> & { hasScene: boolean };
+
+/** A version as the picker and the resolver read it: no scene text in it — that is read only to serve a scene. */
+export interface ThemeReleaseMeta {
+  sha: string;
+  projectId: string;
+  themes: ThemeMeta[];
+  costs: Record<string, SceneCost>;
+  glassAdjusted: Record<string, number>;
 }
 
 const r = schema.themeReleases;
@@ -43,6 +57,7 @@ export async function saveThemeRelease(release: ThemeReleaseInput): Promise<void
       themes: release.themes,
       costs: release.costs,
       glassAdjusted: release.glassAdjusted,
+      measured: release.measured,
     })
     .onConflictDoNothing({ target: r.sha });
 }
@@ -70,8 +85,38 @@ export async function readThemeRelease(sha: string): Promise<ThemeRelease | null
     themes: row.themes,
     costs: row.costs,
     glassAdjusted: row.glassAdjusted,
+    measured: row.measured,
     createdAt: row.createdAt,
   };
+}
+
+/**
+ * A version without its scenes' text: the list (`GET /api/themes`, on every load of /new) needs each theme's title,
+ * window, glass and twin, never the SVG — which can be hundreds of KB a theme. Postgres drops `scene` from each theme
+ * before anything leaves the database, in the themes' order, and says whether there was one. Null when there is none.
+ */
+export async function readThemeReleaseMeta(sha: string): Promise<ThemeReleaseMeta | null> {
+  const [row] = await db
+    .select({
+      sha: r.sha,
+      projectId: r.projectId,
+      themes: sql<ThemeMeta[]>`(
+        SELECT coalesce(jsonb_agg((t.theme - 'scene') || jsonb_build_object('hasScene', t.theme ? 'scene') ORDER BY t.at), '[]'::jsonb)
+        FROM jsonb_array_elements(${r.themes}) WITH ORDINALITY AS t(theme, at)
+      )`,
+      costs: r.costs,
+      glassAdjusted: r.glassAdjusted,
+    })
+    .from(r)
+    .where(eq(r.sha, sha))
+    .limit(1);
+  return row ?? null;
+}
+
+/** What the scenes of a project's latest version measured (scene sha256 → colour), or nothing when it has none. */
+export async function latestThemeMeasurements(projectId: string): Promise<Record<string, string>> {
+  const [row] = await db.select({ measured: r.measured }).from(r).where(eq(r.projectId, projectId)).orderBy(desc(r.createdAt)).limit(1);
+  return row?.measured ?? {};
 }
 
 /**
@@ -104,9 +149,10 @@ export async function upsertThemeInstallation(input: {
   return row;
 }
 
-/** Every installation of a person, oldest first, removed ones included (the page offers to bring them back). */
+/** Every installation of a person, oldest first (two of the same instant by id, so the order never changes between
+ *  reads), removed ones included (the page offers to bring them back). */
 export async function listThemeInstallations(personId: string): Promise<ThemeInstallationRow[]> {
-  return db.select().from(i).where(eq(i.personId, personId)).orderBy(asc(i.installedAt));
+  return db.select().from(i).where(eq(i.personId, personId)).orderBy(asc(i.installedAt), asc(i.id));
 }
 
 /** Marks a person's installation removed, keeping the row. Whether it was theirs to remove: false for another person's or none. */

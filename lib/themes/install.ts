@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 import type { AccesoAlProyecto } from "@/lib/projects/acceso";
 import type { ProjectData } from "@/lib/projects/types";
 
-import { READABLE, glassFit, glassInks, paletteWarnings, type ContrastWarning } from "./contrast";
+import { GLASS_INKS, READABLE, glassFit, glassInks, paletteWarnings, type ContrastWarning } from "./contrast";
 import { readThemeManifest } from "./manifest";
 import { checkScene, type SceneCost, type SceneProblem } from "./scene-check";
 import type { SceneMeter } from "./measure-under";
@@ -31,6 +31,9 @@ export interface ThemeInstallDeps {
   openMeter(): Promise<SceneMeter>;
   /** The most the installer waits, in total, for all the measuring of one install (default 60 s). */
   measureDeadlineMs?: number;
+  /** What the scenes of the project's latest version measured (scene sha256 → colour): a scene that did not change is
+   *  not measured again, so a reinstall whose browser fails keeps the glass it had (it never moves to an unraised one). */
+  previousMeasurements(projectId: string): Promise<Record<string, string>>;
   saveRelease(release: ThemeReleaseInput): Promise<void>;
   upsertInstallation(i: { personId: string; projectId: string; releaseSha: string }): Promise<ThemeInstallationRow>;
   /** Deletes the project's versions no installation points at any more (M2: a reinstall must not pile them up). */
@@ -59,6 +62,7 @@ export async function realThemeInstallDeps(): Promise<ThemeInstallDeps> {
     },
     files: (p) => files.listProjectFiles(p),
     openMeter: measure.openSceneMeter,
+    previousMeasurements: store.latestThemeMeasurements,
     saveRelease: store.saveThemeRelease,
     upsertInstallation: store.upsertThemeInstallation,
     pruneReleases: store.pruneThemeReleases,
@@ -87,11 +91,14 @@ function stableJson(value: unknown): string {
  * it so that an install whose measuring failed (nothing raised) and a later one that measured (something raised) are two
  * versions, and the second is saved and installed instead of the first being kept for good (R12b).
  */
-export function themeReleaseSha(projectId: string, release: Pick<ThemeReleaseInput, "themes" | "costs" | "glassAdjusted">): string {
+export function themeReleaseSha(projectId: string, release: Pick<ThemeReleaseInput, "themes" | "costs" | "glassAdjusted" | "measured">): string {
   return createHash("sha256")
-    .update(stableJson({ projectId, themes: release.themes, costs: release.costs, glassAdjusted: release.glassAdjusted }))
+    .update(stableJson({ projectId, themes: release.themes, costs: release.costs, glassAdjusted: release.glassAdjusted, measured: release.measured }))
     .digest("hex");
 }
+
+/** What names a scene's measurement: its checked SVG, byte for byte. */
+const sceneKey = (svg: string): string => createHash("sha256").update(svg, "utf8").digest("hex");
 
 const MEASURE_DEADLINE_MS = 60_000;
 /** After the deadline, how long closing the browser is waited for; it goes on in the background past this. */
@@ -163,7 +170,9 @@ async function measureScenes(d: ThemeInstallDeps, scenes: ReadonlyMap<string, st
         release();
       });
     });
-    await Promise.race([closing, new Promise<void>((resolve) => setTimeout(resolve, Math.min(CLOSE_WAIT_MS, deadlineMs)))]);
+    let closeWait: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([closing, new Promise<void>((resolve) => (closeWait = setTimeout(resolve, Math.min(CLOSE_WAIT_MS, deadlineMs))))]);
+    clearTimeout(closeWait);
   }
   return new Map(found);
 }
@@ -201,7 +210,7 @@ async function installThemeNow(
   if (!project || !project.data.theme) return { status: 409, body: { error: "not_a_theme" } };
 
   const files = await d.files(i.projectId);
-  const manifest = readThemeManifest(files, { personLocale: i.locale });
+  const manifest = readThemeManifest(files);
   if (!manifest.ok) return { status: 422, body: { error: "theme_manifest_invalid", problems: manifest.problems } };
 
   // Every scene through the gate, each once however many themes share it; every bad one is named, not just the first.
@@ -225,12 +234,27 @@ async function installThemeNow(
   }));
 
   // The contrast gate. Nothing here refuses: a glass is raised until the text reads, and whatever cannot be fixed that way
-  // — or measured — is reported. Each distinct scene that has a glass is measured once, all in one browser and one deadline.
+  // — or measured — is reported. Each distinct scene that has a glass is measured once, all in one browser and one deadline;
+  // a scene byte-identical to one the project's latest version measured is not measured again (its colour is the same).
+  const previous = await d.previousMeasurements(i.projectId).catch((): Record<string, string> => ({}));
+  const keyOf = new Map<string, string>();
   const toMeasure = new Map<string, string>();
   for (const theme of manifest.themes) {
-    if (theme.scene !== undefined && theme.glass) toMeasure.set(theme.scene, checked.get(theme.scene)!.svg);
+    if (theme.scene === undefined || !theme.glass || keyOf.has(theme.scene)) continue;
+    const svg = checked.get(theme.scene)!.svg;
+    const key = sceneKey(svg);
+    keyOf.set(theme.scene, key);
+    if (!Object.hasOwn(previous, key)) toMeasure.set(theme.scene, svg);
   }
-  const measured = await measureScenes(d, toMeasure);
+  const fresh = await measureScenes(d, toMeasure);
+  const measured: Record<string, string> = {};
+  const underOf = (scene: string): string | null => {
+    const key = keyOf.get(scene);
+    if (key === undefined) return null;
+    const under = Object.hasOwn(previous, key) ? previous[key]! : (fresh.get(scene) ?? null);
+    if (under !== null) measured[key] = under;
+    return under;
+  };
 
   const costs: Record<string, SceneCost> = {};
   const glassAdjusted: Record<string, number> = {};
@@ -245,16 +269,19 @@ async function installThemeNow(
 
     if (glass) {
       glassOpacity = glass.opacity;
-      const under = measured.get(theme.scene!) ?? null;
+      const under = underOf(theme.scene!);
       if (under === null) {
         contrastWarnings.push({ themeId: theme.id, code: "glass_unmeasured" });
       } else {
+        // Raised for the STRICTEST of the panel's text colours, not only --fg.
         const fit = glassFit({ ...glassInks(theme, glass), under, opacity: glass.opacity });
         if (fit.opacity > glass.opacity) {
           glassAdjusted[theme.id] = fit.opacity;
           glassOpacity = fit.opacity;
         }
-        if (fit.ratio < READABLE) contrastWarnings.push({ themeId: theme.id, code: "glass_below_target", fg: "--fg", ratio: Math.round(fit.ratio * 100) / 100 });
+        if (fit.ratio < READABLE) {
+          contrastWarnings.push({ themeId: theme.id, code: "glass_below_target", fg: GLASS_INKS[fit.ink], ratio: Math.round(fit.ratio * 100) / 100 });
+        }
       }
     } else {
       // No glass over a scene: the panels are the palette's own, and the palette's pairs are what has to read.
@@ -263,8 +290,8 @@ async function installThemeNow(
     summary.push({ id: theme.id, cost: scene?.cost ?? null, glassOpacity, addedReducedMotion: scene?.addedReducedMotion ?? false });
   }
 
-  const sha = themeReleaseSha(i.projectId, { themes, costs, glassAdjusted });
-  await d.saveRelease({ sha, projectId: i.projectId, themes, costs, glassAdjusted });
+  const sha = themeReleaseSha(i.projectId, { themes, costs, glassAdjusted, measured });
+  await d.saveRelease({ sha, projectId: i.projectId, themes, costs, glassAdjusted, measured });
   const row = await d.upsertInstallation({ personId: i.actorId, projectId: i.projectId, releaseSha: sha });
   // The versions nobody points at now go; a failure here leaves them for the next install, and never fails this one.
   await Promise.resolve()

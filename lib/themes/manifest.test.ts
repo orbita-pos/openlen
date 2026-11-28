@@ -47,16 +47,16 @@ function project(themes: Record<string, unknown>[], over: Record<string, string 
   return Object.fromEntries(Object.entries(files).filter((e): e is [string, string] => e[1] !== undefined));
 }
 
-const read = (files: Files, personLocale = "es") => readThemeManifest(files, { personLocale });
+const read = (files: Files) => readThemeManifest(files);
 
-const codes = (files: Files, personLocale = "es"): string[] => {
-  const r = read(files, personLocale);
+const codes = (files: Files): string[] => {
+  const r = read(files);
   return r.ok ? [] : r.problems.map((p) => p.code);
 };
 
 /** The themes of a manifest that must be valid: it fails loudly, so a refusal can't pass as a `false` or an `undefined`. */
-const themesOf = (files: Files, personLocale = "es"): ThemeDefinition[] => {
-  const r = read(files, personLocale);
+const themesOf = (files: Files): ThemeDefinition[] => {
+  const r = read(files);
   if (!r.ok) throw new Error(`expected a valid manifest, got ${JSON.stringify(r.problems)}`);
   return r.themes;
 };
@@ -244,6 +244,23 @@ describe("readThemeManifest", () => {
       expect(codes(project([POND, { ...POND_NIGHT, window: "light" }]))).toContain("twin_same_window");
       expect(codes(project([{ ...POND, twin: "estanque" }]))).toEqual(["twin_same_window"]);
     });
+
+    it("refuses a twin that does not name this one back: each «names its twin», as in theme-examples", () => {
+      expect(codes(project([POND, { ...POND_NIGHT, twin: undefined }]))).toEqual(["twin_not_mutual"]);
+      const third = { ...POND, id: "estanque-alba", twin: "estanque-noche" };
+      expect(codes(project([POND, POND_NIGHT, third]))).toEqual(["twin_not_mutual"]);
+      expect(codes(project([POND, POND_NIGHT]))).toEqual([]);
+    });
+  });
+
+  describe("the display record, indexed by locale", () => {
+    it("keeps titles on objects with no prototype: a locale named like an object's own property is only a locale", () => {
+      const odd = JSON.stringify({ themes: { estanque: { title: "Odd", blurb: "b" }, "estanque-noche": { title: "Odd", blurb: "b" } } });
+      const themes = themesOf(project([POND, POND_NIGHT], { "/locale/constructor.json": odd }));
+      expect(Object.getPrototypeOf(themes[0]!.titles)).toBeNull();
+      expect(themes[0]!.titles.constructor).toBe("Odd");
+      expect(Object.hasOwn(themes[0]!.titles, "toString")).toBe(false);
+    });
   });
 
   describe("the palette and the font", () => {
@@ -303,19 +320,19 @@ describe("readThemeManifest", () => {
       expect(codes(project([{ ...POND, window: "sepia", twin: undefined }]))).toEqual(["bad_window"]);
     });
 
-    it("requires English and the person's locale for the title and the blurb", () => {
+    it("requires English only, like a plugin's manifest with its one language: another locale may be missing", () => {
+      // The person's interface went from Spanish to anything else since the theme was born: nothing is refused for it.
       const noSpanish = project([POND, POND_NIGHT], { "/locale/es.json": undefined });
-      const r = read(noSpanish, "es");
+      expect(themesOf(noSpanish)).toHaveLength(2);
+      expect(themesOf(noSpanish)[0]!.titles).toEqual({ en: "en estanque" });
+      // No English at all.
+      const r = read(project([POND, POND_NIGHT], { "/locale/en.json": undefined }));
       expect(r.ok).toBe(false);
       if (!r.ok) {
         expect(r.problems.map((p) => p.code)).toEqual(["missing_meta", "missing_meta", "missing_meta", "missing_meta"]);
-        expect(r.problems.every((p) => p.file === "/locale/es.json")).toBe(true);
+        expect(r.problems.every((p) => p.file === "/locale/en.json")).toBe(true);
         expect(r.problems.map((p) => p.detail)).toContain("estanque.blurb");
       }
-      // The same files are fine for someone whose locale is English: only English is required then.
-      expect(themesOf(noSpanish, "en")).toHaveLength(2);
-      // No English at all.
-      expect(codes(project([POND, POND_NIGHT], { "/locale/en.json": undefined }), "es")).toContain("missing_meta");
       // A title without its blurb.
       const half = JSON.stringify({ themes: { estanque: { title: "Pond" }, "estanque-noche": { title: "Night pond", blurb: "b" } } });
       expect(codes(project([POND, POND_NIGHT], { "/locale/en.json": half }))).toEqual(["missing_meta"]);

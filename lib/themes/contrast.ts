@@ -102,8 +102,9 @@ export function contrastRatio(ink: string, ground: string): number {
 // ─── the glass ───────────────────────────────────────────────────────────────
 
 export interface GlassFitInput {
-  /** The text colour. */
-  fg: string;
+  /** The text colour — or every text colour the panel shows: the glass has to carry ALL of them (Claude Code's app uses a
+   *  theme's tint only where its own text reads on it, and its text is more than one ink). */
+  fg: string | readonly string[];
   /** The glass's tint. */
   tint: string;
   /** What the scene is, under the panel (one colour, measured). */
@@ -113,28 +114,36 @@ export interface GlassFitInput {
 }
 
 /**
- * The smallest opacity that is at least the declared one, on 0.02 steps and no higher than 0.95, with which `fg` reads
- * on `tint` laid over `under` — and the ratio it gets. A glass that already reads is left as it was; one is never
- * lowered. Where no opacity reads (the text and the tint are too alike, whatever is under them) it is the one that came
- * CLOSEST, so the caller can tell the person it still does not. A tint's own alpha counts: it lets the scene through.
+ * The smallest opacity that is at least the declared one, on 0.02 steps and no higher than 0.95, with which EVERY ink
+ * reads on `tint` laid over `under` — and the ratio of the weakest ink there (`ink` is its index in `fg`). A glass that
+ * already reads is left as it was; one is never lowered. Where no opacity reads (an ink and the tint are too alike,
+ * whatever is under them) it is the one that came CLOSEST, so the caller can tell the person it still does not. A tint's
+ * own alpha counts: it lets the scene through.
  */
-export function glassFit(o: GlassFitInput): { opacity: number; ratio: number } {
+export function glassFit(o: GlassFitInput): { opacity: number; ratio: number; ink: number } {
   const under = opaque(parseRawColor(o.under));
   const tint = parseRawColor(o.tint);
-  const fg = parseRawColor(o.fg);
-  const ratioAt = (opacity: number): number => {
+  const inks = (typeof o.fg === "string" ? [o.fg] : o.fg).map(parseRawColor);
+  if (inks.length === 0) throw new Error("contrast: glassFit needs at least one ink");
+  /** The weakest ink's ratio at an opacity, and which ink it is. */
+  const weakestAt = (opacity: number): { ratio: number; ink: number } => {
     const surface = over(tint, under, clamp(opacity, 0, 1) * tint.a);
-    return ratioOf(fg.a < 1 ? over(fg, surface) : [fg.r, fg.g, fg.b], surface);
+    let worst = { ratio: Infinity, ink: 0 };
+    inks.forEach((fg, ink) => {
+      const ratio = ratioOf(fg.a < 1 ? over(fg, surface) : [fg.r, fg.g, fg.b], surface);
+      if (ratio < worst.ratio) worst = { ratio, ink };
+    });
+    return worst;
   };
 
   const start = clamp(o.opacity, 0, 1);
-  let best = { opacity: start, ratio: ratioAt(start) };
+  let best = { opacity: start, ...weakestAt(start) };
   if (best.ratio >= READABLE || start >= GLASS_CAP) return best;
   for (let k = 1; ; k++) {
     const opacity = Math.min(GLASS_CAP, Math.round((start + k * GLASS_STEP) * 1e4) / 1e4);
-    const ratio = ratioAt(opacity);
-    if (ratio >= READABLE) return { opacity, ratio };
-    if (ratio > best.ratio) best = { opacity, ratio };
+    const at = weakestAt(opacity);
+    if (at.ratio >= READABLE) return { opacity, ...at };
+    if (at.ratio > best.ratio) best = { opacity, ...at };
     if (opacity >= GLASS_CAP) return best;
   }
 }
@@ -153,13 +162,14 @@ export function glassOpacityFor(o: GlassFitInput): number {
  * rounded to a byte. `contrast.test.ts` reads the file and converts it again on every run, and goes red when a colour
  * there moves and this does not.
  */
-export const WORKSPACE_COLORS: Readonly<Record<ThemeWindow, Readonly<Record<"--bg" | "--bg-sidebar" | "--bg-elev" | "--fg" | "--fg-muted", string>>>> = {
+export const WORKSPACE_COLORS: Readonly<Record<ThemeWindow, Readonly<Record<"--bg" | "--bg-sidebar" | "--bg-elev" | GlassInk, string>>>> = {
   light: {
     "--bg": "#f8f5f5",
     "--bg-sidebar": "#f4eeef",
     "--bg-elev": "#fefcfc",
     "--fg": "#0f090a",
     "--fg-muted": "#5b5354",
+    "--fg-faint": "#635b5c",
   },
   dark: {
     "--bg": "#070304",
@@ -167,14 +177,21 @@ export const WORKSPACE_COLORS: Readonly<Record<ThemeWindow, Readonly<Record<"--b
     "--bg-elev": "#0f090a",
     "--fg": "#f5f0f1",
     "--fg-muted": "#958d8d",
+    "--fg-faint": "#928a8a",
   },
 };
 
-/** The colours a glass theme's text is judged with: its own `--fg` or the workspace's for its window, and its tint or,
- *  when it names none (Claude Code's default glass has none), the workspace's own sidebar for that window. */
-export function glassInks(theme: { window: ThemeWindow; colors?: Partial<Record<ThemeToken, string>> }, glass: { tint?: string }): { fg: string; tint: string } {
+/** The workspace's text colours, every one the panels write with: `--fg-faint` too — tokens.css darkens (lightens) it to
+ *  clear 4.5:1 on the page because it carries text (hints, the code lens's punctuation), not only rules. */
+export const GLASS_INKS = ["--fg", "--fg-muted", "--fg-faint"] as const;
+export type GlassInk = (typeof GLASS_INKS)[number];
+
+/** The colours a glass theme's text is judged with: each of its text colours (`GLASS_INKS`, in that order) — its own, or
+ *  the workspace's for its window —, and its tint or, when it names none (Claude Code's default glass has none), the
+ *  workspace's own sidebar for that window. The glass is raised for the STRICTEST of them. */
+export function glassInks(theme: { window: ThemeWindow; colors?: Partial<Record<ThemeToken, string>> }, glass: { tint?: string }): { fg: string[]; tint: string } {
   const own = WORKSPACE_COLORS[theme.window];
-  return { fg: theme.colors?.["--fg"] ?? own["--fg"], tint: glass.tint ?? own["--bg-sidebar"] };
+  return { fg: GLASS_INKS.map((ink) => theme.colors?.[ink] ?? own[ink]), tint: glass.tint ?? own["--bg-sidebar"] };
 }
 
 // ─── what the gate reports ───────────────────────────────────────────────────

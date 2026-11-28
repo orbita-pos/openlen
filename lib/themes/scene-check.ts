@@ -403,6 +403,14 @@ function countAnimated(tags: SceneTag[], css: string): number {
  * while something moves: a scene with nothing animated is painted once and is never heavy, however big. Two measured
  * scenes fix a line, not a model: it is drawn on the elements (both counts grow together in the two) and sits at the
  * midpoint between them, rounded.
+ *
+ * ⚠️ Measured again on 27/11 on the same laptop, IDLE: honu-lagoon 60, night-reef 60, koi-mosaic 60, dither-dunes 57 and
+ * dither-dunes-night 57 fps — night-reef's 44 was the laptop under load. What decides the frame rate is the machine's
+ * load, not the element count, so this line is NOT a protection: it is information (Len reads `heavy` in what `publish`
+ * says, and the layer may start a heavy scene still). The protection is the client's own guard, which counts the frames
+ * on the person's machine and stops the scene when they fall (`components/workspace-v2/theme/motion-guard.ts`). Claude
+ * Code does the same: `claude plugin validate` only PRINTS a shader's cost, it refuses nothing for it. So the threshold
+ * stays where it is, and is not to be tuned on more measurements.
  */
 const HEAVY_MIN_ELEMENTS = 650;
 
@@ -426,10 +434,13 @@ const URL_CALL = /url\(\s*["']?\s*([^\s)])?/gi;
 // The other CSS functions that load a picture. Nothing in a scene needs them.
 const IMAGE_FUNCTION = /(?:image-set|image|src)\(/i;
 const IMPORT = /@import/i;
-// The rule, written with any spacing: what Claude Code's scenes have, and what a person would write. Only used to say
-// whether the scene had it (see `addedReducedMotion`): the gate puts its own either way.
+// A reduced-motion block that stops ALL animation, written with any spacing: a `@media (prefers-reduced-motion: reduce)`
+// block with a `*` rule that says `animation: none` — alone or beside other declarations, and before or after other
+// rules (koi-mosaic and dither-dunes also hide details at rest in the same block). A rule that stops only one class
+// stops less than the gate's, so it is not taken for it. Only used to say whether the scene had it (see
+// `addedReducedMotion`, a report): the gate puts its own either way.
 const REDUCED_MOTION_PRESENT =
-  /@media\s*\(\s*prefers-reduced-motion\s*:\s*reduce\s*\)\s*\{\s*\*\s*\{\s*animation\s*:\s*none\s*!important\s*;?\s*\}\s*\}/i;
+  /@media\s*\(\s*prefers-reduced-motion\s*:\s*reduce\s*\)\s*\{(?:[^{}]*\{[^{}]*\})*?\s*\*\s*\{[^{}]*\banimation\s*:\s*none\b/i;
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const XLINK_NAMESPACE = "http://www.w3.org/1999/xlink";

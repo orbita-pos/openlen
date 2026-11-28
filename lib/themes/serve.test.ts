@@ -86,7 +86,7 @@ const POND: StoredThemeDefinition = { id: "estanque", window: "light", scene: CH
 const PALETTE_ONLY: StoredThemeDefinition = { id: "solo-colores", window: "dark", titles: { en: "Colours" }, blurbs: { en: "Only colours" } };
 
 function release(sha: string, themes: StoredThemeDefinition[] = [POND, PALETTE_ONLY]): ThemeRelease {
-  return { sha, projectId: "p1", themes, costs: {}, glassAdjusted: {}, createdAt: new Date("2026-11-27T10:00:00Z") };
+  return { sha, projectId: "p1", themes, costs: {}, glassAdjusted: {}, measured: {}, createdAt: new Date("2026-11-27T10:00:00Z") };
 }
 
 function deps(over: Partial<SceneServeDeps> & { rows?: ThemeInstallationRow[]; releases?: ThemeRelease[]; person?: string | null } = {}) {

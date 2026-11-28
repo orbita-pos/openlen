@@ -9,15 +9,17 @@
 // none) and the person simply sees no layer. Only an unavailable database throws.
 //
 // What it does not do: measure anything. The glass of an installed theme was raised at install time to the opacity this
-// reads from its version (`glassAdjusted`); a gallery theme is as Claude Code wrote it.
+// reads from its version (`glassAdjusted`); a gallery theme's was raised the same way when the gallery was generated
+// (`scripts/themes-bundle.mjs` measures each still and writes `glassAdjusted` into the index). And it never reads a
+// scene's text: the list reads each version without it (`readThemeReleaseMeta`), and only the scene route reads a scene.
 import "server-only";
 
 import { BUNDLED_THEMES, bundledSceneSvg } from "./bundled";
 import { WORKSPACE_COLORS } from "./contrast";
 import { checkScene } from "./scene-check";
 import { parseThemeRef } from "./serve";
-import type { ThemeInstallationRow, ThemeRelease } from "./store";
-import { EVERYWHERE_SCOPE, type StoredThemeDefinition, type ThemeChoices, type ThemeDefinition, type ThemeFont, type ThemeGlass, type ThemeGround, type ThemeWindow } from "./types";
+import type { ThemeInstallationRow, ThemeMeta, ThemeReleaseMeta } from "./store";
+import { EVERYWHERE_SCOPE, type BundledThemeDefinition, type ThemeChoices, type ThemeFont, type ThemeGlass, type ThemeGround, type ThemeWindow } from "./types";
 
 /** A theme ready for the layer behind the workspace (Task 8 paints it). */
 export interface ResolvedTheme {
@@ -66,7 +68,8 @@ export interface ThemeDeps {
   choicesOf(personId: string, projectId: string | null): Promise<ThemeChoices>;
   /** Every installation of a person, removed ones included. */
   listInstallations(personId: string): Promise<ThemeInstallationRow[]>;
-  readRelease(sha: string): Promise<ThemeRelease | null>;
+  /** A version without its scenes' text: what the list and the resolver need. */
+  readReleaseMeta(sha: string): Promise<ThemeReleaseMeta | null>;
   /** Saves (or, with null, clears) the pick of a scope: `"everywhere"` or a project's id. */
   setChoice(personId: string, scope: string, themeRef: string | null): Promise<void>;
   /** Whether the person may open the project, in any role: a theme is their own view of it, not the project. */
@@ -78,7 +81,7 @@ export async function realThemeDeps(): Promise<ThemeDeps> {
   return {
     choicesOf: store.themeChoicesOf,
     listInstallations: store.listThemeInstallations,
-    readRelease: store.readThemeRelease,
+    readReleaseMeta: store.readThemeReleaseMeta,
     setChoice: store.setThemeChoice,
     canSee: async (projectId, personId) => !((await acceso.exigirAcceso(projectId, personId, "ver")) instanceof Response),
   };
@@ -94,7 +97,9 @@ interface Entry {
   projectId?: string;
   /** The version a scene URL names; the gallery's scenes have none. */
   version?: string;
-  def: ThemeDefinition | StoredThemeDefinition;
+  def: Omit<BundledThemeDefinition | ThemeMeta, "scene">;
+  /** Whether it has a scene (its URL is then built; the text itself is never read here). */
+  hasScene: boolean;
   heavy(): boolean;
   /** The opacity the install raised the glass to. */
   glassOpacity?: number;
@@ -121,16 +126,25 @@ function bundledSource(): ReadonlyMap<string, Entry> {
   if (bundledEntries) return bundledEntries;
   const entries = new Map<string, Entry>();
   for (const def of BUNDLED_THEMES) {
-    entries.set(def.id, { ref: `bundled:${def.id}`, source: "bundled", def, heavy: () => heavyBundledScene(def.id), siblings: entries });
+    entries.set(def.id, {
+      ref: `bundled:${def.id}`,
+      source: "bundled",
+      def,
+      hasScene: def.scene !== undefined,
+      heavy: () => heavyBundledScene(def.id),
+      // Raised when the gallery was generated, by the same meter and the same sum as an install (`themes:bundle`).
+      ...(typeof def.glassAdjusted === "number" && { glassOpacity: def.glassAdjusted }),
+      siblings: entries,
+    });
   }
   bundledEntries = entries;
   return entries;
 }
 
-function installedSource(row: ThemeInstallationRow, release: ThemeRelease): ReadonlyMap<string, Entry> {
+function installedSource(row: ThemeInstallationRow, release: ThemeReleaseMeta): ReadonlyMap<string, Entry> {
   const entries = new Map<string, Entry>();
   for (const def of release.themes) {
-    const raised = release.glassAdjusted?.[def.id];
+    const raised = Object.hasOwn(release.glassAdjusted ?? {}, def.id) ? release.glassAdjusted[def.id] : undefined;
     entries.set(def.id, {
       ref: `installed:${row.id}:${def.id}`,
       source: "installed",
@@ -138,7 +152,8 @@ function installedSource(row: ThemeInstallationRow, release: ThemeRelease): Read
       projectId: row.projectId,
       version: row.releaseSha,
       def,
-      heavy: () => release.costs?.[def.id]?.heavy === true,
+      hasScene: def.hasScene === true,
+      heavy: () => Object.hasOwn(release.costs ?? {}, def.id) && release.costs[def.id]?.heavy === true,
       ...(typeof raised === "number" && { glassOpacity: raised }),
       siblings: entries,
     });
@@ -149,7 +164,7 @@ function installedSource(row: ThemeInstallationRow, release: ThemeRelease): Read
 /** What one request knows of a person's themes: their installations and the versions of them, each read once. */
 class Catalog {
   private installations: Promise<ThemeInstallationRow[]> | undefined;
-  private readonly releases = new Map<string, Promise<ThemeRelease | null>>();
+  private readonly releases = new Map<string, Promise<ThemeReleaseMeta | null>>();
 
   constructor(
     private readonly deps: ThemeDeps,
@@ -167,7 +182,7 @@ class Catalog {
   private async sourceOf(row: ThemeInstallationRow): Promise<ReadonlyMap<string, Entry> | null> {
     let pending = this.releases.get(row.releaseSha);
     if (!pending) {
-      pending = this.deps.readRelease(row.releaseSha);
+      pending = this.deps.readReleaseMeta(row.releaseSha);
       this.releases.set(row.releaseSha, pending);
     }
     const release = await pending;
@@ -186,11 +201,10 @@ class Catalog {
 
   /** Everything the person can pick: their installed themes (oldest installation first), then the gallery. */
   async all(): Promise<Entry[]> {
+    // Every version at once, not one after another; the order stays the installations'.
+    const sources = await Promise.all((await this.live()).map((row) => this.sourceOf(row)));
     const entries: Entry[] = [];
-    for (const row of await this.live()) {
-      const source = await this.sourceOf(row);
-      if (source) entries.push(...source.values());
-    }
+    for (const source of sources) if (source) entries.push(...source.values());
     entries.push(...bundledSource().values());
     return entries;
   }
@@ -199,9 +213,10 @@ class Catalog {
 // ─── an entry, ready to paint ────────────────────────────────────────────────
 
 const own = (map: Readonly<Record<string, string>>, key: string): string | undefined =>
-  Object.prototype.hasOwnProperty.call(map, key) && typeof map[key] === "string" && map[key] !== "" ? map[key] : undefined;
+  Object.hasOwn(map, key) && typeof map[key] === "string" && map[key] !== "" ? map[key] : undefined;
 
-/** The text in the request's language, then its base language («es-MX» → «es»), then English. */
+/** The text in the request's language, then its base language («es-MX» → «es»), then English — the one language a
+ *  theme's manifest must have, as a plugin's manifest has one. */
 function localized(map: Readonly<Record<string, string>>, locale: string): string | undefined {
   return own(map, locale) ?? own(map, locale.split("-")[0]!) ?? own(map, "en");
 }
@@ -240,7 +255,7 @@ function toResolved(entry: Entry, locale: string): ResolvedTheme {
     ref: entry.ref,
     window: def.window,
     ...(twin && { twinRef: twin.ref }),
-    ...(def.scene !== undefined && { sceneUrl: sceneUrl(entry, false), stillUrl: sceneUrl(entry, true) }),
+    ...(entry.hasScene && { sceneUrl: sceneUrl(entry, false), stillUrl: sceneUrl(entry, true) }),
     ...(def.ground && { ground: def.ground }),
     glass: glassOf(entry),
     ...(Object.keys(colors).length > 0 && { colors }),
@@ -259,7 +274,7 @@ function toAvailable(entry: Entry, locale: string): AvailableTheme {
     blurb: localized(def.blurbs, locale) ?? "",
     window: def.window,
     ...(twin && { twinRef: twin.ref }),
-    ...(def.scene !== undefined && { stillUrl: sceneUrl(entry, true) }),
+    ...(entry.hasScene && { stillUrl: sceneUrl(entry, true) }),
     source: entry.source,
     ...(entry.installationId !== undefined && { installationId: entry.installationId }),
     ...(entry.projectId !== undefined && { projectId: entry.projectId }),
@@ -319,8 +334,9 @@ export type ChooseThemeResult = { ok: true } | { ok: false; error: "unknown_them
 
 /**
  * Saves a pick for «everywhere» or for one project; `themeRef: null` clears that scope's pick and leaves the other alone.
- * The ref must be a theme the person can use right now (`unknown_theme` says nothing about which way it is not), and a
- * project scope needs a project they can open in any role (`no_access`): a theme is their own view, not the project's.
+ * The ref must be a theme the person can use right now (`unknown_theme` says nothing about which way it is not), and
+ * picking for a project scope needs a project they can open in any role (`no_access`): a theme is their own view, not
+ * the project's. Clearing a project's pick needs nothing: it deletes only the person's own row.
  * This is the door for the picker and for Len's `set_theme` alike.
  */
 export async function chooseTheme(
@@ -333,7 +349,10 @@ export async function chooseTheme(
   if (choice.scope === "project") {
     const projectId = choice.projectId;
     // A project named «everywhere» would be written over everywhere's own row.
-    if (!projectId || projectId === EVERYWHERE_SCOPE || !(await d.canSee(projectId, personId))) return { ok: false, error: "no_access" };
+    if (!projectId || projectId === EVERYWHERE_SCOPE) return { ok: false, error: "no_access" };
+    // Clearing needs no access: it only deletes the person's own row, and a project they lost (a revoked invitation, a
+    // deleted project) must not leave them a pick they can never take back. Picking needs a project they can open.
+    if (choice.themeRef !== null && !(await d.canSee(projectId, personId))) return { ok: false, error: "no_access" };
     scope = projectId;
   }
   if (choice.themeRef !== null && !(await new Catalog(d, personId).find(choice.themeRef))) return { ok: false, error: "unknown_theme" };

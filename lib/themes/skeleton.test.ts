@@ -14,7 +14,7 @@ describe("themeSkeleton: the manifest", () => {
   it("🔴 reads as a manifest, in English and in the person's language: a light scene and its dark twin", () => {
     for (const locale of ["en", "es", "ja"]) {
       const s = born(locale);
-      const r = readThemeManifest(s.files, { personLocale: locale });
+      const r = readThemeManifest(s.files);
       expect(r.ok, JSON.stringify(r)).toBe(true);
       if (!r.ok) return;
       expect(r.themes.map((t) => [t.id, t.window, t.twin, t.scene])).toEqual([
@@ -48,7 +48,7 @@ describe("themeSkeleton: the manifest", () => {
   it("a regional language code is kept, and reads as a manifest for that person", () => {
     const s = born("pt-BR");
     expect(Object.keys(s.files).filter((p) => p.startsWith("/locale/")).sort()).toEqual(["/locale/en.json", "/locale/pt-BR.json"]);
-    expect(readThemeManifest(s.files, { personLocale: "pt-BR" }).ok).toBe(true);
+    expect(readThemeManifest(s.files).ok).toBe(true);
   });
 
   it("is a project with no React and no /src: the manifest, the display record, the scenes, the preview and a line of memory", () => {
@@ -104,7 +104,7 @@ describe("themeSkeleton: the preview", () => {
 
   it("🔴 paints a fake workspace over each scene, in an <img>, with the manifest's own glass", () => {
     const s = born();
-    const r = readThemeManifest(s.files, { personLocale: "es" });
+    const r = readThemeManifest(s.files);
     if (!r.ok) throw new Error("the manifest must read");
     for (const t of r.themes) {
       expect(s.html).toContain(`<img class="scene" src="${t.scene}"`);

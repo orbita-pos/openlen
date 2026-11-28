@@ -107,6 +107,21 @@ describe("checkScene — the reduced-motion rule", () => {
     expect(r.svg).toContain(`<style>${REDUCED_MOTION_RULE}</style>`);
   });
 
+  it.each([
+    ["the plain rule", "@media (prefers-reduced-motion: reduce){*{animation:none!important}}", false],
+    ["the rule beside other declarations", "@media (prefers-reduced-motion: reduce){*{animation:none!important;opacity:1}}", false],
+    ["the rule beside another rule (koi-mosaic)", "@media (prefers-reduced-motion: reduce){*{animation:none!important}.poseB,.ring{opacity:0}}", false],
+    ["another rule first", "@media (prefers-reduced-motion: reduce){.grain{opacity:0}*{animation: none !important}}", false],
+    ["spaced out", "@media ( prefers-reduced-motion : reduce ) { .a { color:red } * { color:red; animation : none } }", false],
+    ["a block that stops nothing", "@media (prefers-reduced-motion: reduce){.grain{opacity:0}}", true],
+    ["animation:none outside the block", "@media (prefers-reduced-motion: reduce){.grain{opacity:0}}.b{animation:none}", true],
+  ])("reports whether the scene had its own rule: %s", (_name, css, added) => {
+    const r = checkScene(scene(`<style>${css}</style>`), "/themes/a.svg");
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.addedReducedMotion).toBe(added);
+  });
+
   it("puts the rule where the scene's own CSS cannot swallow it", () => {
     // A brace left open and a comment never closed: written after them, the rule would be part of them.
     const broken = scene("<style>.a{animation:x 1s /* never closed</style>");

@@ -50,6 +50,7 @@ const deps = (over: Partial<ThemeInstallDeps> = {}): ThemeInstallDeps => ({
   loadProject: vi.fn(async () => ({ data: { html: "<p>preview</p>", theme: { bornAt: "2026-11-27T09:00:00Z" } } })),
   files: vi.fn(async () => files()),
   openMeter: meter().openMeter,
+  previousMeasurements: vi.fn(async () => ({})),
   saveRelease: vi.fn(async () => {}),
   upsertInstallation: vi.fn(async (i) => ({ ...ROW, personId: i.personId, projectId: i.projectId, releaseSha: i.releaseSha })),
   pruneReleases: vi.fn(async () => 0),
@@ -200,7 +201,8 @@ describe("the contrast gate", () => {
   });
 
   it("leaves a glass that already reads exactly as it was, and says so", async () => {
-    const d = deps({ openMeter: meter(async () => "#ffffff").openMeter });
+    // The day pond over white, the night one over black: each panel's every ink already reads.
+    const d = deps({ openMeter: meter(async (svg) => (svg.includes("#112244") ? "#000000" : "#ffffff")).openMeter });
     const r = await install(d);
     const pond = (r.body.themes as { id: string; glassOpacity: number | null }[])[0]!;
     expect(pond.glassOpacity).toBe(0.3);
@@ -310,6 +312,71 @@ describe("a measure that failed does not stick (R12b)", () => {
     expect(r2.body.contrastWarnings).toEqual([]);
     // The themes themselves did not change: only what the gate made of them.
     expect(measured.themes).toEqual(unmeasured.themes);
+  });
+
+  it("a reinstall whose browser fails reuses what an unchanged scene measured: the glass stays raised", async () => {
+    const first = deps({ openMeter: meter(async () => "#000000").openMeter });
+    await install(first);
+    const raised = saved(first);
+    expect(raised.glassAdjusted["estanque"]).toBeGreaterThan(0.3);
+    // Keyed by the sha256 of each checked scene, one entry per scene with a glass.
+    expect(Object.keys(raised.measured)).toHaveLength(2);
+    expect(Object.keys(raised.measured).every((k) => /^[0-9a-f]{64}$/.test(k))).toBe(true);
+
+    // The same files again; the browser would not launch — and is not even asked for, since nothing is new.
+    const openMeter = vi.fn(async () => Promise.reject(new Error("no chromium")));
+    const second = deps({ openMeter, previousMeasurements: vi.fn(async () => raised.measured) });
+    const r = await install(second);
+    expect(openMeter).not.toHaveBeenCalled();
+    expect(second.previousMeasurements).toHaveBeenCalledWith("p1");
+    expect(saved(second).glassAdjusted).toEqual(raised.glassAdjusted);
+    expect(saved(second).sha).toBe(raised.sha);
+    expect(r.body.contrastWarnings).toEqual([]);
+  });
+
+  it("only a scene that changed is measured again; one that cannot be is the only one reported unmeasured", async () => {
+    const first = deps({ openMeter: meter(async () => "#000000").openMeter });
+    await install(first);
+    const before = saved(first).measured;
+
+    const m = meter(async () => null);
+    const second = deps({
+      files: vi.fn(async () => files(undefined, { "/themes/estanque-noche.svg": NIGHT.replace("#112244", "#221144") })),
+      openMeter: m.openMeter,
+      previousMeasurements: vi.fn(async () => before),
+    });
+    const r = await install(second);
+    expect(m.under).toHaveBeenCalledTimes(1);
+    expect(m.under.mock.calls[0]![0]).toContain("#221144");
+    expect(r.body.contrastWarnings).toEqual([{ themeId: "estanque-noche", code: "glass_unmeasured" }]);
+    expect(saved(second).glassAdjusted["estanque"]).toBe(saved(first).glassAdjusted["estanque"]);
+  });
+
+  it("a store that cannot say what was measured before is the same as nothing measured", async () => {
+    const m = meter(async () => "#000000");
+    const d = deps({ openMeter: m.openMeter, previousMeasurements: vi.fn(async () => Promise.reject(new Error("db down"))) });
+    expect((await install(d)).status).toBe(200);
+    expect(m.under).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("every text colour of the panel reads (Claude Code: «only where its own text reads»)", () => {
+  it("raises the glass for --fg-muted when --fg alone would read", async () => {
+    // Under a mid-grey scene the theme's own dark --fg already reads on the tint at 0.3, but its grey --fg-muted does not.
+    const muted = { ...POND, colors: { "--fg": "#000000", "--fg-muted": "#767676", "--fg-faint": "#000000" } };
+    const onlyFg = { ...POND, colors: { "--fg": "#000000", "--fg-muted": "#000000", "--fg-faint": "#000000" } };
+    const a = deps({ files: vi.fn(async () => files([onlyFg, POND_NIGHT])), openMeter: meter(async () => "#808080").openMeter });
+    await install(a);
+    const b = deps({ files: vi.fn(async () => files([muted, POND_NIGHT])), openMeter: meter(async () => "#808080").openMeter });
+    await install(b);
+    expect(saved(a).glassAdjusted["estanque"]).toBeUndefined();
+    expect(saved(b).glassAdjusted["estanque"]).toBeGreaterThan(0.3);
+  });
+
+  it("names the ink that still does not read", async () => {
+    const faint = { ...POND, colors: { "--fg": "#000000", "--fg-muted": "#000000", "--fg-faint": "#ffffff" } };
+    const r = await install(deps({ files: vi.fn(async () => files([faint, POND_NIGHT])), openMeter: meter(async () => "#ffffff").openMeter }));
+    expect(r.body.contrastWarnings).toEqual([expect.objectContaining({ themeId: "estanque", code: "glass_below_target", fg: "--fg-faint" })]);
   });
 });
 

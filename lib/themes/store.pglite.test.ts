@@ -60,6 +60,7 @@ const release = (over: Partial<Parameters<typeof store.saveThemeRelease>[0]> = {
     "estanque-noche": { elements: 40, animated: 3, heavy: false },
   },
   glassAdjusted: { "estanque-noche": 0.52 },
+  measured: { ["a".repeat(64)]: "#0b3a2e" } as Record<string, string>,
   ...over,
 });
 
@@ -126,11 +127,13 @@ describe("install, choose, remove", () => {
     await store.saveThemeRelease(release());
     await store.saveThemeRelease(release({ sha: "sha-p2", projectId: "p2" }));
     const a = await store.upsertThemeInstallation({ personId: "u1", projectId: "p1", releaseSha: "sha-1" });
-    await new Promise((resolve) => setTimeout(resolve, 5));
     const b = await store.upsertThemeInstallation({ personId: "u1", projectId: "p2", releaseSha: "sha-p2" });
     await store.upsertThemeInstallation({ personId: "u2", projectId: "p1", releaseSha: "sha-1" });
     await store.markThemeRemoved(a.id, "u1");
-    expect((await store.listThemeInstallations("u1")).map((r) => r.id)).toEqual([a.id, b.id]);
+    // Oldest first; two installed in the same millisecond come by id, the same order on every read.
+    const expected = [a, b].sort((x, y) => x.installedAt.getTime() - y.installedAt.getTime() || (x.id < y.id ? -1 : 1)).map((r) => r.id);
+    expect((await store.listThemeInstallations("u1")).map((r) => r.id)).toEqual(expected);
+    expect((await store.listThemeInstallations("u1")).map((r) => r.id)).toEqual(expected);
     expect((await store.listThemeInstallations("u2")).length).toBe(1);
     expect(await store.listThemeInstallations("nobody")).toEqual([]);
   });
@@ -146,8 +149,40 @@ describe("theme releases", () => {
     expect(read?.themes[0]?.scene).toBe(SCENE);
     expect(read?.costs.estanque).toEqual({ elements: 40, animated: 3, heavy: false });
     expect(read?.glassAdjusted).toEqual({ "estanque-noche": 0.52 });
+    expect(read?.measured).toEqual({ ["a".repeat(64)]: "#0b3a2e" });
     expect(read?.createdAt).toBeInstanceOf(Date);
     expect(await store.readThemeRelease("missing")).toBeNull();
+  });
+
+  it("the list's read never brings a scene's text out of the database: only whether there is one", async () => {
+    const plain: StoredThemeDefinition = { id: "tinta", window: "dark", colors: { "--bg": "#101010" }, titles: { en: "Ink" }, blurbs: { en: "Just a palette." } };
+    await store.saveThemeRelease(release({ themes: [estanque, plain, night] }));
+    // What the query itself returns, before any JavaScript touches it.
+    const { rows } = await pg().query<{ themes: unknown }>(
+      `SELECT (SELECT coalesce(jsonb_agg((t.theme - 'scene') || jsonb_build_object('hasScene', t.theme ? 'scene') ORDER BY t.at), '[]'::jsonb) FROM jsonb_array_elements("themes") WITH ORDINALITY AS t(theme, at)) AS themes FROM "themeReleases"`,
+    );
+    expect(JSON.stringify(rows)).not.toContain("<svg");
+    const meta = await store.readThemeReleaseMeta("sha-1");
+    expect(JSON.stringify(meta)).not.toContain("<svg");
+    expect(JSON.stringify(meta)).not.toContain('"scene"');
+    expect(meta?.themes.map((t) => [t.id, t.hasScene])).toEqual([
+      ["estanque", true],
+      ["tinta", false],
+      ["estanque-noche", true],
+    ]);
+    const { scene: _scene, ...rest } = estanque;
+    expect(meta?.themes[0]).toEqual({ ...rest, hasScene: true });
+    expect(meta?.costs.estanque).toEqual({ elements: 40, animated: 3, heavy: false });
+    expect(meta?.glassAdjusted).toEqual({ "estanque-noche": 0.52 });
+    expect(await store.readThemeReleaseMeta("missing")).toBeNull();
+  });
+
+  it("a project's latest version says what its scenes measured; a project with none says nothing", async () => {
+    await store.saveThemeRelease(release({ sha: "first", measured: { ["b".repeat(64)]: "#111111" } }));
+    await pg().query(`UPDATE "themeReleases" SET "createdAt" = now() - interval '1 hour' WHERE "sha" = 'first'`);
+    await store.saveThemeRelease(release({ sha: "second", measured: { ["c".repeat(64)]: "#222222" } }));
+    expect(await store.latestThemeMeasurements("p1")).toEqual({ ["c".repeat(64)]: "#222222" });
+    expect(await store.latestThemeMeasurements("p2")).toEqual({});
   });
 
   it("saving is idempotent on the sha: a version never changes", async () => {
@@ -181,7 +216,7 @@ describe("theme releases", () => {
 
   it("a theme without a scene (a palette alone) needs no costs", async () => {
     const plain: StoredThemeDefinition = { id: "tinta", window: "dark", colors: { "--bg": "#101010" }, titles: { en: "Ink" }, blurbs: { en: "Just a palette." } };
-    await store.saveThemeRelease({ sha: "sha-plain", projectId: "p1", themes: [plain], costs: {}, glassAdjusted: {} });
+    await store.saveThemeRelease({ sha: "sha-plain", projectId: "p1", themes: [plain], costs: {}, glassAdjusted: {}, measured: {} });
     expect((await store.readThemeRelease("sha-plain"))?.themes).toEqual([plain]);
   });
 });

@@ -2873,6 +2873,9 @@ export const themeReleases = pgTable("themeReleases", {
   costs: jsonb("costs").$type<Record<string, import("@/lib/themes/scene-check").SceneCost>>().notNull().default({}),
   /** The glass opacity the contrast gate raised for a theme (by id), over the one its manifest declared; absent = as declared. */
   glassAdjusted: jsonb("glassAdjusted").$type<Record<string, number>>().notNull().default({}),
+  /** What each scene measured under Len's panel (`#rrggbb`), by the sha256 of its checked SVG: a reinstall reuses it for
+   *  a scene that did not change instead of measuring it again. A scene that could not be measured has no entry. */
+  measured: jsonb("measured").$type<Record<string, string>>().notNull().default({}),
   createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -16,7 +16,7 @@ vi.mock("@/lib/themes/resolve", async (importOriginal) => ({
   realThemeDeps: async () => world.deps,
 }));
 
-import { GET, PUT } from "./route";
+import { GET, HEAD, PUT } from "./route";
 
 function fakeDeps(over: { choices?: ThemeChoices; visible?: string[] } = {}) {
   const choices = over.choices ?? { project: null, everywhere: null };
@@ -24,7 +24,7 @@ function fakeDeps(over: { choices?: ThemeChoices; visible?: string[] } = {}) {
   return {
     choicesOf: vi.fn(async () => choices),
     listInstallations: vi.fn(async () => []),
-    readRelease: vi.fn(async () => null),
+    readReleaseMeta: vi.fn(async () => null),
     setChoice: vi.fn(async () => undefined),
     canSee: vi.fn(async (projectId: string) => visible.includes(projectId)),
   } satisfies ThemeDeps;
@@ -154,5 +154,28 @@ describe("PUT /api/themes", () => {
     expect(res.status).toBe(403);
     expect(await res.json()).toEqual({ error: "no_access" });
     expect((world.deps as ThemeDeps).setChoice).not.toHaveBeenCalled();
+  });
+
+  it("takes `projectId: null` as no project: fine for everywhere, still required for a project", async () => {
+    const d = world.deps as ReturnType<typeof fakeDeps>;
+    expect((await put({ scope: "everywhere", projectId: null, themeRef: "bundled:aurora" })).status).toBe(200);
+    expect(d.setChoice).toHaveBeenLastCalledWith("u1", "everywhere", "bundled:aurora");
+    expect((await put({ scope: "project", projectId: null, themeRef: "bundled:aurora" })).status).toBe(400);
+  });
+
+  it("clears the pick of a project the person can no longer open: it is only their own row", async () => {
+    const d = world.deps as ReturnType<typeof fakeDeps>;
+    const res = await put({ scope: "project", projectId: "secret", themeRef: null });
+    expect(res.status).toBe(200);
+    expect(d.setChoice).toHaveBeenLastCalledWith("u1", "secret", null);
+  });
+});
+
+describe("HEAD /api/themes", () => {
+  it("says only whether themes are on: 204, or 404 with OPENLEN_THEMES=0, with no session read", async () => {
+    expect((await HEAD()).status).toBe(204);
+    vi.stubEnv("OPENLEN_THEMES", "0");
+    expect((await HEAD()).status).toBe(404);
+    expect(auth).not.toHaveBeenCalled();
   });
 });

@@ -57,6 +57,7 @@ export type ThemeProblemCode =
   | "bad_window"
   | "twin_missing"
   | "twin_same_window"
+  | "twin_not_mutual"
   | "scene_path"
   | "scene_missing"
   | "empty_theme"
@@ -302,7 +303,12 @@ function textOf(themes: Record<string, unknown>, id: string, field: "title" | "b
 
 // ─── the manifest ────────────────────────────────────────────────────────────
 
-export function readThemeManifest(files: Readonly<Record<string, string>>, o: { readonly personLocale: string }): ThemeManifestResult {
+/**
+ * Only English is required of the display record: a Claude Code plugin's manifest carries ONE language, and any other
+ * locale falls back to English (`resolve.ts`) — so a person who changed the interface's language between the theme's
+ * birth and its install is never refused for a locale file nobody wrote.
+ */
+export function readThemeManifest(files: Readonly<Record<string, string>>): ThemeManifestResult {
   const raw = files[PACKAGE];
   if (raw === undefined) return { ok: false, problems: [{ code: "no_package_json", file: PACKAGE }] };
   const pkg = record(parse(raw));
@@ -318,8 +324,9 @@ export function readThemeManifest(files: Readonly<Record<string, string>>, o: { 
   const windows = new Map<string, ThemeWindow>();
   const twins: { id: string; twin: unknown }[] = [];
   const locales = readLocales(files);
-  // English and the person's language are required; every locale file present is read.
-  const required = [...new Set(["en", o.personLocale])];
+  // English is required — as a plugin's manifest has one language —; every other locale file present is read, and a
+  // locale without a title falls back to English.
+  const required = ["en"];
 
   for (const [index, entry] of declared.entries()) {
     const t = record(entry);
@@ -382,8 +389,9 @@ export function readThemeManifest(files: Readonly<Record<string, string>>, o: { 
 
     if (present(t.twin)) twins.push({ id, twin: t.twin });
 
-    const titles: Record<string, string> = {};
-    const blurbs: Record<string, string> = {};
+    // Indexed by locale: no prototype, so a locale file can never name anything an object already has.
+    const titles: Record<string, string> = Object.create(null) as Record<string, string>;
+    const blurbs: Record<string, string> = Object.create(null) as Record<string, string>;
     for (const [locale, map] of locales) {
       const title = textOf(map, id, "title");
       const blurb = textOf(map, id, "blurb");
@@ -395,8 +403,8 @@ export function readThemeManifest(files: Readonly<Record<string, string>>, o: { 
       if (blurb) blurbs[locale] = blurb.slice(0, isRequired ? undefined : BLURB_MAX);
     }
     for (const locale of required) {
-      if (!titles[locale]) problems.push({ code: "missing_meta", file: `/locale/${locale}.json`, detail: `${id}.title` });
-      if (!blurbs[locale]) problems.push({ code: "missing_meta", file: `/locale/${locale}.json`, detail: `${id}.blurb` });
+      if (!Object.hasOwn(titles, locale)) problems.push({ code: "missing_meta", file: `/locale/${locale}.json`, detail: `${id}.title` });
+      if (!Object.hasOwn(blurbs, locale)) problems.push({ code: "missing_meta", file: `/locale/${locale}.json`, detail: `${id}.blurb` });
     }
 
     if (validWindow) windows.set(id, window as ThemeWindow);
@@ -415,12 +423,16 @@ export function readThemeManifest(files: Readonly<Record<string, string>>, o: { 
     });
   }
 
-  // A twin is the same theme for the other window: it must exist in this project, and be of the other one.
+  // A twin is the same theme for the other window: it must exist in this project, be of the other one, and name this one
+  // back — as each of Claude Code's theme-examples «names its twin».
+  const twinOf = new Map(twins.map(({ id, twin }) => [id, twin]));
   for (const { id, twin } of twins) {
     if (typeof twin !== "string" || !windows.has(twin)) {
       problems.push({ code: "twin_missing", file: PACKAGE, detail: `${id}: ${typeof twin === "string" ? twin.slice(0, 80) : typeof twin}` });
     } else if (windows.get(twin) === windows.get(id)) {
       problems.push({ code: "twin_same_window", file: PACKAGE, detail: `${id}: ${twin}` });
+    } else if (twinOf.get(twin) !== id) {
+      problems.push({ code: "twin_not_mutual", file: PACKAGE, detail: `${id}: ${twin} names ${typeof twinOf.get(twin) === "string" ? String(twinOf.get(twin)).slice(0, 80) : "no twin"}` });
     }
   }
 
