@@ -89,8 +89,9 @@ describe("la app que nace con el primer mensaje", () => {
     expect(onChatChange).toHaveBeenCalledTimes(1);
   });
 
-  // A tool and a game are born the same way (they are apps): the view must see them as such from the start.
-  for (const naceComo of ["tool", "game"] as const) {
+  // A tool and a game are born the same way (they are apps): the view must see them as such from the start. A theme is
+  // no app, but it is born with the same message and its preview page is what the canvas shows: the same reload.
+  for (const naceComo of ["tool", "game", "theme"] as const) {
     it(`🔴 a ${naceComo} that is born also reloads the project as soon as the turn starts`, async () => {
       stubAgentStream();
       const onChatChange = vi.fn();

@@ -196,6 +196,8 @@ import { addChangesToTurn, guardarCambiosDelTurno } from "@/lib/projects/deshace
 import { nacerComoApp } from "@/lib/projects/nacer-como-app";
 import { bornAsGame } from "@/lib/projects/born-as-game";
 import { bornAsTool } from "@/lib/projects/born-as-tool";
+import { bornAsTheme } from "@/lib/projects/born-as-theme";
+import { themesEnabled } from "@/lib/themes/enabled";
 import { toolCardStatusNotice } from "@/lib/tools/cards/notice";
 import { toolsEnabled } from "@/lib/tools/enabled";
 import { connectorsEnabled } from "@/lib/mcp-connectors/enabled";
@@ -841,6 +843,20 @@ async function correrTurno(
     }).catch((err: unknown) => {
       // eslint-disable-next-line no-console
       console.warn("[agent] the game couldn't be born; the turn goes on with the project as it is", err);
+    });
+  }
+  // A THEME IS BORN the same way (spec local 2026-11-27-temas-del-workspace, §4.1): «Nuevo tema» (Herramientas → Temas)
+  // sends its first message with `naceComo: "theme"`, and the blank project gets the theme skeleton before Len reads it:
+  // no app, no /src, a manifest, two scenes and a preview page. Open to every plan, like a game.
+  if (body?.naceComo === "theme" && !opts.round && themesEnabled()) {
+    await bornAsTheme({
+      projectId,
+      userId,
+      title: "My theme",
+      locale: typeof body.idioma === "string" ? body.idioma : "en",
+    }).catch((err: unknown) => {
+      // eslint-disable-next-line no-console
+      console.warn("[agent] the theme couldn't be born; the turn goes on with the project as it is", err);
     });
   }
   const project = await deps.loadProject(projectId, userId);

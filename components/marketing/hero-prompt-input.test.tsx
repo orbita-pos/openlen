@@ -379,6 +379,19 @@ describe("the only box", () => {
     expect(push).not.toHaveBeenCalled();
     expect(window.location.search).toBe("");
   });
+
+  // WORKSPACE THEMES (spec local 2026-11-27-temas-del-workspace, §4.1): «Nuevo tema» arrives with kind=theme. The pill
+  // takes it without offering it, the box speaks for it, and sending it carries the kind in the ticket and the link.
+  it("🔴 a link that carried kind=theme fills the pill with Tema, speaks its placeholder, and sends it as a theme", async () => {
+    window.history.replaceState(null, "", `/?brief=${encodeURIComponent(BRIEF)}&kind=theme`);
+    const el = mount();
+    expect(el.querySelector('button[aria-haspopup="menu"][aria-label$="start.kind.theme"]')).not.toBeNull();
+    expect(el.querySelector<HTMLTextAreaElement>("#hero-prompt")!.getAttribute("placeholder")).toBe("start.kind.themePlaceholder");
+    expect(push).not.toHaveBeenCalled();
+    await press(sendButton(el));
+    expect(push).toHaveBeenCalledWith(`/new?brief=${encodeURIComponent(BRIEF)}&kind=theme`);
+    expect(takeFirstMessage(BRIEF)).toEqual({ brief: BRIEF, kind: "theme" });
+  });
 });
 
 // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.3): Agente in the pill, five jobs under the box that

@@ -208,7 +208,9 @@ export function HeroPromptInput({ tools = false, agents = false }: { tools?: boo
                 ? tw("start.kind.toolPlaceholder")
                 : kind === "agent"
                   ? tw("start.kind.agentPlaceholder")
-                  : t("heroPrompt.placeholder")
+                  : kind === "theme"
+                    ? tw("start.kind.themePlaceholder")
+                    : t("heroPrompt.placeholder")
         }
         ghost={ghost.text || null}
         onActivity={onActivity}

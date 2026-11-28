@@ -16,9 +16,9 @@ vi.mock("next-intl", () => ({
 
 const roots: Root[] = [];
 const vistos: NaceComo[] = [];
-type Opts = { conJuego?: boolean; conHerramienta?: boolean; conAgente?: boolean; herramientaBloqueada?: string; disabled?: boolean };
-function Arnes(o: Opts) {
-  const [v, setV] = useState<NaceComo>("pagina");
+type Opts = { conJuego?: boolean; conHerramienta?: boolean; conAgente?: boolean; herramientaBloqueada?: string; disabled?: boolean; inicial?: NaceComo };
+function Arnes({ inicial = "pagina", ...o }: Opts) {
+  const [v, setV] = useState<NaceComo>(inicial);
   return (
     <HeroKindPicker
       value={v}
@@ -144,6 +144,33 @@ describe("Herramienta, and the pill while sending", () => {
     expect(menu.className).toContain("bg-white");
     expect(menu.className).not.toContain("bg-elev");
     expect(menu.className).toContain("bottom-[calc(100%+8px)]");
+  });
+});
+
+// WORKSPACE THEMES (spec local 2026-11-27-temas-del-workspace, §4.1): Tema is a kind the pill ACCEPTS on arrival (the
+// link of Herramientas → Temas → «Nuevo tema») and never OFFERS: it has no card in the menu.
+describe("Tema, the hidden kind", () => {
+  it("🔴 arriving with it chosen, the pill says Tema", () => {
+    const c = render({ inicial: "theme" });
+    expect(disparador(c).textContent).toContain("start.kind.theme");
+    expect(disparador(c).getAttribute("aria-label")).toContain("start.kind.theme");
+  });
+
+  it("🔴 the menu never offers it, with everything else on, and none of its cards is marked as chosen", () => {
+    const c = render({ inicial: "theme", conJuego: true, conHerramienta: true, conAgente: true });
+    act(() => disparador(c).click());
+    const todas = opciones(c);
+    expect(todas).toHaveLength(5);
+    expect(todas.some((o) => o.textContent?.includes("theme"))).toBe(false);
+    expect(todas.every((o) => o.getAttribute("aria-checked") === "false")).toBe(true);
+  });
+
+  it("choosing another kind leaves Tema behind", () => {
+    const c = render({ inicial: "theme" });
+    act(() => disparador(c).click());
+    act(() => opciones(c)[1]!.click());
+    expect(vistos).toEqual(["app"]);
+    expect(disparador(c).textContent).toContain("start.kind.app");
   });
 });
 

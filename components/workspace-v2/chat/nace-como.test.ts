@@ -74,6 +74,26 @@ describe("an agent from the home", () => {
   });
 });
 
+// A THEME (spec local 2026-11-27-temas-del-workspace, §4.1): reached only from Herramientas → Temas → «Nuevo tema», as a
+// link with `kind=theme`, and born like an app: `naceComo` and the language in the first message.
+describe("a theme in the URL and in the first message", () => {
+  it("kind=theme is a theme; its link carries it", () => {
+    expect(kindFromParam("theme")).toBe("theme");
+    expect(newProjectHref("un bosque", "theme")).toBe("/new?brief=un%20bosque&kind=theme");
+    expect(newProjectHref("á".repeat(5_000), "theme", "0123456789abcdef")).toBe("/new?first=0123456789abcdef&kind=theme");
+  });
+  it("a theme travels like an app: `naceComo` and the language", () => {
+    expect(camposDeNacer({ naceComo: "theme", idioma: "es" })).toEqual({ naceComo: "theme", idioma: "es" });
+  });
+  it("a link back to the home's box carries it, and the box reads it", () => {
+    expect(homeHref("un bosque", "theme")).toBe("/?brief=un+bosque&kind=theme");
+    expect(homeArrival("?kind=theme")).toEqual({ brief: "", kind: "theme" });
+  });
+  it("is never made unavailable by the games switch", () => {
+    expect(naceComoDisponible("theme", false)).toBe("theme");
+  });
+});
+
 describe("a tool in the URL (spec local 2026-11-04-herramientas-hechas-por-len)", () => {
   it("kind=tool is a tool; its link carries it", () => {
     expect(kindFromParam("tool")).toBe("tool");

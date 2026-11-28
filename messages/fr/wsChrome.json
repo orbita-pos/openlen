@@ -333,6 +333,8 @@
       "toolHeadline": "De quel outil avez-vous besoin ?",
       "toolSubtitle": "Len le construit et il reste dans votre OpenLen : dans la barre latérale ou dans vos projets.",
       "toolPlaceholder": "Quelque chose pour voir les réservations du jour et les confirmer…",
+      "theme": "Thème",
+      "themePlaceholder": "Un thème avec un étang au crépuscule, calme et lent…",
       "agent": "Agent",
       "agentHint": "Votre propre assistant pour ce que vous voulez : un prof, un coach, un cuisinier",
       "agentPlaceholder": "Pour quoi votre agent doit-il vous aider ?",

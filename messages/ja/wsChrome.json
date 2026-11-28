@@ -333,6 +333,8 @@
       "toolHeadline": "どんなツールが必要ですか？",
       "toolSubtitle": "Len が作り、あなたの OpenLen に残ります。サイドバーか、プロジェクトの中に。",
       "toolPlaceholder": "今日の予約を見て確定できるもの…",
+      "theme": "テーマ",
+      "themePlaceholder": "夕暮れの池をモチーフにした、静かでゆっくり動くテーマ…",
       "agent": "エージェント",
       "agentHint": "何にでも使える自分だけのアシスタント：先生、トレーナー、料理人",
       "agentPlaceholder": "エージェントに何を手伝ってほしいですか？",

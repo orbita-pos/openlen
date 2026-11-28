@@ -36,22 +36,30 @@ export async function nacerComoApp(p: {
 }
 
 /**
- * The one statement behind every birth (an app here; a tool in `born-as-tool.ts`): merges `patch` into
- * `data` and writes the skeleton's files, only on a blank project the user owns that isn't an app yet.
+ * The one statement behind every birth (an app here; a tool in `born-as-tool.ts`, a theme in `born-as-theme.ts`):
+ * merges `patch` into `data` and writes the skeleton's files, only on a blank project the user owns that isn't an app yet.
+ *
+ * `userBrief` is the project's `/LEN.md` (its memory, a column and not a folder file): written in the same statement,
+ * and never over one the person already has.
  */
 export async function bornWithSkeleton(p: {
   readonly projectId: string;
   readonly userId: string;
   readonly patch: Record<string, unknown>;
   readonly files: Readonly<Record<string, string>>;
+  readonly userBrief?: string;
 }): Promise<boolean> {
   const ficheros = Object.entries(p.files).map(([path, content]) => ({ path, content }));
+  const memoria =
+    p.userBrief === undefined
+      ? sql``
+      : sql`, "userBrief" = CASE WHEN coalesce(btrim("userBrief"), '') = '' THEN ${p.userBrief} ELSE "userBrief" END`;
   const res = await db.execute(sql`
     WITH actualizado AS (
       UPDATE "projects"
       SET "data" = coalesce("data", '{}'::jsonb) || ${JSON.stringify(p.patch)}::jsonb,
           "filesHash" = ${folderFingerprint(p.files)},
-          "updatedAt" = now()
+          "updatedAt" = now()${memoria}
       WHERE "id" = ${p.projectId} AND "userId" = ${p.userId}
         AND coalesce(btrim("data"->>'html'), '') = ''
         AND coalesce("data"->'pages', '{}'::jsonb) = '{}'::jsonb

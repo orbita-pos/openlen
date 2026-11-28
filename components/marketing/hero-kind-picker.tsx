@@ -20,7 +20,7 @@
 
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { Bot, Check, ChevronDown, Gamepad2, LayoutDashboard, PanelsTopLeft, Wrench } from "lucide-react";
+import { Bot, Check, ChevronDown, Gamepad2, LayoutDashboard, PanelsTopLeft, Palette, Wrench } from "lucide-react";
 import { useMandoDesplegable } from "@/components/workspace-v2/use-mando-desplegable";
 import {
   DibujoAgente,
@@ -118,8 +118,20 @@ export function HeroKindPicker({
       : []),
     ...(conAgente ? [{ id: "agent" as const, titulo: t("start.kind.agent"), linea: t("start.kind.agentHint"), dibujo: <DibujoAgente /> }] : []),
   ];
+  // WORKSPACE THEMES (spec local 2026-11-27-temas-del-workspace, §4.1): Tema is ACCEPTED on arrival — the link of
+  // Herramientas → Temas → «Nuevo tema» — and never OFFERED: it has no option above, so the pill only says it.
   const Icono =
-    value === "app" ? LayoutDashboard : value === "game" ? Gamepad2 : value === "tool" ? Wrench : value === "agent" ? Bot : PanelsTopLeft;
+    value === "app"
+      ? LayoutDashboard
+      : value === "game"
+        ? Gamepad2
+        : value === "tool"
+          ? Wrench
+          : value === "agent"
+            ? Bot
+            : value === "theme"
+              ? Palette
+              : PanelsTopLeft;
   const nombre =
     value === "app"
       ? t("start.kind.app")
@@ -129,7 +141,9 @@ export function HeroKindPicker({
           ? t("start.kind.tool")
           : value === "agent"
             ? t("start.kind.agent")
-            : t("start.kind.page");
+            : value === "theme"
+              ? t("start.kind.theme")
+              : t("start.kind.page");
 
   const elegir = (id: NaceComo) => {
     setOpen(false);

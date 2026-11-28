@@ -10,8 +10,10 @@
  *  TOOLS MADE BY LEN (spec local 2026-11-04-herramientas-hechas-por-len, §4.9 door 2): `"tool"`.
  *  THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.2): `"game"` too, before Herramienta.
  *  AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.3): `"agent"`, last — which no project is born as:
- *  it goes to the person's space. */
-export type NaceComo = "pagina" | "app" | "game" | "tool" | "agent";
+ *  it goes to the person's space.
+ *  WORKSPACE THEMES (spec local 2026-11-27-temas-del-workspace, §4.1): `"theme"`, which the pill accepts on arrival and
+ *  never offers (no card): it is reached only from Herramientas → Temas → «Nuevo tema». */
+export type NaceComo = "pagina" | "app" | "game" | "tool" | "agent" | "theme";
 
 // LOS DIBUJOS, en `currentColor`: la opción elegida los tiñe del acento y las
 // demás los dejan en gris, en claro y en oscuro sin una sola regla más. La

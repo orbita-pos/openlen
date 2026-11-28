@@ -333,6 +333,8 @@
       "toolHeadline": "어떤 도구가 필요하세요?",
       "toolSubtitle": "Len이 만들어 내 OpenLen에 남아요. 사이드바나 프로젝트 안에요.",
       "toolPlaceholder": "오늘 예약을 보고 확정할 수 있는 것…",
+      "theme": "테마",
+      "themePlaceholder": "해 질 녘의 연못이 있는 차분하고 느린 테마…",
       "agent": "에이전트",
       "agentHint": "무엇이든 돕는 나만의 어시스턴트: 선생님, 트레이너, 요리사",
       "agentPlaceholder": "에이전트가 무엇을 도와주면 좋을까요?",

@@ -39,6 +39,12 @@ describe("the first message sent from the home", () => {
     expect(takeFirstMessage(BRIEF, T0 + 5_000)).toEqual({ brief: BRIEF, kind: "agent" });
   });
 
+  // WORKSPACE THEMES (spec local 2026-11-27-temas-del-workspace, §4.1): «Nuevo tema» sends the home's ticket with kind theme.
+  it("keeps a theme's kind, for /new to be born as one", () => {
+    leaveFirstMessage({ brief: BRIEF, kind: "theme" }, T0);
+    expect(takeFirstMessage(BRIEF, T0 + 5_000)).toEqual({ brief: BRIEF, kind: "theme" });
+  });
+
   it("is used once: reloading /new does not send it again", () => {
     leaveFirstMessage({ brief: BRIEF, kind: "pagina" }, T0);
     takeFirstMessage(BRIEF, T0);

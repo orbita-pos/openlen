@@ -145,6 +145,7 @@ const mocks = vi.hoisted(() => {
   nacerComoApp: vi.fn(async (_p: unknown) => true),
   bornAsTool: vi.fn(async (_p: unknown): Promise<"born" | "not_blank" | "plan_required"> => "born"),
   bornAsGame: vi.fn(async (_p: unknown): Promise<"born" | "not_blank"> => "born"),
+  bornAsTheme: vi.fn(async (_p: unknown): Promise<"born" | "not_blank"> => "born"),
   // The owner's plan, for the box (spec local 2026-11-05-modo-juego-design, §11).
   getUserPlan: vi.fn(async (_userId: string): Promise<string> => "pro"),
   // Len's subagents (spec local 2026-11-01-subagentes-de-len): the launcher is checked by what the route hands it.
@@ -259,6 +260,7 @@ vi.mock("@/lib/projects/deshacer-turno", () => ({ guardarCambiosDelTurno: mocks.
 vi.mock("@/lib/projects/nacer-como-app", () => ({ nacerComoApp: mocks.nacerComoApp }));
 vi.mock("@/lib/projects/born-as-tool", () => ({ bornAsTool: mocks.bornAsTool }));
 vi.mock("@/lib/projects/born-as-game", () => ({ bornAsGame: mocks.bornAsGame }));
+vi.mock("@/lib/projects/born-as-theme", () => ({ bornAsTheme: mocks.bornAsTheme }));
 vi.mock("@/lib/limits", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/lib/limits")>()), getUserPlan: mocks.getUserPlan }));
 // LEN'S MCP CONNECTORS (spec local 2026-11-06-conectores-mcp): one approved, listed server for whoever speaks.
 const connectorDeps = vi.hoisted(() => {
@@ -675,6 +677,49 @@ describe("POST /api/agent credit gate", () => {
     }));
     vi.unstubAllEnvs();
     expect(mocks.bornAsGame).not.toHaveBeenCalled();
+  });
+
+  // A THEME IS BORN the same way (spec local 2026-11-27-temas-del-workspace, §4.1): open to every plan, like a game.
+  it("naceComo: \"theme\" makes the blank project a theme before reading it, on any plan", async () => {
+    const orden: string[] = [];
+    mocks.bornAsTheme.mockImplementationOnce(async () => (orden.push("nace"), "born"));
+    mocks.loadProject.mockImplementationOnce(async () => (orden.push("lee"), null));
+    const res = await POST(new Request("http://localhost/api/agent", {
+      method: "POST",
+      body: JSON.stringify({ projectId: "p1", prompt: "un tema de bosque al atardecer", naceComo: "theme", idioma: "es" }),
+    }));
+    expect(mocks.bornAsTheme).toHaveBeenCalledWith({ projectId: "p1", userId: "u1", title: "My theme", locale: "es" });
+    expect(orden).toEqual(["nace", "lee"]);
+    expect(res.status).not.toBe(402);
+    expect(mocks.nacerComoApp).not.toHaveBeenCalled();
+    expect(mocks.bornAsTool).not.toHaveBeenCalled();
+    expect(mocks.bornAsGame).not.toHaveBeenCalled();
+  });
+
+  it("a theme that cannot be born does not stop the turn: it goes on with the project as it is", async () => {
+    mocks.bornAsTheme.mockImplementationOnce(async () => {
+      throw new Error("boom");
+    });
+    mocks.loadProject.mockClear();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    await POST(new Request("http://localhost/api/agent", {
+      method: "POST",
+      body: JSON.stringify({ projectId: "p1", prompt: "un tema", naceComo: "theme" }),
+    }));
+    expect(mocks.bornAsTheme).toHaveBeenCalledTimes(1);
+    expect(mocks.loadProject).toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("theme couldn't be born"), expect.any(Error));
+    warn.mockRestore();
+  });
+
+  it("with OPENLEN_THEMES=0, naceComo: \"theme\" is ignored", async () => {
+    vi.stubEnv("OPENLEN_THEMES", "0");
+    await POST(new Request("http://localhost/api/agent", {
+      method: "POST",
+      body: JSON.stringify({ projectId: "p1", prompt: "un tema", naceComo: "theme" }),
+    }));
+    vi.unstubAllEnvs();
+    expect(mocks.bornAsTheme).not.toHaveBeenCalled();
   });
 
   describe("a game's turn carries the game posture, and only a game's", () => {

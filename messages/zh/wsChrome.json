@@ -333,6 +333,8 @@
       "toolHeadline": "你需要什么工具？",
       "toolSubtitle": "Len 来做，它会留在你的 OpenLen 里：在侧边栏，或在你的项目里。",
       "toolPlaceholder": "能查看并确认今天预订的东西…",
+      "theme": "主题",
+      "themePlaceholder": "一个有黄昏池塘的主题，安静而缓慢…",
       "agent": "智能体",
       "agentHint": "你自己的助手，什么都能帮：老师、教练、厨师",
       "agentPlaceholder": "你想让你的智能体帮你做什么？",

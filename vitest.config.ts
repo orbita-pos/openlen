@@ -362,6 +362,8 @@ export default defineConfig({
       // A blank project born as a tool (spec local 2026-11-04-herramientas-hechas-por-len). LISTA BLANCA.
       "lib/projects/born-as-tool.pglite.test.ts",
       "lib/projects/born-as-game.pglite.test.ts",
+      // A blank project born as a theme (spec local 2026-11-27-temas-del-workspace, §4.1).
+      "lib/projects/born-as-theme.pglite.test.ts",
       "lib/projects/publish-refuses-a-tool.pglite.test.ts",
       "lib/publish/model-runtime-locales.test.ts",
       // Un idioma pedido que no sale tiene que OÍRSE: el fallo era mudo y por

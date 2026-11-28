@@ -1580,7 +1580,9 @@ function NewV2Inner() {
   // AN APP BEING BORN: the first turn of a project that is (or was just asked to
   // be, before the reload that brings the skeleton) an app. Meanwhile the
   // canvas shows Len's workshop instead of the skeleton's blank «App» page.
-  const appBirth = useAppBirth(latestTurn, esApp || naceComo !== "pagina");
+  // A theme is born with no app: its canvas is the preview page, and there is no workshop for it (naceComo "theme").
+  const nacePorApp = naceComo !== "pagina" && naceComo !== "theme";
+  const appBirth = useAppBirth(latestTurn, esApp || nacePorApp);
   // LO QUE ENSEÑA EL CENTRO, como Claude con un artefacto (21/10): la conversación ocupa el medio mientras no hay
   // nada que ver; una pieza (presentación, dashboard, imagen, video, voz) se abre ahí si el proyecto no tiene
   // página; con página o app, el lienzo de siempre. La lista de piezas se lee UNA vez y la comparten la campana,
@@ -1597,7 +1599,7 @@ function NewV2Inner() {
   // `loading` vuelve a false y cuenta como ninguna).
   const centro = centerContent({
     hasPage: loadedProject ? activeDoc.trim() !== "" || Object.keys(loadedProject.pages ?? {}).length > 0 : null,
-    isApp: esApp || naceComo !== "pagina",
+    isApp: esApp || nacePorApp,
     deliverables:
       artifactsOn && artifacts.enabled === null && artifacts.loading ? null : artifactsOn && artifacts.enabled ? artifacts.items.length : 0,
   });

@@ -4,11 +4,13 @@
 
 import { spaceHref } from "@/lib/space/href";
 
-/** What is born as an app: an app, a tool (spec local 2026-11-04-herramientas-hechas-por-len) or a game (spec local
- *  2026-11-05-modo-juego-design). A page is born as always, with nothing. */
-export type NaceComoApp = "app" | "tool" | "game";
+/** What a first message asks the blank project to be born as, besides a page: an app, a tool (spec local
+ *  2026-11-04-herramientas-hechas-por-len), a game (spec local 2026-11-05-modo-juego-design) or a workspace theme
+ *  (spec local 2026-11-27-temas-del-workspace — no app at all, but it travels the same way: `naceComo` and the
+ *  language). A page is born as always, with nothing. */
+export type NaceComoApp = "app" | "tool" | "game" | "theme";
 
-const COMO_APP: readonly string[] = ["app", "tool", "game"] satisfies readonly NaceComoApp[];
+const COMO_APP: readonly string[] = ["app", "tool", "game", "theme"] satisfies readonly NaceComoApp[];
 
 /** What the home's pill can choose: what a project is born as, or an agent of the person's own (spec local
  *  2026-11-19-agentes-para-todos, §6.3) — which goes to their space and is never a way a project is born. */
@@ -45,7 +47,7 @@ export function naceComoDisponible<T extends StartKind>(v: T, juegos: boolean): 
 /** El parámetro de /new con el que la portada pide nacer como app. */
 export const KIND_PARAM = "kind";
 
-/** Lo que dice la URL: `app`, `tool`, `game` o `agent`; lo demás, o nada, es una página. */
+/** Lo que dice la URL: `app`, `tool`, `game`, `theme` o `agent`; lo demás, o nada, es una página. */
 export function kindFromParam(v: string | null): StartKind {
   return naceComoApp(v) ? v : v === "agent" ? "agent" : "pagina";
 }
