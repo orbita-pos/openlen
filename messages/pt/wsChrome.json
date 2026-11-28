@@ -859,6 +859,22 @@
       "disconnect": "Desconectar"
     }
   },
+  "themes": {
+    "title": "Temas",
+    "hint": "Uma cena atrás do espaço de trabalho. A pré-visualização só aparece nesta aba: nada é salvo até você usar o tema.",
+    "preview": "Pré-visualizar",
+    "stopPreview": "Parar pré-visualização",
+    "useEverywhere": "Usar em tudo",
+    "useInProject": "Usar neste projeto",
+    "off": "Desativar",
+    "remove": "Remover",
+    "newTheme": "Novo tema",
+    "lightWindow": "Janela clara",
+    "darkWindow": "Janela escura",
+    "twinOf": "Gêmeo: {title}",
+    "onEverywhere": "Ativo em tudo",
+    "onInProject": "Ativo neste projeto"
+  },
   "space": {
     "title": "Seu espaço",
     "home": "Voltar ao início",

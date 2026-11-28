@@ -859,6 +859,22 @@
       "disconnect": "切断"
     }
   },
+  "themes": {
+    "title": "テーマ",
+    "hint": "ワークスペースの背景にシーンを置きます。プレビューはこのタブだけで表示され、使うまで何も保存されません。",
+    "preview": "プレビュー",
+    "stopPreview": "プレビューを止める",
+    "useEverywhere": "すべてで使う",
+    "useInProject": "このプロジェクトで使う",
+    "off": "オフにする",
+    "remove": "外す",
+    "newTheme": "新しいテーマ",
+    "lightWindow": "明るいウィンドウ",
+    "darkWindow": "暗いウィンドウ",
+    "twinOf": "対になるテーマ：{title}",
+    "onEverywhere": "すべてで使用中",
+    "onInProject": "このプロジェクトで使用中"
+  },
   "space": {
     "title": "あなたのスペース",
     "home": "ホームに戻る",

@@ -859,6 +859,22 @@
       "disconnect": "연결 해제"
     }
   },
+  "themes": {
+    "title": "테마",
+    "hint": "작업 공간 뒤에 장면을 둡니다. 미리보기는 이 탭에서만 보이며, 사용하기 전에는 아무것도 저장되지 않습니다.",
+    "preview": "미리보기",
+    "stopPreview": "미리보기 중지",
+    "useEverywhere": "모든 곳에서 사용",
+    "useInProject": "이 프로젝트에서 사용",
+    "off": "끄기",
+    "remove": "제거",
+    "newTheme": "새 테마",
+    "lightWindow": "밝은 창",
+    "darkWindow": "어두운 창",
+    "twinOf": "짝 테마: {title}",
+    "onEverywhere": "모든 곳에서 사용 중",
+    "onInProject": "이 프로젝트에서 사용 중"
+  },
   "space": {
     "title": "내 공간",
     "home": "홈으로 돌아가기",

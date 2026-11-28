@@ -859,6 +859,22 @@
       "disconnect": "Déconnecter"
     }
   },
+  "themes": {
+    "title": "Thèmes",
+    "hint": "Une scène derrière l’espace de travail. L’aperçu n’apparaît que dans cet onglet : rien n’est enregistré tant que vous ne l’utilisez pas.",
+    "preview": "Aperçu",
+    "stopPreview": "Arrêter l’aperçu",
+    "useEverywhere": "Utiliser partout",
+    "useInProject": "Utiliser dans ce projet",
+    "off": "Désactiver",
+    "remove": "Retirer",
+    "newTheme": "Nouveau thème",
+    "lightWindow": "Fenêtre claire",
+    "darkWindow": "Fenêtre sombre",
+    "twinOf": "Jumeau : {title}",
+    "onEverywhere": "Actif partout",
+    "onInProject": "Actif dans ce projet"
+  },
   "space": {
     "title": "Votre espace",
     "home": "Retour à l'accueil",

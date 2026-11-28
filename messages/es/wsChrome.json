@@ -859,6 +859,22 @@
       "disconnect": "Desconectar"
     }
   },
+  "themes": {
+    "title": "Temas",
+    "hint": "Una escena detrás del espacio de trabajo. La vista previa sólo se ve en esta pestaña: no se guarda nada hasta que lo uses.",
+    "preview": "Vista previa",
+    "stopPreview": "Dejar de ver",
+    "useEverywhere": "Usar en todo",
+    "useInProject": "Usar en este proyecto",
+    "off": "Desactivar",
+    "remove": "Quitar",
+    "newTheme": "Nuevo tema",
+    "lightWindow": "Ventana clara",
+    "darkWindow": "Ventana oscura",
+    "twinOf": "Gemelo: {title}",
+    "onEverywhere": "Activo en todo",
+    "onInProject": "Activo en este proyecto"
+  },
   "space": {
     "title": "Tu espacio",
     "home": "Volver al inicio",

@@ -7,8 +7,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key, useLocale: () => "es" }));
 const nav = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => nav }));
-// «Conectores» fetches on its own and has its own tests (connectors-section.test.tsx): here the page's fetches alone.
-vi.mock("./connectors-section", () => ({ ConnectorsSection: () => null }));
+// «Conectores» and «Temas» fetch on their own and have their own tests (connectors-section.test.tsx, themes-section.test.tsx):
+// here the page's fetches alone, and a marker where each one is mounted.
+vi.mock("./connectors-section", async () => {
+  const { createElement } = await import("react");
+  return { ConnectorsSection: () => createElement("div", { "data-connectors-stub": "" }) };
+});
+vi.mock("./themes-section", async () => {
+  const { createElement } = await import("react");
+  return { ThemesSection: ({ projectId }: { projectId: string | null }) => createElement("div", { "data-themes-stub": "", "data-project": projectId ?? "" }) };
+});
 
 import type { InstalledToolView } from "@/lib/tools/types";
 
@@ -48,12 +56,12 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-async function render(tools: InstalledToolView[], paid = true, suggestions?: { available: boolean; on: boolean }) {
+async function render(tools: InstalledToolView[], paid = true, suggestions?: { available: boolean; on: boolean }, projectId?: string | null) {
   const reload = vi.fn();
   const div = document.createElement("div");
   document.body.appendChild(div);
   root = createRoot(div);
-  await act(async () => root!.render(<ToolsView tools={tools} paid={paid} onChanged={reload} {...(suggestions ? { suggestions } : {})} />));
+  await act(async () => root!.render(<ToolsView tools={tools} paid={paid} onChanged={reload} {...(suggestions ? { suggestions } : {})} {...(projectId !== undefined ? { projectId } : {})} />));
   return reload;
 }
 const byText = (text: string) => [...document.querySelectorAll("button")].find((b) => b.textContent === text)!;
@@ -122,6 +130,19 @@ describe("ToolsView", () => {
     root = null;
     await render([]);
     expect(document.querySelector("[data-tool-suggestions]")).toBeNull();
+  });
+
+  // «TEMAS» (spec local 2026-11-27-temas-del-workspace, §4.4): between the tools and the connectors, with the open project.
+  it("mounts «Temas» before «Conectores»; with no project open it gets none", async () => {
+    await render([]);
+    const themes = document.querySelector("[data-themes-stub]")!;
+    expect(themes.getAttribute("data-project")).toBe("");
+    expect(themes.compareDocumentPosition(document.querySelector("[data-connectors-stub]")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("hands «Temas» the project that is open", async () => {
+    await render([], true, undefined, "p9");
+    expect(document.querySelector("[data-themes-stub]")!.getAttribute("data-project")).toBe("p9");
   });
 
   it("on Free the switch can't be turned on", async () => {

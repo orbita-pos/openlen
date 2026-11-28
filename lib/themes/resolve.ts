@@ -48,6 +48,8 @@ export interface AvailableTheme {
   stillUrl?: string;
   source: "bundled" | "installed";
   installationId?: string;
+  /** The theme project an installed theme came from: what the picker's «Quitar» removes (`DELETE /api/projects/<id>/theme-install`). */
+  projectId?: string;
 }
 
 /** What `GET /api/themes` says. */
@@ -89,6 +91,7 @@ interface Entry {
   ref: string;
   source: "bundled" | "installed";
   installationId?: string;
+  projectId?: string;
   /** The version a scene URL names; the gallery's scenes have none. */
   version?: string;
   def: ThemeDefinition | StoredThemeDefinition;
@@ -132,6 +135,7 @@ function installedSource(row: ThemeInstallationRow, release: ThemeRelease): Read
       ref: `installed:${row.id}:${def.id}`,
       source: "installed",
       installationId: row.id,
+      projectId: row.projectId,
       version: row.releaseSha,
       def,
       heavy: () => release.costs?.[def.id]?.heavy === true,
@@ -258,6 +262,7 @@ function toAvailable(entry: Entry, locale: string): AvailableTheme {
     ...(def.scene !== undefined && { stillUrl: sceneUrl(entry, true) }),
     source: entry.source,
     ...(entry.installationId !== undefined && { installationId: entry.installationId }),
+    ...(entry.projectId !== undefined && { projectId: entry.projectId }),
   };
 }
 

@@ -859,6 +859,22 @@
       "disconnect": "Disconnetti"
     }
   },
+  "themes": {
+    "title": "Temi",
+    "hint": "Una scena dietro lo spazio di lavoro. L’anteprima si vede solo in questa scheda: non viene salvato nulla finché non lo usi.",
+    "preview": "Anteprima",
+    "stopPreview": "Interrompi anteprima",
+    "useEverywhere": "Usa ovunque",
+    "useInProject": "Usa in questo progetto",
+    "off": "Disattiva",
+    "remove": "Rimuovi",
+    "newTheme": "Nuovo tema",
+    "lightWindow": "Finestra chiara",
+    "darkWindow": "Finestra scura",
+    "twinOf": "Gemello: {title}",
+    "onEverywhere": "Attivo ovunque",
+    "onInProject": "Attivo in questo progetto"
+  },
   "space": {
     "title": "Il tuo spazio",
     "home": "Torna alla home",

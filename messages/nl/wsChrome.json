@@ -859,6 +859,22 @@
       "disconnect": "Verbinding verbreken"
     }
   },
+  "themes": {
+    "title": "Thema’s",
+    "hint": "Een scène achter de werkruimte. Het voorbeeld is alleen in dit tabblad te zien: er wordt niets opgeslagen tot je het gebruikt.",
+    "preview": "Voorbeeld",
+    "stopPreview": "Voorbeeld stoppen",
+    "useEverywhere": "Overal gebruiken",
+    "useInProject": "In dit project gebruiken",
+    "off": "Uitzetten",
+    "remove": "Verwijderen",
+    "newTheme": "Nieuw thema",
+    "lightWindow": "Licht venster",
+    "darkWindow": "Donker venster",
+    "twinOf": "Tegenhanger: {title}",
+    "onEverywhere": "Overal actief",
+    "onInProject": "In dit project actief"
+  },
   "space": {
     "title": "Jouw ruimte",
     "home": "Terug naar home",

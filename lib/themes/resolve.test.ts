@@ -292,6 +292,8 @@ describe("themeState: what the picker shows", () => {
       stillUrl: "/api/themes/scene?ref=installed%3Ainst1%3Aestanque&still=1&v=sha-1",
       source: "installed",
       installationId: "inst1",
+      // The theme project the installation came from: what «Quitar» in the picker deletes (DELETE /api/projects/<id>/theme-install).
+      projectId: "tp1",
     });
     const dawn = state.available.find((a) => a.ref === "bundled:halftone-dawn")!;
     expect(dawn).toEqual({

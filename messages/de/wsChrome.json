@@ -859,6 +859,22 @@
       "disconnect": "Trennen"
     }
   },
+  "themes": {
+    "title": "Themes",
+    "hint": "Eine Szene hinter dem Arbeitsbereich. Die Vorschau gilt nur in diesem Tab: Gespeichert wird erst, wenn du ein Theme verwendest.",
+    "preview": "Vorschau",
+    "stopPreview": "Vorschau beenden",
+    "useEverywhere": "Überall verwenden",
+    "useInProject": "In diesem Projekt verwenden",
+    "off": "Ausschalten",
+    "remove": "Entfernen",
+    "newTheme": "Neues Theme",
+    "lightWindow": "Helles Fenster",
+    "darkWindow": "Dunkles Fenster",
+    "twinOf": "Gegenstück: {title}",
+    "onEverywhere": "Überall aktiv",
+    "onInProject": "In diesem Projekt aktiv"
+  },
   "space": {
     "title": "Dein Bereich",
     "home": "Zur Startseite",

@@ -14,6 +14,7 @@ import type { InstalledToolView } from "@/lib/tools/types";
 
 import { KIND_PARAM } from "../chat/nace-como";
 import { ConnectorsSection } from "./connectors-section";
+import { ThemesSection } from "./themes-section";
 import { ToolIcon } from "./tool-icon";
 
 export const NEW_TOOL_HREF = `/new?${KIND_PARAM}=tool`;
@@ -23,12 +24,15 @@ export function ToolsView({
   paid,
   onChanged,
   suggestions,
+  projectId = null,
 }: {
   tools: readonly InstalledToolView[];
   paid: boolean;
   onChanged: () => void;
   /** GET /api/tools's `suggestions`: whether the switch exists here, and the person's state. */
   suggestions?: { available: boolean; on: boolean };
+  /** The project open behind the page, if any: «Usar en este proyecto» of «Temas» needs one. The start page has none. */
+  projectId?: string | null;
 }) {
   const t = useTranslations("wsChrome");
   const router = useRouter();
@@ -146,6 +150,9 @@ export function ToolsView({
             })}
           </ul>
         )}
+
+        {/* «TEMAS» (spec local 2026-11-27-temas-del-workspace, §4.4): the picker, like Claude Code's /custom-theme; not drawn with OPENLEN_THEMES=0. */}
+        <ThemesSection projectId={projectId} />
 
         {/* «CONECTORES» (spec local 2026-11-06-conectores-mcp, §5.7): the person's MCP servers; hidden with OPENLEN_MCP=0. */}
         <ConnectorsSection />

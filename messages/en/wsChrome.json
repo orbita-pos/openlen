@@ -859,6 +859,22 @@
       "disconnect": "Disconnect"
     }
   },
+  "themes": {
+    "title": "Themes",
+    "hint": "A scene behind the workspace. Preview shows a theme in this tab only: nothing is saved until you use it.",
+    "preview": "Preview",
+    "stopPreview": "Stop preview",
+    "useEverywhere": "Use everywhere",
+    "useInProject": "Use in this project",
+    "off": "Turn off",
+    "remove": "Remove",
+    "newTheme": "New theme",
+    "lightWindow": "Light window",
+    "darkWindow": "Dark window",
+    "twinOf": "Twin: {title}",
+    "onEverywhere": "On everywhere",
+    "onInProject": "On in this project"
+  },
   "space": {
     "title": "Your space",
     "home": "Back to home",
