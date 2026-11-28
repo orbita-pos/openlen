@@ -206,14 +206,27 @@ describe("checkScene — what it refuses", () => {
     ["a url( spelled with a CSS escape in a style", scene(`<style>.a{fill:\\75rl(https://evil/x)}</style>`), "css_escape"],
     ["a CSS escape in a style attribute", scene(`<g style="fill:\\75rl(https://evil/x)"/>`), "css_escape"],
     ["a CSS escape in a presentation attribute", scene(`<rect fill="u\\72l(https://evil/x)"/>`), "css_escape"],
-    [
-      "a CSS escape in a style after a </ inside CDATA",
-      scene(`<style><![CDATA[.a{content:"</"}.b{fill:\\75rl(https://evil/x)}]]></style>`),
-      "css_escape",
-    ],
     ["an image-set()", scene(`<style>.a{fill:image-set("https://evil/x.png" 1x)}</style>`), "external_ref"],
     ["an image()", scene(`<style>.a{background:image("x.png")}</style>`), "external_ref"],
     ["a src()", scene(`<style>.a{fill:src("x.png")}</style>`), "external_ref"],
+
+    // The text of a <style> is one string to a browser, whatever markup sits in it: a comment, a CDATA section, an
+    // instruction or an element in the middle of a word do not split it, so the word is there. None is taken.
+    ["a url( split by a comment", scene(`<style>.a{fill:ur<!---->l(https://evil/x)}</style>`), "style_markup"],
+    ["an @import split by a comment", scene(`<style>@imp<!---->ort "https://evil/x.css";</style>`), "style_markup"],
+    ["a url( split by a CDATA section", scene(`<style>.a{fill:ur<![CDATA[]]>l(https://evil/x)}</style>`), "style_markup"],
+    ["a url( split by an instruction", scene(`<style>.a{fill:ur<?x?>l(https://evil/x)}</style>`), "style_markup"],
+    ["a url( split by an element", scene(`<style>.a{fill:ur<x/>l(https://evil/x)}</style>`), "style_markup"],
+    [
+      "an image-set( split by a comment",
+      scene(`<style>.a{fill:image<!---->-set("https://evil/x" 1x)}</style>`),
+      "style_markup",
+    ],
+    ["a CSS escape split by a comment", scene(`<style>.a{fill:\\<!---->75rl(https://evil/x)}</style>`), "style_markup"],
+    ["a style wrapped in CDATA", scene(`<style><![CDATA[.a{fill:red}]]></style>`), "style_markup"],
+    ["a comment in a style", scene(`<style>.a{fill:red}<!-- note --></style>`), "style_markup"],
+    ["a style written with a prefix", scene(`<svg:style xmlns:svg="http://www.w3.org/2000/svg">a<!---->b</svg:style>`), "style_markup"],
+    ["a style written in capitals", scene(`<STYLE>.a{fill:ur<!---->l(https://evil/x)}</STYLE>`), "style_markup"],
 
     // A tag whose name no parser of ours would call one.
     ["an element with a name that starts outside ASCII", scene(`<é onclick="alert(1)"/>`), "event_handler"],
@@ -305,10 +318,11 @@ describe("checkScene — what it refuses", () => {
     expect(checkScene(svg, "/themes/a.svg").ok).toBe(true);
   });
 
-  it("takes the glyphs a scene draws with: a backslash in a <text>, named entities, CDATA in a style", () => {
+  it("takes the glyphs a scene draws with: a backslash in a <text>, named entities, markup outside a style", () => {
     const svg = scene(
       `<text>\\|/ &amp; &lt;&gt; &quot;</text>` +
-        `<style><![CDATA[.a{fill:red}.b{animation:x 1s}]]></style>` +
+        `<!-- a comment is fine anywhere but in a style --><style>.a{fill:red}.b{animation:x 1s}</style><?x y?>` +
+        `<![CDATA[ a CDATA section is fine in a <text> ]]>` +
         `<g xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"/>`,
     );
     expect(checkScene(svg, "/themes/a.svg").ok).toBe(true);

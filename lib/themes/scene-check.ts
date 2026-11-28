@@ -8,9 +8,11 @@
 // an href, a url(), an @import) are on purpose stricter than a parse: a hit inside a comment or a <text> is a false
 // positive that costs a clear message, never a hole. For the same reason nothing is allowed to HIDE a mark: a numeric
 // character reference (`&#114;`) or a CSS escape (`\75`) could spell `url(` or `@import` where the text does not
-// show it, so neither is taken. Only the event handlers, namespaces, `src` and SMIL look at real tags and attributes,
-// because a word like `once =` in a caption must not read as one. Every pass is linear in the size of the scene (no
-// regular expression that backtracks on a long run), because the scene is up to a megabyte and it is somebody else's.
+// show it, so neither is taken; nor is a `<style>` with markup in its text (`ur<!---->l(`), which a browser joins
+// into one string and a scan of the text does not. Only the event handlers, namespaces, `src` and SMIL look at real
+// tags and attributes, because a word like `once =` in a caption must not read as one. Every pass is linear in the
+// size of the scene (no regular expression that backtracks on a long run), because the scene is up to a megabyte and
+// it is somebody else's.
 //
 // It also counts what the scene costs to paint. Claude Code's own theme scenes were measured (spec §10.1) on
 // Jesús's laptop, an i5-11400H with an Intel UHD, behind the workspace: night-reef ran at 44–46 fps and honu-lagoon
@@ -191,7 +193,7 @@ function attrOf(tag: SceneTag, name: string): string | undefined {
 // ---------------------------------------------------------------------------------------------------------------
 // CSS: which elements does an animation reach?
 
-/** CSS without its comments or the CDATA markers a `<style>` is often wrapped in. */
+/** CSS without its comments. */
 function cleanCss(css: string): string {
   let out = "";
   let pos = 0;
@@ -206,7 +208,7 @@ function cleanCss(css: string): string {
     if (close < 0) break;
     pos = close + 2;
   }
-  return out.split("<![CDATA[").join("").split("]]>").join("");
+  return out;
 }
 
 /** The index of the `}` that closes the `{` at `open` (the end of the text if it never closes). Skips strings. */
@@ -338,42 +340,20 @@ function lastCompound(selector: string): Compound {
 const MATCH_WORK_CAP = 20_000_000;
 
 /**
- * The text of every `<style>`, as written: from after its tag to the closing tag that follows, skipping the CDATA
- * sections and comments in between (a `</` inside a CDATA is CSS, not the end).
+ * The text of every `<style>`, as written: from after its tag to the closing tag that follows. A browser reads the
+ * text and CDATA children of a style as ONE string, so a comment, an instruction, a CDATA section or an element in
+ * the middle of a word (`ur<!---->l(`) does not split it there: the scene would hide the word from every scan of the
+ * text and still have it. So a style may hold no markup at all, and `markup` says that one does.
  */
-function styleBlocks(tags: SceneTag[], svg: string): string[] {
+function styleBlocks(tags: SceneTag[], svg: string): { blocks: string[]; markup: boolean } {
   const blocks: string[] = [];
-  let readTo = 0;
   for (const tag of tags) {
-    // A "<style" that sits inside the text of the one before is text, not a style: the cursor only moves forward.
-    if (localName(tag.name) !== "style" || tag.selfClosing || tag.start < readTo) continue;
-    let at = tag.end;
-    for (;;) {
-      const lt = svg.indexOf("<", at);
-      if (lt < 0) {
-        at = svg.length;
-        break;
-      }
-      const skipTo = svg.startsWith("<![CDATA[", lt)
-        ? svg.indexOf("]]>", lt + 9)
-        : svg.startsWith("<!--", lt)
-          ? svg.indexOf("-->", lt + 4)
-          : -2;
-      if (skipTo === -2) {
-        if (svg.startsWith("</", lt)) {
-          at = lt;
-          break;
-        }
-        at = lt + 1;
-      } else if (skipTo < 0) {
-        at = svg.length;
-        break;
-      } else at = skipTo + 3;
-    }
-    readTo = at;
-    blocks.push(svg.slice(tag.end, at));
+    if (localName(tag.name).toLowerCase() !== "style" || tag.selfClosing) continue;
+    const lt = svg.indexOf("<", tag.end);
+    if (lt >= 0 && !svg.startsWith("</", lt)) return { blocks, markup: true };
+    blocks.push(svg.slice(tag.end, lt < 0 ? svg.length : lt));
   }
-  return blocks;
+  return { blocks, markup: false };
 }
 
 /** The CSS of every `<style>`, comments gone. */
@@ -540,7 +520,8 @@ export function checkScene(svg: string, file: string): SceneCheck {
       if (attr.value.includes("\\")) return problem("css_escape", file, clip(attr.name));
     }
   }
-  const blocks = styleBlocks(tags, svg);
+  const { blocks, markup } = styleBlocks(tags, svg);
+  if (markup) return problem("style_markup", file);
   if (blocks.some((block) => block.includes("\\"))) return problem("css_escape", file, "style");
 
   const external = externalRef(svg);
