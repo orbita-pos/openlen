@@ -104,6 +104,7 @@ const NOT_INSTALLED: Readonly<Record<number, string>> = {
   404: "Themes are off on this server: nothing was installed.",
   409: "This project isn't a theme project: nothing was installed.",
   422: "Nothing was installed: fix these problems and call publish again.",
+  429: "An install of theirs is still running: wait for it to finish before calling publish again. Nothing new was installed.",
 };
 
 /** Len's `publish` in a theme project: the install, for the speaker, with each theme's ref for `set_theme`. */

@@ -52,6 +52,7 @@ const deps = (over: Partial<ThemeInstallDeps> = {}): ThemeInstallDeps => ({
   openMeter: meter().openMeter,
   saveRelease: vi.fn(async () => {}),
   upsertInstallation: vi.fn(async (i) => ({ ...ROW, personId: i.personId, projectId: i.projectId, releaseSha: i.releaseSha })),
+  pruneReleases: vi.fn(async () => 0),
   listInstallations: vi.fn(async () => [ROW]),
   markRemoved: vi.fn(async () => true),
   ...over,
@@ -378,6 +379,117 @@ describe("one browser, one deadline (R14)", () => {
     await Promise.resolve();
     expect(saved(d).glassAdjusted).toEqual({});
     expect((r.body.contrastWarnings as { code: string }[]).map((w) => w.code)).toEqual(["glass_unmeasured", "glass_unmeasured"]);
+  });
+});
+
+describe("taking turns (R26)", () => {
+  it("one browser in the whole process: a second install waits for the first one's browser to close before launching its own", async () => {
+    const order: string[] = [];
+    let finishFirst!: () => void;
+    const firstMeasures = new Promise<void>((resolve) => (finishFirst = resolve));
+    const first = deps({
+      openMeter: vi.fn(async () => {
+        order.push("open 1");
+        return {
+          under: vi.fn(async () => {
+            await firstMeasures;
+            return "#000000";
+          }),
+          close: vi.fn(async () => {
+            order.push("close 1");
+          }),
+        };
+      }),
+    });
+    const second = deps({
+      openMeter: vi.fn(async () => {
+        order.push("open 2");
+        return { under: vi.fn(async () => "#000000"), close: vi.fn(async () => void order.push("close 2")) };
+      }),
+    });
+    const a = install(first, { actorId: "u1" });
+    const b = install(second, { actorId: "u2" });
+    await vi.waitFor(() => expect(order).toEqual(["open 1"]));
+    // The second install is waiting for its turn: its browser is not launched while the first one's is open.
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(second.openMeter).not.toHaveBeenCalled();
+    finishFirst();
+    const [ra, rb] = await Promise.all([a, b]);
+    expect(ra.status).toBe(200);
+    expect(rb.status).toBe(200);
+    expect(order).toEqual(["open 1", "close 1", "open 2", "close 2"]);
+    expect((rb.body.contrastWarnings as { code: string }[]).map((w) => w.code)).not.toContain("glass_unmeasured");
+  });
+
+  it("an install whose deadline comes while it waits for its turn reports its scenes unmeasured and never launches a browser", async () => {
+    let finishFirst!: () => void;
+    const firstMeasures = new Promise<void>((resolve) => (finishFirst = resolve));
+    const close = vi.fn(async () => {});
+    const first = deps({
+      openMeter: vi.fn(async () => ({
+        under: vi.fn(async () => {
+          await firstMeasures;
+          return "#000000";
+        }),
+        close,
+      })),
+    });
+    const waiting = meter();
+    const second = deps({ openMeter: waiting.openMeter, measureDeadlineMs: 30 });
+    const a = install(first, { actorId: "u1" });
+    await vi.waitFor(() => expect(first.openMeter).toHaveBeenCalled());
+    const rb = await install(second, { actorId: "u2" });
+    expect(rb.status).toBe(200);
+    expect((rb.body.contrastWarnings as { code: string }[]).map((w) => w.code)).toEqual(["glass_unmeasured", "glass_unmeasured"]);
+    finishFirst();
+    expect((await a).status).toBe(200);
+    // Its turn came after the deadline: nothing was launched, so there was nothing to close.
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(waiting.openMeter).not.toHaveBeenCalled();
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  it("a person with an install running is a 429 install_in_progress, and installs again once it ends", async () => {
+    let finish!: () => void;
+    const slow = new Promise<void>((resolve) => (finish = resolve));
+    const d = deps({
+      files: vi.fn(async () => {
+        await slow;
+        return files();
+      }),
+    });
+    const running = install(d);
+    const again = await install(deps());
+    expect(again).toEqual({ status: 429, body: { error: "install_in_progress" } });
+    // Someone else is not held up by it.
+    expect((await install(deps(), { actorId: "u2" })).status).toBe(200);
+    finish();
+    expect((await running).status).toBe(200);
+    expect((await install(deps())).status).toBe(200);
+  });
+
+  it("the lock is let go when an install fails", async () => {
+    const d = deps({ files: vi.fn(async () => Promise.reject(new Error("db down"))) });
+    await expect(install(d)).rejects.toThrow("db down");
+    expect((await install(deps())).status).toBe(200);
+  });
+});
+
+describe("old versions (M2)", () => {
+  it("after a successful install, the project's versions nobody points at are pruned", async () => {
+    const d = deps();
+    expect((await install(d)).status).toBe(200);
+    expect(d.pruneReleases).toHaveBeenCalledWith("p1");
+    const upsertOrder = (d.upsertInstallation as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0]!;
+    expect((d.pruneReleases as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0]!).toBeGreaterThan(upsertOrder);
+  });
+
+  it("a prune that fails does not fail the install, and a refused install prunes nothing", async () => {
+    const d = deps({ pruneReleases: vi.fn(async () => Promise.reject(new Error("nope"))) });
+    expect((await install(d)).status).toBe(200);
+    const refused = deps({ access: vi.fn(async () => ({ rol: "editor" as const, duenoId: "u9" })) });
+    expect((await install(refused)).status).toBe(403);
+    expect(refused.pruneReleases).not.toHaveBeenCalled();
   });
 });
 

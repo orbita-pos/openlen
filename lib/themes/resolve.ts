@@ -281,20 +281,6 @@ async function resolveFrom(choices: ThemeChoices, catalog: Catalog, locale: stri
 }
 
 /**
- * The theme that applies to this person in this project (`null` = none open: only «everywhere» counts), and its twin.
- * `locale` only picks the title's language.
- */
-export async function resolveTheme(
-  personId: string,
-  projectId: string | null,
-  locale: string,
-  deps?: ThemeDeps,
-): Promise<{ theme: ResolvedTheme | null; twin: ResolvedTheme | null }> {
-  const d = deps ?? (await realThemeDeps());
-  return resolveFrom(await d.choicesOf(personId, projectId), new Catalog(d, personId), locale);
-}
-
-/**
  * What the picker needs in one read: the saved picks, what applies, its twin, and every theme the person can choose.
  * A project they cannot open is not a project here — only «everywhere» is read — so a stale link, a deleted project or a
  * revoked invitation leaves the person with the theme that holds everywhere, not with none.

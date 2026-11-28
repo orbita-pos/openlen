@@ -6,7 +6,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, notInArray } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 
@@ -45,6 +45,19 @@ export async function saveThemeRelease(release: ThemeReleaseInput): Promise<void
       glassAdjusted: release.glassAdjusted,
     })
     .onConflictDoNothing({ target: r.sha });
+}
+
+/**
+ * Deletes a project's versions that no installation points at — anyone's, a removed one's included (its row stays and a
+ * reinstall moves it) — so reinstalling does not pile up every old version with its scenes' full text. How many went.
+ */
+export async function pruneThemeReleases(projectId: string): Promise<number> {
+  const pointed = db.select({ sha: i.releaseSha }).from(i).where(eq(i.projectId, projectId));
+  const rows = await db
+    .delete(r)
+    .where(and(eq(r.projectId, projectId), notInArray(r.sha, pointed)))
+    .returning({ sha: r.sha });
+  return rows.length;
 }
 
 /** A version, or null when there is none (its project was deleted, or the sha was never saved). */

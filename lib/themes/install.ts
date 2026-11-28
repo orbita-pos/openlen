@@ -33,6 +33,8 @@ export interface ThemeInstallDeps {
   measureDeadlineMs?: number;
   saveRelease(release: ThemeReleaseInput): Promise<void>;
   upsertInstallation(i: { personId: string; projectId: string; releaseSha: string }): Promise<ThemeInstallationRow>;
+  /** Deletes the project's versions no installation points at any more (M2: a reinstall must not pile them up). */
+  pruneReleases(projectId: string): Promise<unknown>;
   /** Every installation of a person, removed ones included. */
   listInstallations(personId: string): Promise<ThemeInstallationRow[]>;
   markRemoved(id: string, personId: string): Promise<boolean>;
@@ -59,6 +61,7 @@ export async function realThemeInstallDeps(): Promise<ThemeInstallDeps> {
     openMeter: measure.openSceneMeter,
     saveRelease: store.saveThemeRelease,
     upsertInstallation: store.upsertThemeInstallation,
+    pruneReleases: store.pruneThemeReleases,
     listInstallations: store.listThemeInstallations,
     markRemoved: store.markThemeRemoved,
   };
@@ -93,12 +96,27 @@ export function themeReleaseSha(projectId: string, release: Pick<ThemeReleaseInp
 const MEASURE_DEADLINE_MS = 60_000;
 /** After the deadline, how long closing the browser is waited for; it goes on in the background past this. */
 const CLOSE_WAIT_MS = 5_000;
+/** The most a browser that will not close keeps the next install's turn: past this the turn passes on anyway. */
+const TURN_HOLD_CAP_MS = 30_000;
+
+// ONE measuring browser in the whole process (R26): installing is open to every plan, so without this any account could
+// launch Chromium as often as it posts. Installs take turns in arrival order; a turn is held from the launch until the
+// browser has closed (or TURN_HOLD_CAP_MS after the install stopped using it).
+let meterQueue: Promise<void> = Promise.resolve();
+function takeMeterTurn(): Promise<() => void> {
+  let release!: () => void;
+  const done = new Promise<void>((resolve) => (release = resolve));
+  const turn = meterQueue.then(() => release);
+  meterQueue = meterQueue.then(() => done);
+  return turn;
+}
 
 /**
  * The colour under Len's panel of each scene given, measured in ONE browser (a page per scene) within ONE deadline for all
- * of them (R14). A scene that is not measured — the browser would not launch, the page would not paint, the deadline came
- * first — is null, and the caller reports it as unmeasured. The browser is closed on every path, also when it only
- * finishes launching after the deadline.
+ * of them (R14). The deadline counts from the call, so an install that waits for its turn at the browser (R26) waits within
+ * it. A scene that is not measured — the browser would not launch, the page would not paint, the turn or the deadline came
+ * late — is null, and the caller reports it as unmeasured. The browser is closed on every path, also when it only finishes
+ * launching after the deadline; an install whose deadline came while it waited never launches one.
  */
 async function measureScenes(d: ThemeInstallDeps, scenes: ReadonlyMap<string, string>): Promise<Map<string, string | null>> {
   const found = new Map<string, string | null>([...scenes.keys()].map((path) => [path, null]));
@@ -107,7 +125,11 @@ async function measureScenes(d: ThemeInstallDeps, scenes: ReadonlyMap<string, st
   let expired = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
 
-  const opened = Promise.resolve().then(() => d.openMeter());
+  const turn = takeMeterTurn();
+  const opened = turn.then(() => {
+    if (expired) throw new Error("the deadline came before this install's turn at the browser");
+    return d.openMeter();
+  });
   const work = (async () => {
     const meter = await opened;
     for (const [path, svg] of scenes) {
@@ -132,6 +154,15 @@ async function measureScenes(d: ThemeInstallDeps, scenes: ReadonlyMap<string, st
     clearTimeout(timer);
     // Closing the browser also ends a measure still in flight. A launch that is still pending is closed when it finishes.
     const closing = opened.then((meter) => meter.close()).catch(() => undefined);
+    // The turn passes on once the browser is closed — or, if it never closes, after the cap.
+    void turn.then((release) => {
+      const cap = setTimeout(release, TURN_HOLD_CAP_MS);
+      cap.unref?.();
+      void closing.then(() => {
+        clearTimeout(cap);
+        release();
+      });
+    });
     await Promise.race([closing, new Promise<void>((resolve) => setTimeout(resolve, Math.min(CLOSE_WAIT_MS, deadlineMs)))]);
   }
   return new Map(found);
@@ -139,7 +170,24 @@ async function measureScenes(d: ThemeInstallDeps, scenes: ReadonlyMap<string, st
 
 type Answer = { status: number; body: Record<string, unknown> };
 
+/** The people with an install running in this process: one at a time each (R26), whichever door it came by — the route or
+ *  Len's `publish` — so nobody queues up browsers behind the shared one by posting again and again. */
+const installing = new Set<string>();
+
 export async function installTheme(
+  i: { readonly projectId: string; readonly actorId: string; readonly locale: string },
+  deps?: ThemeInstallDeps,
+): Promise<Answer> {
+  if (installing.has(i.actorId)) return { status: 429, body: { error: "install_in_progress" } };
+  installing.add(i.actorId);
+  try {
+    return await installThemeNow(i, deps);
+  } finally {
+    installing.delete(i.actorId);
+  }
+}
+
+async function installThemeNow(
   i: { readonly projectId: string; readonly actorId: string; readonly locale: string },
   deps?: ThemeInstallDeps,
 ): Promise<Answer> {
@@ -218,6 +266,10 @@ export async function installTheme(
   const sha = themeReleaseSha(i.projectId, { themes, costs, glassAdjusted });
   await d.saveRelease({ sha, projectId: i.projectId, themes, costs, glassAdjusted });
   const row = await d.upsertInstallation({ personId: i.actorId, projectId: i.projectId, releaseSha: sha });
+  // The versions nobody points at now go; a failure here leaves them for the next install, and never fails this one.
+  await Promise.resolve()
+    .then(() => d.pruneReleases(i.projectId))
+    .catch(() => undefined);
 
   return {
     status: 200,

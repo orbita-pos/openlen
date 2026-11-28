@@ -51,6 +51,14 @@ describe("POST", () => {
     expect(await r.json()).toEqual({ error: "owner_only" });
   });
 
+  it("an install already running for the person is a 429 install_in_progress (R26)", async () => {
+    signedIn();
+    vi.mocked(installTheme).mockResolvedValue({ status: 429, body: { error: "install_in_progress" } });
+    const r = await post("{}");
+    expect(r.status).toBe(429);
+    expect(await r.json()).toEqual({ error: "install_in_progress" });
+  });
+
   it("is a 400 for a body that is not JSON, or not the shape", async () => {
     signedIn();
     expect((await post("{nope")).status).toBe(400);

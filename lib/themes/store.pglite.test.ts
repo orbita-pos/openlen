@@ -159,6 +159,26 @@ describe("theme releases", () => {
     expect(await count("themeReleases")).toBe(1);
   });
 
+  it("pruning deletes only the project's versions no installation points at, anyone's and removed ones counted", async () => {
+    await store.saveThemeRelease(release({ sha: "old" }));
+    await store.saveThemeRelease(release({ sha: "u1-now" }));
+    await store.saveThemeRelease(release({ sha: "u2-removed" }));
+    await store.saveThemeRelease(release({ sha: "other-project", projectId: "p2" }));
+    await store.upsertThemeInstallation({ personId: "u1", projectId: "p1", releaseSha: "old" });
+    // u1 moves on: «old» is pointed at by nobody now.
+    await store.upsertThemeInstallation({ personId: "u1", projectId: "p1", releaseSha: "u1-now" });
+    const u2 = await store.upsertThemeInstallation({ personId: "u2", projectId: "p1", releaseSha: "u2-removed" });
+    await store.markThemeRemoved(u2.id, "u2");
+
+    expect(await store.pruneThemeReleases("p1")).toBe(1);
+    expect(await store.readThemeRelease("old")).toBeNull();
+    expect(await store.readThemeRelease("u1-now")).not.toBeNull();
+    expect(await store.readThemeRelease("u2-removed")).not.toBeNull();
+    // Another project's version, which nothing points at either, is not this project's to prune.
+    expect(await store.readThemeRelease("other-project")).not.toBeNull();
+    expect(await store.pruneThemeReleases("p1")).toBe(0);
+  });
+
   it("a theme without a scene (a palette alone) needs no costs", async () => {
     const plain: StoredThemeDefinition = { id: "tinta", window: "dark", colors: { "--bg": "#101010" }, titles: { en: "Ink" }, blurbs: { en: "Just a palette." } };
     await store.saveThemeRelease({ sha: "sha-plain", projectId: "p1", themes: [plain], costs: {}, glassAdjusted: {} });

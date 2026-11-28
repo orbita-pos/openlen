@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { BUNDLED_THEMES } from "./bundled";
 import { WORKSPACE_COLORS } from "./contrast";
-import { chooseTheme, previewTheme, resolveTheme, themeState, type ThemeDeps } from "./resolve";
+import { chooseTheme, previewTheme, themeState, type ThemeDeps } from "./resolve";
 import type { ThemeInstallationRow, ThemeRelease } from "./store";
 import type { StoredThemeDefinition, ThemeChoices } from "./types";
 
@@ -84,6 +84,12 @@ function deps(w: World = {}) {
   } satisfies ThemeDeps;
 }
 
+/** Which theme applies and its twin, as `themeState` answers it (the picker's one read, and the only door to it). */
+async function resolveTheme(personId: string, projectId: string | null, locale: string, d: ThemeDeps) {
+  const { resolved, twin } = await themeState(personId, projectId, locale, d);
+  return { theme: resolved, twin };
+}
+
 const POND = "installed:inst1:estanque";
 const NIGHT_POND = "installed:inst1:estanque-noche";
 
@@ -108,11 +114,10 @@ describe("resolveTheme: which pick wins", () => {
     expect(d.choicesOf).toHaveBeenCalledWith("u1", null);
   });
 
-  it("nothing picked: no theme and no twin, without asking for any installation", async () => {
+  // (The picker's one read still lists every installation for `available`; only nothing is RESOLVED.)
+  it("nothing picked: no theme and no twin", async () => {
     const d = deps();
     expect(await resolveTheme("u1", "p1", "en", d)).toEqual({ theme: null, twin: null });
-    expect(d.listInstallations).not.toHaveBeenCalled();
-    expect(d.readRelease).not.toHaveBeenCalled();
   });
 });
 

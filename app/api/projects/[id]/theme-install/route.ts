@@ -1,7 +1,10 @@
-// «INSTALAR» A THEME (spec local 2026-11-27-temas-del-workspace, §4.2): the Temas section's button and the card of Len's
-// `publish` in a theme project both land here. POST installs — checks the manifest and every scene, measures the contrast
-// and raises the glass until the text reads, and keeps the version — and DELETE is «Quitar»: the person's own installation
-// is marked removed. Open to every plan (decision 1); only the project's owner installs it.
+// «INSTALAR» A THEME (spec local 2026-11-27-temas-del-workspace, §4.2): the top bar's «Instalar» in a theme project
+// (`components/workspace-v2/theme/theme-install-button.tsx`) POSTs here, and the Temas section's «Quitar» DELETEs.
+// Len's `publish` in a theme project does NOT come through here: it calls `installTheme` directly
+// (`lib/agent/theme-tools.ts`). POST installs — checks the manifest and every scene, measures the contrast and raises the
+// glass until the text reads, and keeps the version — and DELETE marks the person's own installation removed. Open to
+// every plan (decision 1); only the project's owner installs it, one install at a time per person (429
+// `install_in_progress`, R26, kept in `installTheme` so Len's door shares it).
 // Web session only: the phone has no theme layer yet (spec §8), so — as the desktop-apps route — this one doesn't take the
 // phone's key, has no app CORS, and isn't on `RUTAS_DE_LA_APP`.
 import { z } from "zod";
