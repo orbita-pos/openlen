@@ -4,7 +4,7 @@
 // the types of `window.openlen`, the bridge OpenLen injects (§4.4).
 import { createHash } from "node:crypto";
 
-import { esqueletoDeApp } from "@/lib/apps/esqueleto";
+import { esqueletoDeApp, idiomaDe } from "@/lib/apps/esqueleto";
 import type { AppDeProyecto } from "@/lib/projects/types";
 
 import type { ToolOfProject } from "./types";
@@ -204,7 +204,8 @@ export function toolSkeleton(o: { readonly title: string; readonly locale: strin
     exports: { "./locale/*.json": "./locale/*.json", "./icon": "./icon.svg" },
   };
   const meta = `${JSON.stringify({ meta: { title: o.title.trim() || "Tool", description: o.title.trim() || "A tool made by Len." } }, null, 2)}\n`;
-  const locales = [...new Set(["en", o.locale])];
+  // `o.locale` is any string the first message carried and is a path segment below: only a language code is taken.
+  const locales = [...new Set(["en", idiomaDe(o.locale)])];
   return {
     html: app.html,
     app: app.app,

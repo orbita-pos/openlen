@@ -59,8 +59,9 @@ function escaparHtml(texto: string): string {
   return texto.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-/** Un código de idioma válido para `lang`, o `en`. */
-function idiomaDe(idioma: string | undefined): string {
+/** Un código de idioma válido para `lang`, o `en`. Exportado: los esqueletos de herramienta y de tema lo usan para que
+ *  un idioma pedido nunca sea un trozo de ruta (`/locale/<idioma>.json`). */
+export function idiomaDe(idioma: string | undefined): string {
   return idioma && /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})?$/.test(idioma) ? idioma : "en";
 }
 

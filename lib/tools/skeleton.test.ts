@@ -69,4 +69,14 @@ describe("toolSkeleton", () => {
     const s = toolSkeleton({ title: "Bookings", locale: "en" });
     expect(Object.keys(s.files).filter((p) => p.startsWith("/locale/"))).toEqual(["/locale/en.json"]);
   });
+
+  // `idioma` is any string the first message carries, and the birth writes its rows by raw SQL, past the folder's path
+  // rules: the locale is a path segment, so it is normalised as an app's `lang` is (`idiomaDe`) — never taken as written.
+  it("🔴 a locale that is not a language code never becomes a path: only /locale/en.json is written", () => {
+    for (const locale of ["../../x", "../x", "es/../../x", "a/b", "", "es\n", "x".repeat(40), "es-"]) {
+      const paths = Object.keys(toolSkeleton({ title: "Bookings", locale }).files);
+      expect(paths.filter((p) => p.startsWith("/locale/")), JSON.stringify(locale)).toEqual(["/locale/en.json"]);
+      expect(paths.some((p) => p.includes("..")), JSON.stringify(locale)).toBe(false);
+    }
+  });
 });

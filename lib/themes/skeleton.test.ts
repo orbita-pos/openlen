@@ -35,6 +35,22 @@ describe("themeSkeleton: the manifest", () => {
     expect(Object.keys(born("es").files).filter((p) => p.startsWith("/locale/")).sort()).toEqual(["/locale/en.json", "/locale/es.json"]);
   });
 
+  // `idioma` is any string the first message carries, and the birth writes its rows by raw SQL, past the folder's path
+  // rules: the locale is a path segment, so it is normalised as an app's `lang` is (`idiomaDe`) — never taken as written.
+  it("🔴 a locale that is not a language code never becomes a path: only /locale/en.json is written", () => {
+    for (const locale of ["../../x", "../x", "es/../../x", "a/b", "", "es\n", "x".repeat(40), "es-"]) {
+      const paths = Object.keys(born(locale).files);
+      expect(paths.filter((p) => p.startsWith("/locale/")), JSON.stringify(locale)).toEqual(["/locale/en.json"]);
+      expect(paths.some((p) => p.includes("..")), JSON.stringify(locale)).toBe(false);
+    }
+  });
+
+  it("a regional language code is kept, and reads as a manifest for that person", () => {
+    const s = born("pt-BR");
+    expect(Object.keys(s.files).filter((p) => p.startsWith("/locale/")).sort()).toEqual(["/locale/en.json", "/locale/pt-BR.json"]);
+    expect(readThemeManifest(s.files, { personLocale: "pt-BR" }).ok).toBe(true);
+  });
+
   it("is a project with no React and no /src: the manifest, the display record, the scenes, the preview and a line of memory", () => {
     expect(Object.keys(born("es").files).sort()).toEqual([
       "/LEN.md",

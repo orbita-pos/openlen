@@ -10,7 +10,11 @@
 // no SMIL, no `&#`, no `\` in a style, nothing that points outside the file). The scenes are meant to be REPLACED: they are
 // a finished little drawing so the first preview is not an empty box, and the example Len starts from.
 //
-// Pure and client-safe: no server imports. `lib/projects/born-as-theme.ts` is what writes it.
+// Pure: no server imports. `lib/projects/born-as-theme.ts` is what writes it.
+
+import { idiomaDe } from "@/lib/apps/esqueleto";
+
+import { REDUCED_MOTION_RULE } from "./scene-check";
 
 /** The glass of a scene theme, as the manifest names it. */
 interface SkeletonGlass {
@@ -56,15 +60,13 @@ function slug(title: string): string {
 // CSS animation only, and slow («to sit under hours of work»): every cycle lasts tens of seconds, and what moves is a
 // handful of elements. `prefers-reduced-motion` stops all of it. Ids with a hyphen, as the skill teaches.
 
-const REDUCED_MOTION = "@media (prefers-reduced-motion: reduce){*{animation:none!important}}";
-
 const LIGHT_SCENE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="100%" height="100%" preserveAspectRatio="xMidYMid slice"><style>.sun{animation:breathe 40s ease-in-out infinite alternate}
 .cloud{animation:drift 150s ease-in-out infinite alternate}
 .cloud.far{animation-duration:210s;animation-direction:alternate-reverse}
 .mist{animation:breathe 60s ease-in-out infinite alternate}
 @keyframes drift{from{transform:translateX(-80px)}to{transform:translateX(80px)}}
 @keyframes breathe{from{opacity:0.6}to{opacity:1}}
-${REDUCED_MOTION}</style><defs><linearGradient id="sky-fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bcd9ee"/><stop offset="0.6" stop-color="#f3efe2"/><stop offset="1" stop-color="#fbd9bf"/></linearGradient>
+${REDUCED_MOTION_RULE}</style><defs><linearGradient id="sky-fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bcd9ee"/><stop offset="0.6" stop-color="#f3efe2"/><stop offset="1" stop-color="#fbd9bf"/></linearGradient>
 <radialGradient id="sun-glow"><stop offset="0" stop-color="#fff6d2" stop-opacity="0.95"/><stop offset="1" stop-color="#fff6d2" stop-opacity="0"/></radialGradient>
 <linearGradient id="mist-fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity="0"/><stop offset="1" stop-color="#ffffff" stop-opacity="0.55"/></linearGradient></defs>
 <rect width="1600" height="900" fill="url(#sky-fade)"/>
@@ -102,7 +104,7 @@ const NIGHT_SCENE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 9
 @keyframes twinkle{from{opacity:0.35}to{opacity:1}}
 @keyframes drift{from{transform:translateX(-80px)}to{transform:translateX(80px)}}
 @keyframes breathe{from{opacity:0.5}to{opacity:1}}
-${REDUCED_MOTION}</style><defs><linearGradient id="sky-fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#070d1f"/><stop offset="0.65" stop-color="#14233f"/><stop offset="1" stop-color="#27385e"/></linearGradient>
+${REDUCED_MOTION_RULE}</style><defs><linearGradient id="sky-fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#070d1f"/><stop offset="0.65" stop-color="#14233f"/><stop offset="1" stop-color="#27385e"/></linearGradient>
 <radialGradient id="moon-glow"><stop offset="0" stop-color="#cfd9ff" stop-opacity="0.55"/><stop offset="1" stop-color="#cfd9ff" stop-opacity="0"/></radialGradient>
 <linearGradient id="mist-fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6f86bd" stop-opacity="0"/><stop offset="1" stop-color="#6f86bd" stop-opacity="0.3"/></linearGradient></defs>
 <rect width="1600" height="900" fill="url(#sky-fade)"/>
@@ -204,7 +206,9 @@ export function themeSkeleton(o: { readonly title: string; readonly locale: stri
     },
   };
   const locale = `${JSON.stringify({ themes: record(title) }, null, 2)}\n`;
-  const locales = [...new Set(["en", o.locale])];
+  // `o.locale` is any string the first message carried and is a path segment below (the birth writes by raw SQL, past the
+  // folder's path rules): only a language code is taken, as an app's `lang` is.
+  const locales = [...new Set(["en", idiomaDe(o.locale)])];
   const html = previewPage();
   return {
     html,
