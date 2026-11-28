@@ -54,7 +54,8 @@ export function ProjectsSection({
   }, []);
 
   return (
-    <div className="flex-1 min-w-0 overflow-y-auto flex flex-col bg-app">
+    // `data-glass-surface`: with a workspace theme this page is glass (theme-backdrop.tsx); its cards keep their own colours.
+    <div data-glass-surface="" className="relative flex-1 min-w-0 overflow-y-auto flex flex-col bg-app">
       {state ? (
         <ProjectsView
           projects={state.projects}

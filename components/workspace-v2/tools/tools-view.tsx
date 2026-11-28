@@ -51,7 +51,8 @@ export function ToolsView({
   }
 
   return (
-    <section className="flex-1 min-w-0 min-h-0 overflow-y-auto nice-scroll bg-app" data-tools-view>
+    // `data-glass-surface`: with a workspace theme this page is glass (theme-backdrop.tsx); its cards keep their tokens.
+    <section data-glass-surface="" className="relative flex-1 min-w-0 min-h-0 overflow-y-auto nice-scroll bg-app" data-tools-view>
       <div className="mx-auto max-w-3xl px-6 py-10">
         <div className="flex items-start justify-between gap-4">
           <div>

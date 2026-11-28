@@ -3947,7 +3947,8 @@ function NewV2Inner() {
           // `/new` abre el proyecto en blanco, y su estado vacío es el compositor
           // (rama `editing`, más abajo). Esta rama sólo espera al blanco, o dice
           // por qué no llegó; y sigue pintando las otras dos superficies.
-          <div className="flex-1 min-w-0 min-h-0 flex flex-col bg-app">
+          // `data-glass-surface` + `relative`: con tema, el centro de la pantalla de inicio es cristal (theme-backdrop.tsx).
+          <div data-glass-surface="" className="relative flex-1 min-w-0 min-h-0 flex flex-col bg-app">
             {/* ⚰️ LAS TRES PESTAÑAS ESTABAN AQUÍ, flotando en el centro justo
                 debajo de la barra. Subieron A la barra el 2026-08-31: son la
                 navegación global, y ahí competían por el centro con el propio
@@ -4023,7 +4024,7 @@ function NewV2Inner() {
             // THE BLANK PROJECT HAS NO BOX (Jesús, 06/11: «¿para qué tener 2 inputs?»): what the home sent is on its
             // way (`useFirstMessageOnArrival` turns this into the chat with Len working), or there is nothing to send
             // and the page is going back to the home's box. Either way, a quiet wait — never a second box.
-            <div className="flex-1 min-w-0 min-h-0 flex items-center justify-center bg-app" data-blank-waiting="">
+            <div data-glass-surface="" className="relative flex-1 min-w-0 min-h-0 flex items-center justify-center bg-app" data-blank-waiting="">
               <div className="text-[12px] fg-faint">{t("editing.loading")}</div>
             </div>
           ))}

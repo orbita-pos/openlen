@@ -447,7 +447,7 @@ describe("the client's canvas stays opaque", () => {
   it("the marked surfaces: the rail (both widths, Len's docked panel inside), the top bar and the start rail, each positioned", () => {
     const marked = (file: string) => {
       const src = readFileSync(join(repo, file), "utf8");
-      return [...src.matchAll(/<(aside|header|div|nav)\s[^>]*data-glass-surface=""[^>]*>/g)].map((m) => m[0]);
+      return [...src.matchAll(/<(aside|header|div|nav|section)\s[^>]*data-glass-surface=""[^>]*>/g)].map((m) => m[0]);
     };
     const sidebar = marked("components/workspace-v2/left-sidebar.tsx");
     expect(sidebar).toHaveLength(2);
@@ -457,6 +457,25 @@ describe("the client's canvas stays opaque", () => {
     expect(bar[0]).toMatch(/className="relative /);
     const start = readFileSync(join(repo, "components/workspace-v2/start-rail.tsx"), "utf8");
     expect(start).toMatch(/data-start-rail\n[^<]*data-glass-surface=""\n[\s\S]{0,400}"relative hidden shrink-0/);
+    // The start screen's centre (and its quiet wait), Herramientas and Mis páginas: each one root, positioned.
+    const centre = marked("app/[locale]/new/page.tsx");
+    expect(centre).toHaveLength(2);
+    for (const tag of centre) expect(tag).toMatch(/className="relative flex-1 /);
+    for (const file of ["components/workspace-v2/tools/tools-view.tsx", "app/[locale]/projects/projects-section.tsx"]) {
+      const roots = marked(file);
+      expect(roots, file).toHaveLength(1);
+      expect(roots[0], file).toMatch(/className="relative flex-1 [^"]*bg-app"/);
+    }
+    // Menus stay unmarked: they hang over the client's canvas.
+    expect(marked("components/workspace-v2/account-menu.tsx")).toHaveLength(0);
+  });
+
+  it("a marked surface inside another tints and blurs nothing of its own", () => {
+    const nested = glassRules.filter(([, selector]) => /\[data-glass-surface\] \[data-glass-surface\]/.test(selector));
+    const plain = nested.find(([, selector]) => !selector.includes("::before"));
+    const before = nested.find(([, selector]) => selector.trim().endsWith("::before"));
+    expect(plain?.[2]).toMatch(/background-color:\s*transparent/);
+    expect(before?.[2]).toMatch(/content:\s*none/);
   });
 
   it("the canvas is `bg-preview-a` and the page's frame paints the page's own ground", () => {

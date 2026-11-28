@@ -8,7 +8,7 @@
 // Mounted as the FIRST CHILD of `div.workspace-v2` (`app/[locale]/new/page.tsx`): it marks that root —
 // `data-theme-layer`, `data-theme-glass`, `data-theme-font` and the custom properties on its `style` — and nothing else.
 // The rules that read those marks live in `app/[locale]/new/tokens.css`: the glass is painted ONLY on the surfaces that
-// carry `data-glass-surface` (the rail with Len's panel, the top bar, the start rail, their menus), its blur on a
+// carry `data-glass-surface` (the rail with Len's panel, the top bar, the start rail, the centre of /new with no project, Herramientas and Mis páginas), its blur on a
 // `::before` so no surface becomes the containing block of a `position: fixed` child. 🔴 The client's canvas never shows
 // the scene: nothing touches `--bg-preview`, and under a theme the canvas paints an opaque base below its own colour
 // (Review Focus 5).
