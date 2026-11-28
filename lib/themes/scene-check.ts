@@ -1,14 +1,16 @@
 // THE SCENE'S GATE. A theme's scene is an SVG the workspace paints in an <img> behind the glass panels (and the
 // route that serves it also hands it out as a file of its own). It is written by Len — or by anyone who sends a
 // project — so before it is kept this decides, from the text alone, whether it may be: no script, no event handler,
-// no <foreignObject>, nothing that points outside the document, no DTD, a root that covers the window.
+// no <foreignObject>, no SMIL, nothing that points outside the document, no DTD, a root that covers the window.
 //
 // It works on text, not on a parser: that is what a browser does with an <img> too (it runs nothing and fetches
 // nothing), and what is looked for here are marks. The refusals that look for a mark ANYWHERE in the text (a script,
 // an href, a url(), an @import) are on purpose stricter than a parse: a hit inside a comment or a <text> is a false
-// positive that costs a clear message, never a hole. Only the event handlers look at real attributes, because a word
-// like `once =` in a caption must not read as one. Every pass is linear in the size of the scene (no regular
-// expression that backtracks on a long run), because the scene is up to a megabyte and it is somebody else's.
+// positive that costs a clear message, never a hole. For the same reason nothing is allowed to HIDE a mark: a numeric
+// character reference (`&#114;`) or a CSS escape (`\75`) could spell `url(` or `@import` where the text does not
+// show it, so neither is taken. Only the event handlers, namespaces, `src` and SMIL look at real tags and attributes,
+// because a word like `once =` in a caption must not read as one. Every pass is linear in the size of the scene (no
+// regular expression that backtracks on a long run), because the scene is up to a megabyte and it is somebody else's.
 //
 // It also counts what the scene costs to paint. Claude Code's own theme scenes were measured (spec §10.1) on
 // Jesús's laptop, an i5-11400H with an Intel UHD, behind the workspace: night-reef ran at 44–46 fps and honu-lagoon
@@ -25,7 +27,8 @@ const STILL_RULE = "*{animation:none!important}";
 
 /**
  * The scene's cost, counted from its text. `elements` is the opening tags; `animated` is the elements that something
- * animates: those a CSS rule with an `animation` reaches (or that carry one in their `style`), plus every `<animate*>`.
+ * animates: those a CSS rule with an `animation` reaches, or that carry one in their `style`. (SMIL is refused, so
+ * CSS is the only animation there is to count.)
  */
 export interface SceneCost {
   elements: number;
@@ -63,7 +66,11 @@ interface SceneTag {
 }
 
 const isSpace = (c: number) => c === 32 || c === 9 || c === 10 || c === 13 || c === 12;
-const isNameStart = (c: number) => (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c === 95;
+// Anything but what cannot begin a tag name: a `/` (a closing tag), `!`, `?`, a space, a `>`, or the end of the text.
+// Wider than XML's own name start on purpose: an `<é onclick="…"/>` or a `<:g …/>` a parser might take as an element
+// is looked at here as one, and refused if it carries what an element may not.
+const isNameStart = (c: number) =>
+  !Number.isNaN(c) && c !== 47 /* / */ && c !== 33 /* ! */ && c !== 63 /* ? */ && c !== 62 /* > */ && !isSpace(c);
 
 /**
  * The opening tags of the document, in order, skipping comments, CDATA, processing instructions and declarations.
@@ -330,19 +337,47 @@ function lastCompound(selector: string): Compound {
 /** The most pairs of (element, selector) looked at. Past it the scene is counted as animated throughout. */
 const MATCH_WORK_CAP = 20_000_000;
 
-/** The CSS of every `<style>`, comments gone, read from after its tag to the next closing one. */
-function styleText(tags: SceneTag[], svg: string): string {
-  let css = "";
+/**
+ * The text of every `<style>`, as written: from after its tag to the closing tag that follows, skipping the CDATA
+ * sections and comments in between (a `</` inside a CDATA is CSS, not the end).
+ */
+function styleBlocks(tags: SceneTag[], svg: string): string[] {
+  const blocks: string[] = [];
   let readTo = 0;
   for (const tag of tags) {
     // A "<style" that sits inside the text of the one before is text, not a style: the cursor only moves forward.
     if (localName(tag.name) !== "style" || tag.selfClosing || tag.start < readTo) continue;
-    const close = svg.indexOf("</", tag.end);
-    readTo = close < 0 ? svg.length : close;
-    css += cleanCss(svg.slice(tag.end, readTo)) + "\n";
+    let at = tag.end;
+    for (;;) {
+      const lt = svg.indexOf("<", at);
+      if (lt < 0) {
+        at = svg.length;
+        break;
+      }
+      const skipTo = svg.startsWith("<![CDATA[", lt)
+        ? svg.indexOf("]]>", lt + 9)
+        : svg.startsWith("<!--", lt)
+          ? svg.indexOf("-->", lt + 4)
+          : -2;
+      if (skipTo === -2) {
+        if (svg.startsWith("</", lt)) {
+          at = lt;
+          break;
+        }
+        at = lt + 1;
+      } else if (skipTo < 0) {
+        at = svg.length;
+        break;
+      } else at = skipTo + 3;
+    }
+    readTo = at;
+    blocks.push(svg.slice(tag.end, at));
   }
-  return css;
+  return blocks;
 }
+
+/** The CSS of every `<style>`, comments gone. */
+const styleText = (blocks: string[]) => blocks.map((block) => cleanCss(block) + "\n").join("");
 
 function countAnimated(tags: SceneTag[], css: string): number {
   const seen = new Set<string>();
@@ -358,11 +393,8 @@ function countAnimated(tags: SceneTag[], css: string): number {
   let animated = 0;
   for (const tag of tags) {
     const local = localName(tag.name);
-    let hit = local.startsWith("animate");
-    if (!hit) {
-      const style = attrOf(tag, "style");
-      hit = style !== undefined && declaresAnimation(style);
-    }
+    const style = attrOf(tag, "style");
+    let hit = style !== undefined && declaresAnimation(style);
     if (!hit && compounds.length > 0) {
       const classes = (attrOf(tag, "class") ?? "").split(/\s+/).filter(Boolean);
       const id = attrOf(tag, "id");
@@ -411,10 +443,19 @@ const SCRIPT = /<(?:[\w.-]+:)?script(?![\w:.-])/i;
 const FOREIGN_OBJECT = /<(?:[\w.-]+:)?foreignObject(?![\w:.-])/i;
 const HREF = /href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]*))/gi;
 const URL_CALL = /url\(\s*["']?\s*([^\s)])?/gi;
+// The other CSS functions that load a picture. Nothing in a scene needs them.
+const IMAGE_FUNCTION = /(?:image-set|image|src)\(/i;
 const IMPORT = /@import/i;
-// The rule, written with any spacing: what Claude Code's scenes have, and what a person would write.
+// The rule, written with any spacing: what Claude Code's scenes have, and what a person would write. Only used to say
+// whether the scene had it (see `addedReducedMotion`): the gate puts its own either way.
 const REDUCED_MOTION_PRESENT =
   /@media\s*\(\s*prefers-reduced-motion\s*:\s*reduce\s*\)\s*\{\s*\*\s*\{\s*animation\s*:\s*none\s*!important\s*;?\s*\}\s*\}/i;
+
+const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+const XLINK_NAMESPACE = "http://www.w3.org/1999/xlink";
+// SMIL animates from inside the document, and `animation:none` does not touch it: the reduced-motion rule and the
+// still scene would stop nothing. It can also set an `href` (a `<set attributeName="href" to="javascript:…">`).
+const SMIL_ELEMENTS = new Set(["animate", "animatetransform", "animatemotion", "set", "discard"]);
 
 function problem(code: string, file: string, detail?: string): { ok: false; problem: SceneProblem } {
   return { ok: false, problem: detail === undefined ? { code, file } : { code, file, detail } };
@@ -432,6 +473,8 @@ function externalRef(svg: string): string | null {
       return clip(svg.slice(m.index, close < 0 ? m.index + DETAIL_MAX : close + 1));
     }
   }
+  const picture = IMAGE_FUNCTION.exec(svg);
+  if (picture) return picture[0];
   if (IMPORT.test(svg)) return "@import";
   return null;
 }
@@ -470,22 +513,39 @@ export function checkScene(svg: string, file: string): SceneCheck {
 
   const declaration = DECLARATION.exec(svg);
   if (declaration) return problem("doctype", file, declaration[0]);
+  // A numeric character reference can spell a mark the text does not show (`u&#114;l(`, `@imp&#111;rt`).
+  if (svg.includes("&#")) return problem("char_reference", file);
   if (SCRIPT.test(svg)) return problem("script", file);
   if (FOREIGN_OBJECT.test(svg)) return problem("foreign_object", file);
 
   const tags = scanTags(svg);
+  const root = tags[0];
+  if (!root || root.name !== "svg") return problem("not_svg", file, root ? root.name : "no root element");
+  if (attrOf(root, "xmlns") !== SVG_NAMESPACE) return problem("not_svg", file, "xmlns");
+
   for (const tag of tags) {
+    if (SMIL_ELEMENTS.has(localName(tag.name).toLowerCase())) return problem("smil", file, clip(tag.name));
     for (const attr of tag.attrs) {
       if (/^on[a-z]/i.test(attr.name)) return problem("event_handler", file, clip(attr.name));
+      // Only the two namespaces of an SVG: a foreign one is how an `<iframe>` or an `<img>` of XHTML gets in.
+      const declaresNamespace = attr.name === "xmlns" || attr.name.startsWith("xmlns:");
+      if (declaresNamespace && attr.value !== SVG_NAMESPACE && attr.value !== XLINK_NAMESPACE) {
+        return problem("foreign_namespace", file, clip(`${attr.name}="${attr.value}"`));
+      }
+      // Nothing in a scene has a `src`: it is how an <img> or an <iframe> loads what it names.
+      if (localName(attr.name).toLowerCase() === "src") {
+        return problem("external_ref", file, clip(`${attr.name}="${attr.value}"`));
+      }
+      // Every attribute is CSS to a browser when it is a presentation one (`fill`, `filter`, `style`…).
+      if (attr.value.includes("\\")) return problem("css_escape", file, clip(attr.name));
     }
   }
+  const blocks = styleBlocks(tags, svg);
+  if (blocks.some((block) => block.includes("\\"))) return problem("css_escape", file, "style");
 
   const external = externalRef(svg);
   if (external !== null) return problem("external_ref", file, external);
 
-  const root = tags[0];
-  if (!root || root.name !== "svg") return problem("not_svg", file, root ? root.name : "no root element");
-  if (attrOf(root, "xmlns") !== "http://www.w3.org/2000/svg") return problem("not_svg", file, "xmlns");
   const viewBox = attrOf(root, "viewBox");
   if (!validViewBox(viewBox)) return problem("no_viewbox", file, viewBox === undefined ? "missing" : clip(viewBox));
   const aspect = attrOf(root, "preserveAspectRatio");
@@ -493,25 +553,24 @@ export function checkScene(svg: string, file: string): SceneCheck {
     return problem("not_slice", file, aspect === undefined ? "missing" : clip(aspect));
   }
 
-  // Looked for in the CSS the scene really has: a rule inside a comment is not one.
-  const css = styleText(tags, svg);
-  const addedReducedMotion = !REDUCED_MOTION_PRESENT.test(css);
   return {
     ok: true,
-    svg: addedReducedMotion ? withRule(svg, root, REDUCED_MOTION_RULE) : svg,
-    addedReducedMotion,
-    cost: costOf(tags, css),
+    // The gate's own rule goes in whatever the scene says: a rule the author wrote can sit in a comment or a nested
+    // `@media` and stop nothing, so nothing of theirs is taken as the guarantee.
+    svg: withRule(svg, root, REDUCED_MOTION_RULE),
+    // Only a report of whether the author wrote it too.
+    addedReducedMotion: !REDUCED_MOTION_PRESENT.test(svg),
+    cost: costOf(tags, styleText(blocks)),
   };
 }
-
-const STILL_STYLE = `<style>${STILL_RULE}</style>`;
 
 /**
  * The same scene, standing still: what `?still=1` serves to someone who asked for less motion or whose machine
  * cannot hold the frames. The rule is unconditional here (no `@media`), so it stops CSS animation whatever the
- * browser says. Meant for a scene that already passed `checkScene`; asked twice, it answers the same.
+ * browser says. Meant for a scene that already passed `checkScene`. It is always put in, never looked for: a copy of
+ * it in a comment, or inside a media query, would be taken for this one and stop nothing.
  */
 export function stillScene(svg: string): string {
-  if (svg.includes(STILL_STYLE)) return svg;
-  return withRule(svg, scanTags(svg)[0], STILL_RULE);
+  const root = scanTags(svg)[0];
+  return root && root.name === "svg" ? withRule(svg, root, STILL_RULE) : svg;
 }

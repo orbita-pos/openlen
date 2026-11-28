@@ -12,6 +12,8 @@ const honu = readFileSync(resolve(__dirname, "__fixtures__/honu-lagoon.svg"), "u
 const nightReef = readFileSync(resolve(__dirname, "__fixtures__/night-reef.svg"), "utf8");
 
 const SLICE = `viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice"`;
+const ROOT_OPEN = `<svg xmlns="http://www.w3.org/2000/svg" ${SLICE}>`;
+const STILL_RULE = "*{animation:none!important}";
 
 /** A scene that passes, with `inner` inside it and `root` as the root's attributes. */
 function scene(inner = "", root = SLICE): string {
@@ -32,8 +34,10 @@ describe("checkScene — Claude Code's own scenes", () => {
       const r = checkScene(svg, "/themes/x.svg");
       expect(r.ok).toBe(true);
       if (!r.ok) return;
+      // They carry the rule themselves, so there is nothing to report; the gate's own copy goes in all the same,
+      // and that copy is the only difference.
       expect(r.addedReducedMotion).toBe(false);
-      expect(r.svg).toBe(svg);
+      expect(r.svg.replace(`<style>${REDUCED_MOTION_RULE}</style>`, "")).toBe(svg);
     }
   });
 
@@ -51,7 +55,7 @@ describe("checkScene — Claude Code's own scenes", () => {
     expect(lagoon.cost.heavy).toBe(false);
   });
 
-  it("counts as animated what a CSS rule with an animation reaches, and every <animate*>", () => {
+  it("counts as animated what a CSS rule with an animation reaches, or a style says", () => {
     const css =
       `.a{animation:x 1s}.b{animation:none}.c{animation-delay:1s}.d{opacity:.5;animation-name:x}` +
       `@keyframes x{from{opacity:0}to{opacity:1}}` +
@@ -62,16 +66,16 @@ describe("checkScene — Claude Code's own scenes", () => {
       `<g class="a"/><g class="d"/><g id="e"/><g class="f"/><g class="g"/>` +
       `<g style="opacity:0; animation: x 2s"/>` +
       // A descendant rule is read by its last compound alone: this <circle> has no `.p` above it and is counted.
-      `<circle/><animateTransform/>`;
+      `<circle/>`;
     const notReached =
       // `animation:none`, a delay on its own, the reduced-motion media, a class on a tag the rule does not name,
-      // a style that stops, and <set> (which is not an <animate*>)
-      `<g class="b"/><g class="c"/><g class="h"/><rect class="f"/><g style="animation:none"/><set/>`;
+      // and a style that stops
+      `<g class="b"/><g class="c"/><g class="h"/><rect class="f"/><g style="animation:none"/>`;
     const r = checkScene(scene(`<style>${css}</style>${reached}${notReached}`), "/themes/a.svg");
     if (!r.ok) throw new Error("the scene must pass");
-    expect(r.cost.animated).toBe(8);
-    // the root, the <style>, the 8 that are reached, the 6 that are not, and the scene's own <rect>
-    expect(r.cost.elements).toBe(1 + 1 + 8 + 6 + 1);
+    expect(r.cost.animated).toBe(7);
+    // the root, the <style>, the 7 that are reached, the 5 that are not, and the scene's own <rect>
+    expect(r.cost.elements).toBe(1 + 1 + 7 + 5 + 1);
   });
 
   it("counts a scene with nothing animated as light however big it is", () => {
@@ -112,11 +116,25 @@ describe("checkScene — the reduced-motion rule", () => {
     expect(r.svg.indexOf(`<style>${REDUCED_MOTION_RULE}</style>`)).toBeLessThan(r.svg.indexOf("<style>.a{"));
   });
 
-  it("does not take the rule for there when it only sits in a comment", () => {
-    const r = checkScene(scene(`<style>/* ${REDUCED_MOTION_RULE} */</style>`), "/themes/a.svg");
+  // The gate's own rule goes in whatever the scene says: a copy the author wrote can sit where it stops nothing, and
+  // `addedReducedMotion` only reports whether the text had one.
+  const OWN_RULE_FIRST = `<style>${REDUCED_MOTION_RULE}</style>`;
+
+  it.each([
+    ["a CSS comment", `<style>/* ${REDUCED_MOTION_RULE} */</style>`],
+    ["an XML comment", `<!-- <style>${REDUCED_MOTION_RULE}</style> -->`],
+    ["a string", `<style>.a{content:"${REDUCED_MOTION_RULE}"}</style>`],
+    ["a media query that never applies", `<style>@media print{${REDUCED_MOTION_RULE}}</style>`],
+    ["a media query inside another", `<style>@media (min-width:1px){${REDUCED_MOTION_RULE}}</style>`],
+    ["a block left open before it", `<style>.a{animation:x 1s ${REDUCED_MOTION_RULE}</style>`],
+  ])("puts its own rule in when the scene's copy is only in %s", (_name, inner) => {
+    const r = checkScene(scene(inner), "/themes/a.svg");
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.addedReducedMotion).toBe(true);
+    // First thing in the root, as a style of its own: out of reach of whatever follows.
+    expect(r.svg.startsWith(ROOT_OPEN + OWN_RULE_FIRST)).toBe(true);
+    // The author's copy is textually there, so there is nothing to report.
+    expect(r.addedReducedMotion).toBe(false);
   });
 
   it("adds a <style> when the scene has none", () => {
@@ -140,13 +158,14 @@ describe("checkScene — the reduced-motion rule", () => {
     );
   });
 
-  it("takes the same rule written with other spacing as already there", () => {
+  it("reports the same rule written with other spacing as the scene's own, and still puts its own in", () => {
     const spaced = "@media (prefers-reduced-motion:reduce){ * { animation: none !important; } }";
     const r = checkScene(scene(`<style>.a{animation:x 1s}${spaced}</style>`), "/themes/a.svg");
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.addedReducedMotion).toBe(false);
-    expect(occurrences(r.svg, "prefers-reduced-motion")).toBe(1);
+    expect(occurrences(r.svg, "prefers-reduced-motion")).toBe(2);
+    expect(occurrences(r.svg, REDUCED_MOTION_RULE)).toBe(1);
   });
 
   it("does not take a reduced-motion rule that stops something else as the one it needs", () => {
@@ -167,6 +186,53 @@ describe("checkScene — what it refuses", () => {
     ["an onclick on a child", scene(`<g onclick="x"/>`), "event_handler"],
     ["an event handler in other case, glued to a quote", scene(`<g id="a"ONCLICK='x'/>`), "event_handler"],
     ["<foreignObject>", scene("<foreignObject><div/></foreignObject>"), "foreign_object"],
+
+    // SMIL animates from inside the document, and can set an href: none of it is taken.
+    ["a <set> that points an href away", scene(`<a><set attributeName="href" to="https://evil/x"/></a>`), "smil"],
+    [
+      "an <animate> that sets a javascript: href",
+      scene(`<a><animate attributeName="href" values="javascript:alert(1)"/></a>`),
+      "smil",
+    ],
+    ["an <animateMotion>", scene(`<animateMotion/>`), "smil"],
+    ["an <animateTransform>", scene(`<g><animateTransform attributeName="transform" dur="1s"/></g>`), "smil"],
+    ["a <discard>", scene(`<g><discard begin="1s"/></g>`), "smil"],
+    ["a SMIL element written with a prefix", scene(`<svg:set xmlns:svg="http://www.w3.org/2000/svg"/>`), "smil"],
+
+    // Nothing may spell a mark the text does not show.
+    ["a url( spelled with a character reference", scene(`<rect fill="u&#114;l(https://evil/x)"/>`), "char_reference"],
+    ["an @import spelled with one", scene(`<style>@imp&#111;rt "https://evil/x.css";</style>`), "char_reference"],
+    ["a hexadecimal character reference", scene(`<text>&#x41;</text>`), "char_reference"],
+    ["a url( spelled with a CSS escape in a style", scene(`<style>.a{fill:\\75rl(https://evil/x)}</style>`), "css_escape"],
+    ["a CSS escape in a style attribute", scene(`<g style="fill:\\75rl(https://evil/x)"/>`), "css_escape"],
+    ["a CSS escape in a presentation attribute", scene(`<rect fill="u\\72l(https://evil/x)"/>`), "css_escape"],
+    [
+      "a CSS escape in a style after a </ inside CDATA",
+      scene(`<style><![CDATA[.a{content:"</"}.b{fill:\\75rl(https://evil/x)}]]></style>`),
+      "css_escape",
+    ],
+    ["an image-set()", scene(`<style>.a{fill:image-set("https://evil/x.png" 1x)}</style>`), "external_ref"],
+    ["an image()", scene(`<style>.a{background:image("x.png")}</style>`), "external_ref"],
+    ["a src()", scene(`<style>.a{fill:src("x.png")}</style>`), "external_ref"],
+
+    // A tag whose name no parser of ours would call one.
+    ["an element with a name that starts outside ASCII", scene(`<é onclick="alert(1)"/>`), "event_handler"],
+    ["an element with a name that starts with a colon", scene(`<:g onclick="x"/>`), "event_handler"],
+
+    // Another namespace is how an <iframe> or an <img> of XHTML gets into an SVG.
+    [
+      "an <iframe> in the XHTML namespace",
+      scene(`<iframe xmlns="http://www.w3.org/1999/xhtml" src="javascript:alert(1)"/>`),
+      "foreign_namespace",
+    ],
+    [
+      "an <img> in the XHTML namespace",
+      scene(`<img xmlns="http://www.w3.org/1999/xhtml" src="https://evil/t.png"/>`),
+      "foreign_namespace",
+    ],
+    ["a prefix bound to a foreign namespace", scene(`<g xmlns:h="http://www.w3.org/1999/xhtml"/>`), "foreign_namespace"],
+    ["a src attribute", scene(`<img src="https://evil/t.png"/>`), "external_ref"],
+    ["a src attribute with a prefix", scene(`<image xlink:src="x.png"/>`), "external_ref"],
     ["an https href", scene(`<use href="https://a"/>`), "external_ref"],
     ["a protocol-relative xlink:href", scene(`<use xlink:href="//a"/>`), "external_ref"],
     ["a data: href", scene(`<image href="data:image/png;base64,AAAA"/>`), "external_ref"],
@@ -197,6 +263,10 @@ describe("checkScene — what it refuses", () => {
     expect(problemOf(scene("", `${SLICE} onload="x"`)).detail).toBe("onload");
     expect(problemOf(scene(`<use href="https://a"/>`)).detail).toBe(`href="https://a"`);
     expect(problemOf(scene(`<rect fill="url(https://a)"/>`)).detail).toBe("url(https://a)");
+    expect(problemOf(scene(`<animateMotion/>`)).detail).toBe("animateMotion");
+    expect(problemOf(scene(`<g xmlns:h="http://www.w3.org/1999/xhtml"/>`)).detail).toBe(
+      `xmlns:h="http://www.w3.org/1999/xhtml"`,
+    );
   });
 
   it("refuses a scene one byte over the limit, and takes one exactly at it", () => {
@@ -234,6 +304,15 @@ describe("checkScene — what it refuses", () => {
     const svg = scene(`<text>once = 1, on x=2, a word like href, or script</text>`);
     expect(checkScene(svg, "/themes/a.svg").ok).toBe(true);
   });
+
+  it("takes the glyphs a scene draws with: a backslash in a <text>, named entities, CDATA in a style", () => {
+    const svg = scene(
+      `<text>\\|/ &amp; &lt;&gt; &quot;</text>` +
+        `<style><![CDATA[.a{fill:red}.b{animation:x 1s}]]></style>` +
+        `<g xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"/>`,
+    );
+    expect(checkScene(svg, "/themes/a.svg").ok).toBe(true);
+  });
 });
 
 describe("stillScene", () => {
@@ -268,8 +347,15 @@ describe("stillScene", () => {
     expect(stillScene("hello")).toBe("hello");
   });
 
-  it("does not stack the rule when asked twice", () => {
-    const once = stillScene(scene());
-    expect(stillScene(once)).toBe(once);
+  // It is always put in, never looked for: a copy that stops nothing must not be taken for it.
+  it.each([
+    ["an XML comment", `<!-- <style>${STILL_RULE}</style> -->`],
+    ["a CSS comment", `<style>/* ${STILL_RULE} */</style>`],
+    ["a string", `<style>.a{content:"${STILL_RULE}"}</style>`],
+    ["a media query", `<style>@media print{${STILL_RULE}}</style>`],
+    ["a block left open before it", `<style>.a{animation:x 1s ${STILL_RULE}</style>`],
+  ])("stops the animation of a scene whose copy of the rule is only in %s", (_name, inner) => {
+    const still = stillScene(scene(`${inner}<style>.b{animation:x 1s}</style>`));
+    expect(still.startsWith(ROOT_OPEN + `<style>${STILL_RULE}</style>`)).toBe(true);
   });
 });
