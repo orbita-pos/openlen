@@ -522,7 +522,7 @@ export function TopBar({
         Cambios y Terminal, el panel de propiedades): con el mismo nivel ganaba
         la que va después en la página y tapaba los menús de aquí (Publicar).
         Por debajo de lo que sí debe taparla (la barra lateral en el móvil, z-40). */}
-    <header className="relative z-[35] h-[60px] shrink-0 border-b bd bg-app flex items-center justify-between px-2 sm:px-4 gap-2 sm:gap-3">
+    <header data-glass-surface="" className="relative z-[35] h-[60px] shrink-0 border-b bd bg-app flex items-center justify-between px-2 sm:px-4 gap-2 sm:gap-3">
       <div className="flex items-center gap-3 min-w-0">
         <Link
           href="/"

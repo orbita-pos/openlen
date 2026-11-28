@@ -7,9 +7,11 @@
 //
 // Mounted as the FIRST CHILD of `div.workspace-v2` (`app/[locale]/new/page.tsx`): it marks that root —
 // `data-theme-layer`, `data-theme-glass`, `data-theme-font` and the custom properties on its `style` — and nothing else.
-// The rules that read those marks live in `app/[locale]/new/tokens.css`. 🔴 The client's canvas never shows the scene:
-// the glass redefines `--bg`, `--bg-sidebar` and `--bg-elev` only, never `--bg-preview`, and under a theme the canvas
-// paints an opaque base below its own colour (Review Focus 5).
+// The rules that read those marks live in `app/[locale]/new/tokens.css`: the glass is painted ONLY on the surfaces that
+// carry `data-glass-surface` (the rail with Len's panel, the top bar, the start rail, their menus), its blur on a
+// `::before` so no surface becomes the containing block of a `position: fixed` child. 🔴 The client's canvas never shows
+// the scene: nothing touches `--bg-preview`, and under a theme the canvas paints an opaque base below its own colour
+// (Review Focus 5).
 //
 // The window (Review Focus 1): if the theme has a twin for the person's own mode, the twin is painted and nothing is
 // forced; otherwise `<html>.dark` is switched to the theme's window while it is on — the class ONLY, never
@@ -199,7 +201,9 @@ export function ThemeBackdrop({ projectId }: { projectId: string | null }) {
     if (layer) attrs.push("data-theme-layer");
     if (glass) {
       attrs.push("data-theme-glass");
-      props.push(["--glass-tint", glass.tint ?? "transparent"], ["--glass-opacity", String(glass.opacity)], ["--glass-blur", `${glass.blur}px`]);
+      // No tint: none is set, and the CSS falls back to the root's own --bg (never transparent).
+      if (glass.tint) props.push(["--glass-tint", glass.tint]);
+      props.push(["--glass-opacity", String(glass.opacity)], ["--glass-blur", `${glass.blur}px`]);
     }
     for (const [token, value] of Object.entries(colors ?? {})) {
       if (!PALETTE_TOKENS.has(token) || (glass && GLASS_TOKENS.has(token))) continue;

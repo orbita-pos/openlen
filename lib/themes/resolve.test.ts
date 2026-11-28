@@ -356,6 +356,14 @@ describe("previewTheme", () => {
     expect(await previewTheme("u1", "bundled:nothing", "en", deps())).toBeNull();
     expect(await previewTheme("u1", "not a ref", "en", deps())).toBeNull();
   });
+
+  it("another person's installation, even when the store hands its row over: null, nothing previewed", async () => {
+    const d = deps({ rows: [row({ personId: "u2" })] });
+    // A store that does not filter by person: the resolver itself must refuse the row.
+    d.listInstallations.mockImplementation(async () => [row({ personId: "u2" })]);
+    expect(await previewTheme("u1", POND, "en", d)).toBeNull();
+    expect(await previewTheme("u1", NIGHT_POND, "en", d)).toBeNull();
+  });
 });
 
 describe("chooseTheme", () => {

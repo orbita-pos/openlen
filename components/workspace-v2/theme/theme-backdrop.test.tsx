@@ -13,6 +13,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { NextIntlClientProvider } from "next-intl";
 
 import type { ResolvedTheme } from "@/lib/themes/resolve";
+import { THEME_TOKENS } from "@/lib/themes/types";
 
 const guard = vi.hoisted(() => ({ fps: 60 as number | null, renderer: null as string | null, measured: 0 }));
 vi.mock("./motion-guard", async (importOriginal) => ({
@@ -155,6 +156,14 @@ describe("ThemeBackdrop", () => {
     // A fast machine: the scene keeps moving.
     expect(guard.measured).toBe(1);
     expect(img.getAttribute("src")).toBe(LAGOON.sceneUrl);
+  });
+
+  it("a glass with no tint sets none: the CSS falls back to the root's own --bg, never transparent", async () => {
+    answer = state({ ...LAGOON, glass: { blur: 7, opacity: 0.42 } });
+    const { ws } = await mount();
+    expect(ws.hasAttribute("data-theme-glass")).toBe(true);
+    expect(ws.style.getPropertyValue("--glass-tint")).toBe("");
+    expect(ws.style.getPropertyValue("--glass-opacity")).toBe("0.42");
   });
 
   it("asks only for «everywhere» with no project open", async () => {
@@ -366,14 +375,88 @@ describe("the client's canvas stays opaque", () => {
       expect(body, selector).not.toContain("--bg-preview");
       expect(selector, selector).not.toContain("bg-preview");
     }
-    // And the three it does turn to glass.
-    const all = glassRules.map((m) => m[2]).join("\n");
-    for (const token of ["--bg:", "--bg-sidebar:", "--bg-elev:"]) expect(all).toContain(token);
   });
 
   it("under a theme the canvas paints an opaque base below its own colour, whatever a palette says", () => {
-    expect(tokens).toMatch(/\.workspace-v2\[data-theme-layer\] \.bg-preview-a\s*\{[^}]*background-color:\s*oklch\(96\.4% 0\.004 12\)/);
-    expect(tokens).toMatch(/\.dark \.workspace-v2\[data-theme-layer\] \.bg-preview-a\s*\{[^}]*background-color:\s*oklch\(10% 0\.01 12\)/);
+    expect(tokens).toMatch(/\.workspace-v2\[data-theme-layer\] \.bg-preview-a\s*\{[^}]*background-color:\s*var\(--bg-preview-base\)/);
+    // The base is a token of both windows, the same values as `--bg-preview`, and no palette can name it.
+    expect(tokens).toMatch(/\.workspace-v2 \{[^}]*--bg-preview-base:\s*oklch\(96\.4% 0\.004 12\)/);
+    expect(tokens).toMatch(/\.dark \.workspace-v2 \{[^}]*--bg-preview-base:\s*oklch\(10% 0\.01 12\)/);
+    expect((THEME_TOKENS as readonly string[]).includes("--bg-preview-base")).toBe(false);
+  });
+
+  it("the glass is only on marked surfaces: the root and every unmarked surface keep their opaque colours", () => {
+    const rootRule = glassRules.find(([, selector]) => selector.trim() === ".workspace-v2[data-theme-glass]");
+    expect(rootRule).toBeDefined();
+    for (const token of ["--bg:", "--bg-sidebar:", "--bg-elev:"]) expect(rootRule![2]).not.toContain(token);
+    for (const [, selector] of glassRules) {
+      expect(selector.trim().startsWith(".workspace-v2[data-theme-glass] [data-glass-surface]") || selector.trim() === ".workspace-v2[data-theme-glass]", selector).toBe(true);
+      expect(selector, selector).not.toMatch(/bg-(app|side|elev)/);
+    }
+    // Inside a marked surface what paints the workshop's or the bar's ground lets the glass through; cards stay opaque.
+    const surface = glassRules.find(([, selector]) => selector.trim() === ".workspace-v2[data-theme-glass] [data-glass-surface]")!;
+    expect(surface[2]).toMatch(/--bg:\s*transparent/);
+    expect(surface[2]).toMatch(/--bg-sidebar:\s*transparent/);
+    expect(surface[2]).not.toContain("--bg-elev");
+    // No tint → the root's own --bg, never transparent.
+    expect(surface[2]).toContain("var(--glass-tint, var(--glass-fallback))");
+    expect(rootRule![2]).toMatch(/--glass-fallback:\s*var\(--bg\)/);
+  });
+
+  it("the blur sits on a ::before, never on the surface: a position: fixed child is not trapped", () => {
+    const withBlur = [...tokens.matchAll(/([^{}]*)\{([^}]*backdrop-filter[^}]*)\}/g)].filter(([, selector]) => selector.includes("data-theme"));
+    expect(withBlur.length).toBe(1);
+    expect(withBlur[0]![1].trim()).toBe(".workspace-v2[data-theme-glass] [data-glass-surface]::before");
+    expect(withBlur[0]![2]).toMatch(/position:\s*absolute/);
+    expect(withBlur[0]![2]).toMatch(/z-index:\s*-1/);
+    // Nothing in the theme's rules gives an element a transform, a filter or a backdrop-filter of its own.
+    for (const [, selector, body] of [...tokens.matchAll(/([^{}]*data-theme[^{}]*)\{([^}]*)\}/g)]) {
+      if (selector.trim().endsWith("::before")) continue;
+      expect(body, selector).not.toMatch(/(^|[;\s])(-webkit-)?(backdrop-filter|filter|transform|will-change|contain|perspective)\s*:/);
+    }
+  });
+
+  it("in a document with the theme's rules, the fixed chat inside the glass rail has no blurred or transformed ancestor", async () => {
+    const sheet = document.createElement("style");
+    sheet.textContent = tokens;
+    document.head.appendChild(sheet);
+    try {
+      answer = state(LAGOON);
+      const { ws } = await mount();
+      const rail = document.createElement("aside");
+      rail.setAttribute("data-glass-surface", "");
+      rail.className = "relative h-full bg-side";
+      const chat = document.createElement("div");
+      chat.style.position = "fixed";
+      rail.appendChild(chat);
+      ws.appendChild(rail);
+      expect(ws.hasAttribute("data-theme-glass")).toBe(true);
+      const own = getComputedStyle(rail);
+      expect(own.getPropertyValue("--bg-sidebar").trim()).toBe("transparent");
+      for (let el: Element | null = chat.parentElement; el; el = el.parentElement) {
+        const cs = getComputedStyle(el);
+        for (const prop of ["backdrop-filter", "-webkit-backdrop-filter", "filter", "transform"]) {
+          expect(["", "none"], `${el.tagName}.${prop}`).toContain(cs.getPropertyValue(prop));
+        }
+      }
+    } finally {
+      sheet.remove();
+    }
+  });
+
+  it("the marked surfaces: the rail (both widths, Len's docked panel inside), the top bar and the start rail, each positioned", () => {
+    const marked = (file: string) => {
+      const src = readFileSync(join(repo, file), "utf8");
+      return [...src.matchAll(/<(aside|header|div|nav)\s[^>]*data-glass-surface=""[^>]*>/g)].map((m) => m[0]);
+    };
+    const sidebar = marked("components/workspace-v2/left-sidebar.tsx");
+    expect(sidebar).toHaveLength(2);
+    for (const tag of sidebar) expect(tag).toMatch(/className=\{?[`"]relative /);
+    const bar = marked("components/workspace-v2/top-bar.tsx");
+    expect(bar).toHaveLength(1);
+    expect(bar[0]).toMatch(/className="relative /);
+    const start = readFileSync(join(repo, "components/workspace-v2/start-rail.tsx"), "utf8");
+    expect(start).toMatch(/data-start-rail\n[^<]*data-glass-surface=""\n[\s\S]{0,400}"relative hidden shrink-0/);
   });
 
   it("the canvas is `bg-preview-a` and the page's frame paints the page's own ground", () => {

@@ -143,9 +143,11 @@ export function StartRail({
           the account sat right under them instead of at the foot. */}
       <aside
         data-start-rail
+        // With a workspace theme, glass (theme-backdrop.tsx); `relative` holds its blur layer. Inert on the home.
+        data-glass-surface=""
         data-open={String(open)}
         className={cn(
-          "hidden shrink-0 flex-col gap-1 self-stretch pb-1 pt-3 md:flex",
+          "relative hidden shrink-0 flex-col gap-1 self-stretch pb-1 pt-3 md:flex",
           slides && "transition-[width] duration-200 motion-reduce:transition-none",
           open ? "w-60 px-2.5" : "w-14 items-center",
         )}

@@ -476,7 +476,7 @@ export function LeftSidebar({
 
   if (collapsed && !chatOut) {
     return (
-      <aside className="h-full w-12 shrink-0 bg-side border-r bd flex flex-col items-center pt-2 gap-1">
+      <aside data-glass-surface="" className="relative h-full w-12 shrink-0 bg-side border-r bd flex flex-col items-center pt-2 gap-1">
         <UnifiedRail
           activeKey={railActiveKey(activeSection, mode, collapsed, activeToolId)}
           onPanel={abrirOPlegar}
@@ -513,7 +513,9 @@ export function LeftSidebar({
     // On mobile (< md) the expanded panel can't share the row with the canvas
     // (272px of a 390px screen leaves nothing) — it overlays the whole row
     // instead, rail included, and the header grows a close button.
-    <aside className={`h-full ${filling ? "min-w-0 flex-1" : "shrink-0"} flex bg-side border-r bd max-md:absolute max-md:inset-0 max-md:z-40 max-md:border-r-0`}>
+    // `data-glass-surface` + `relative`: with a theme, the rail and Len's docked panel are glass (theme-backdrop.tsx;
+    // its blur sits on a ::before, never on this aside, so the floating chat's `position: fixed` is not trapped).
+    <aside data-glass-surface="" className={`relative h-full ${filling ? "min-w-0 flex-1" : "shrink-0"} flex bg-side border-r bd max-md:absolute max-md:inset-0 max-md:z-40 max-md:border-r-0`}>
       {/* The icon rail stays vertical + fixed — identical to collapsed; the
           panel just opens to its right (it never reflows into a top row). */}
       <div className="h-full w-12 shrink-0 flex flex-col items-center pt-2 gap-1 border-r bd">

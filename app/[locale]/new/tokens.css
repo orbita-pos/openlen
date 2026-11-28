@@ -17,6 +17,8 @@
   --bg:            oklch(97.2% 0.004 12);
   --bg-sidebar:    oklch(95.4% 0.006 12);
   --bg-preview:    oklch(96.4% 0.004 12);
+  /* Lo que pinta el lienzo DEBAJO de su color cuando hay tema: opaco siempre (ver «El lienzo, con tema»). Una paleta no lo nombra. */
+  --bg-preview-base: oklch(96.4% 0.004 12);
   --bg-elev:       oklch(99.2% 0.003 12);
   --fg:            oklch(15% 0.01 12);
   --fg-muted:      oklch(45% 0.01 12);
@@ -57,6 +59,7 @@
   --bg:            oklch(11% 0.01 12);
   --bg-sidebar:    oklch(13% 0.01 12);
   --bg-preview:    oklch(10% 0.01 12);
+  --bg-preview-base: oklch(10% 0.01 12);
   --bg-elev:       oklch(15% 0.01 12);
   --fg:            oklch(96% 0.005 12);
   --fg-muted:      oklch(65% 0.01 12);
@@ -86,32 +89,46 @@
   isolation: isolate;
 }
 
-/* `data-theme-glass` — el cristal de Claude Code: las tres superficies del taller pasan a ser el tinte del tema a su
-   opacidad sobre la escena. 🔴 NUNCA `--bg-preview`: el lienzo de la página del cliente sigue opaco (Review Focus 5).
-   Va también con `.dark` delante porque `.dark .workspace-v2` pesa lo mismo que `.workspace-v2[data-theme-glass]` y
-   está antes en el fichero, pero no conviene depender del orden. */
-.workspace-v2[data-theme-glass],
-.dark .workspace-v2[data-theme-glass] {
-  --bg:         color-mix(in oklch, var(--glass-tint) calc(var(--glass-opacity) * 100%), transparent);
-  --bg-sidebar: color-mix(in oklch, var(--glass-tint) calc(var(--glass-opacity) * 100%), transparent);
-  --bg-elev:    color-mix(in oklch, var(--glass-tint) calc(var(--glass-opacity) * 100%), transparent);
-}
+/* `data-theme-glass` — el cristal de Claude Code, SÓLO en las superficies marcadas con `data-glass-surface` (R19): el
+   riel con el panel de Len (`left-sidebar.tsx`), la barra superior (`top-bar.tsx`), el riel de inicio
+   (`start-rail.tsx`) y los menús que salen de ellas (`top-bar.tsx`, `account-menu.tsx`). Lo demás conserva sus colores
+   opacos: un tema no vuelve de cristal cada chip y cada botón.
 
-/* El desenfoque, en las superficies que pintan esos tres fondos: riel y paneles (`bg-side`), barra y página del taller
-   (`bg-app`), menús y tarjetas (`bg-elev`). Medido el 2026-11-27: lo que cuesta frames es la escena, no el blur. */
-.workspace-v2[data-theme-glass] :is(.bg-app, .bg-side, .bg-elev) {
+   🔴 El desenfoque va en un `::before`, NUNCA en la superficie: un `backdrop-filter` (como un `transform`, ver
+   `left-sidebar.tsx`) hace del elemento el bloque contenedor de sus hijos `position: fixed`, y el chat flotante de Len
+   vive dentro del riel. El seudoelemento está en `z-index: -1` dentro de una superficie posicionada, así que se pinta
+   detrás de su contenido y no contiene a nadie.
+
+   Dentro de una superficie marcada `--bg` y `--bg-sidebar` son transparentes: lo que dentro pinta el fondo del taller o
+   de la barra (el panel de Len, sus cabeceras) deja ver el cristal en vez de taparlo. `--bg-elev` sigue opaco: tarjetas
+   y chips se leen igual. El chat flotante redefine sus tokens (`.nc-float-dark`) y sigue siendo su barra oscura.
+
+   El tinte sin `--glass-tint` es el `--bg` de la raíz (`--glass-fallback`, resuelto en la raíz), nunca transparente.
+   🔴 Nada de esto toca `--bg-preview`: el lienzo de la página del cliente sigue opaco (Review Focus 5). */
+.workspace-v2[data-theme-glass] {
+  --glass-fallback: var(--bg);
+}
+.workspace-v2[data-theme-glass] [data-glass-surface] {
+  --bg: transparent;
+  --bg-sidebar: transparent;
+  background-color: color-mix(in oklch, var(--glass-tint, var(--glass-fallback)) calc(var(--glass-opacity) * 100%), transparent);
+}
+.workspace-v2[data-theme-glass] [data-glass-surface]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
   -webkit-backdrop-filter: blur(var(--glass-blur));
   backdrop-filter: blur(var(--glass-blur));
 }
 
-/* El lienzo, con tema: su color encima de una base OPACA (los valores de `--bg-preview` de arriba), por si una paleta
-   le diera un color con transparencia. La escena no asoma nunca detrás de la página. */
+/* El lienzo, con tema: su color encima de una base OPACA (`--bg-preview-base`), por si una paleta le diera un color con
+   transparencia. La escena no asoma nunca detrás de la página. */
 .workspace-v2[data-theme-layer] .bg-preview-a {
-  background-color: oklch(96.4% 0.004 12);
+  background-color: var(--bg-preview-base);
   background-image: linear-gradient(var(--bg-preview), var(--bg-preview));
-}
-.dark .workspace-v2[data-theme-layer] .bg-preview-a {
-  background-color: oklch(10% 0.01 12);
 }
 
 /* `data-theme-font` — la fuente genérica que pide el tema (`--theme-font`, una de las pilas de `FONT_STACKS`). */

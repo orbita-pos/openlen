@@ -34,8 +34,23 @@ export function prefersReducedMotion(): boolean {
   }
 }
 
-/** WebGL's unmasked renderer string (`WEBGL_debug_renderer_info`), or null when the browser gives none. */
+let rendererOfThisTab: string | null | undefined;
+
+/**
+ * WebGL's unmasked renderer string (`WEBGL_debug_renderer_info`), or null when the browser gives none. Asked ONCE per
+ * tab: the GPU does not change under a page, and every ask opens a WebGL context.
+ */
 export function detectRenderer(): string | null {
+  if (rendererOfThisTab === undefined) rendererOfThisTab = askRenderer();
+  return rendererOfThisTab;
+}
+
+/** For tests: forget what the tab was told. */
+export function forgetRenderer(): void {
+  rendererOfThisTab = undefined;
+}
+
+function askRenderer(): string | null {
   try {
     const canvas = document.createElement("canvas");
     const gl = (canvas.getContext("webgl") ?? canvas.getContext("experimental-webgl")) as WebGLRenderingContext | null;
