@@ -485,6 +485,8 @@ export interface BuildAgentMessagesArgs {
   game?: boolean;
   /** Len in the person's space (spec local 2026-11-19-agentes-para-todos, §6.3): the space posture. */
   space?: boolean;
+  /** A theme project (spec local 2026-11-27-temas-del-workspace, §4.5): the theme posture. */
+  theme?: boolean;
   /** La zona del usuario (IANA), la misma de `AgentSession.zonaHoraria`: el HOY
    *  del contexto es SU día (plans/len-resultados/diseno.md §7). */
   zona?: string;
@@ -599,7 +601,7 @@ export type BuildAgentMessagesResult =
  *  (ensayo de caja de crear-es-len, 06/10). El último mensaje es el del dueño:
  *  ahí van también sus fotos (la ruta) y, marcados, los avisos del turno. */
 export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMessagesResult {
-  const systemPrompt = buildAgentSystemPrompt(process.env, args.mode, args.app ?? null, args.tool === true, args.game === true, args.space === true);
+  const systemPrompt = buildAgentSystemPrompt(process.env, args.mode, args.app ?? null, args.tool === true, args.game === true, args.space === true, args.theme === true);
   const odysseyPosture =
     args.mode === "dynamis" && terminalEncendida(process.env)
       ? odysseyContextPostureLine(

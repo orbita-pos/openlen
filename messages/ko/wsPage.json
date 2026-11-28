@@ -68,6 +68,7 @@
       "create_goal": "목표 만들기",
       "update_goal": "목표 업데이트",
       "create_assistant": "어시스턴트 만들기",
+      "set_theme": "테마 적용",
       "propose_skills": "스킬 제안 중",
       "ask_len": "Len에게 전달",
       "message_len": "Len에게 메시지",

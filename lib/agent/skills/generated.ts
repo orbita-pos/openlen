@@ -34,6 +34,8 @@ export interface BundledContext {
   /** A game project (spec local 2026-11-05-modo-juego-design, §8.5): `game-development` is offered and its Phaser
    *  references are served; `frontend-design` is Claude's method without the app guide. */
   readonly game?: boolean;
+  /** A theme project (spec local 2026-11-27-temas-del-workspace, §4.5): `theme-development` is offered. */
+  readonly theme?: boolean;
 }
 
 export interface GeneratedSkill {

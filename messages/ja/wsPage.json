@@ -68,6 +68,7 @@
       "create_goal": "ゴールを作成",
       "update_goal": "ゴールを更新",
       "create_assistant": "アシスタントを作成",
+      "set_theme": "テーマを適用",
       "propose_skills": "スキルを提案中",
       "ask_len": "Len に引き継ぎ",
       "message_len": "Len にメッセージ",

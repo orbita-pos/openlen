@@ -155,6 +155,7 @@ import type { HeldVisualState } from "@/lib/agent/visuals/model-context";
 import { READ_WIDGET_CONTEXT, toolReadWidgetContext } from "@/lib/agent/visuals/read-widget-context";
 import { ASK_LEN, runAskLen } from "@/lib/assistants/ask-len";
 import { CREATE_ASSISTANT, runCreateAssistant } from "@/lib/assistants/create-tool";
+import { publishTheme, runSetTheme, SET_THEME } from "@/lib/agent/theme-tools";
 import { MESSAGE_AGENT, MESSAGE_LEN, runSendMessage } from "@/lib/assistants/messages/tool";
 import { ARTIFACT_DATA, PUBLISH_ARTIFACT, artifactEyesScope, runArtifactData, runPublishArtifact } from "@/lib/len-artifacts/tools";
 import { lenArtifactsEnabled } from "@/lib/len-artifacts/enabled";
@@ -1273,6 +1274,9 @@ export interface AgentSession {
   /** A GAME (spec local 2026-11-05-modo-juego-design, §8.4): the game posture and the `game-development` skill.
    *  Absent = not a game. */
   game?: boolean;
+  /** A THEME project (spec local 2026-11-27-temas-del-workspace, §4.5): `publish` installs it for the speaker instead of
+   *  publishing a site. Absent = not a theme. */
+  theme?: boolean;
   /** Len in the person's SPACE (spec local 2026-11-19-agentes-para-todos, §6.3): `create_assistant` hands a card that
    *  makes an agent living there, with no page. Absent elsewhere and in an agent's own turn. */
   space?: true;
@@ -2915,6 +2919,10 @@ async function toolPublicar(
       },
     };
   }
+  // A THEME INSTALLS (spec local 2026-11-27-temas-del-workspace, §4.5): for the speaker, at once and privately — it only
+  // changes how their own OpenLen looks. It never reaches the site's publish: /locale, /themes and the preview page would
+  // ship as a website.
+  if (session.theme) return publishTheme(session);
   // A TOOL INSTALLS (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): the same card, another action.
   if (session.tool) {
     const { toolInstalar } = await import("./tool-install");
@@ -3584,6 +3592,9 @@ async function ejecutarHerramienta(
       // Len's card to create the person's own assistant (lib/assistants/create-tool.ts).
       case CREATE_ASSISTANT:
         return await runCreateAssistant(session, args);
+      // The workspace's themes (lib/agent/theme-tools.ts): Claude Code's /custom-theme, for whoever speaks.
+      case SET_THEME:
+        return await runSetTheme(session, args);
       // The review card of the person's own skills (lib/agent/skills/propose-tool.ts): render-only.
       case PROPOSE_SKILLS: {
         const store = deps.skillStore;

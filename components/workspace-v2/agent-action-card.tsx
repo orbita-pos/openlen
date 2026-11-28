@@ -262,6 +262,7 @@ export const KNOWN_TOOLS = new Set([
   "schedule_update",
   // The person's own assistant (spec local 2026-11-06-asistente-propio): Len creates her; she passes work to him.
   "create_assistant",
+  "set_theme",
   "ask_len",
   // Len and the agent talk (spec local 2026-11-21-len-y-el-agente-conversan): the agent's message to Len, and Len's to it.
   "message_len",

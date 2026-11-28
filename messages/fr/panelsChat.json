@@ -153,6 +153,7 @@
       "schedule": "Planifier une tâche que Len fera à une heure donnée",
       "setup-brand": "Enregistrer votre marque : couleurs, typo, logo et ton",
       "skill-creator": "Créer ou modifier une skill de ce projet ou la vôtre",
+      "theme-development": "Créer, modifier, installer ou appliquer un thème de l'espace de travail",
       "tool-development": "Construire, modifier, installer ou vérifier cet outil",
       "tool-suggestions": "Proposer un outil pour votre OpenLen",
       "verify": "Vérifier dans un navigateur que ce qui a changé fonctionne"

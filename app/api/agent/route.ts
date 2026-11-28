@@ -875,6 +875,9 @@ async function correrTurno(
   const toolDelTurno = appDelTurno && project.data?.tool && toolsEnabled() ? true : false;
   // A GAME (spec local 2026-11-05-modo-juego-design, §8.4): an app with the game posture. Off, it is the app it is.
   const gameDelTurno = appDelTurno && project.data?.game && gamesEnabled() && !toolDelTurno ? true : false;
+  // A THEME (spec local 2026-11-27-temas-del-workspace, §4.5): no app — the theme posture, its skill, and a `publish` that
+  // installs. Off, it is the page it looks like.
+  const themeDelTurno = !appDelTurno && project.data?.theme && themesEnabled() ? true : false;
   /** The person's space (spec local 2026-11-19-agentes-para-todos, §6.2): decided once, like a tool or a game. */
   const espacioDelTurno = isSpaceData(project.data);
   // EL MODO DISEÑO (spec local 2026-10-11): sólo en una app. Las líneas se
@@ -1488,7 +1491,7 @@ async function correrTurno(
       return suggestionCatalog({ installed: rows.map((r) => toInstalledToolView(r, { locale: idiomaDelCatalogo, requestHost: null, plan: "pro", releaseExists: true })) });
     };
   }
-  const skillsDelTurno = skillsOn ? resolveSkills({ bundled: bundledSkills({ app: appDelTurno ?? null, env: process.env, tool: toolDelTurno, game: gameDelTurno, toolSuggestions: ofrecerSugerencias }), project: skillsDelProyecto, personal: skillsPersonales }) : EMPTY_SKILL_SET;
+  const skillsDelTurno = skillsOn ? resolveSkills({ bundled: bundledSkills({ app: appDelTurno ?? null, env: process.env, tool: toolDelTurno, game: gameDelTurno, theme: themeDelTurno, toolSuggestions: ofrecerSugerencias }), project: skillsDelProyecto, personal: skillsPersonales }) : EMPTY_SKILL_SET;
   const presupuestoDeSkills = catalogBudgetChars(MODEL_WINDOW_TOKENS);
   const catalogoDelTurno = skillsOn
     ? skillCatalogMessage(
@@ -1591,6 +1594,7 @@ async function correrTurno(
     app: appDelTurno,
     tool: toolDelTurno,
     game: gameDelTurno,
+    ...(themeDelTurno ? { theme: true as const } : {}),
     // Len in the person's space (spec local 2026-11-19-agentes-para-todos, §6.3); never an agent's own turn there.
     ...(espacioDelTurno && !asistente ? { space: true } : {}),
     realTerminal,
@@ -1790,6 +1794,7 @@ async function correrTurno(
     app: appDelTurno,
     tool: toolDelTurno,
     game: gameDelTurno,
+    ...(themeDelTurno ? { theme: true as const } : {}),
     ...(espacioDelTurno && !asistente ? { space: true as const } : {}),
     // El idioma del panel, para los hallazgos de la revisión de seguridad de `publish`.
     ...(typeof body?.idioma === "string" ? { uiLocale: body.idioma.slice(0, 10) } : {}),
@@ -2632,6 +2637,8 @@ async function correrTurno(
                   // A child in a tool project installs and opens the installed tool, as Len does.
                   ...(toolDelTurno ? { tool: true } : {}),
                   ...(gameDelTurno ? { game: true } : {}),
+                  // A child in a theme project installs it as Len does (publish).
+                  ...(themeDelTurno ? { theme: true } : {}),
                   // A child of Len's turn an agent's message woke, with none of the owner's words, has no owner in it
                   // either: it keeps the connectors' resource tools, and they are refused for it (final review I2, 2b).
                   ...(agentSession.wokenByAgent ? { wokenByAgent: true as const } : {}),

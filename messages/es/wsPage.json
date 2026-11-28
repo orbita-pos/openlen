@@ -68,6 +68,7 @@
       "create_goal": "Creando el encargo",
       "update_goal": "Actualizando el encargo",
       "create_assistant": "Creando tu asistente",
+      "set_theme": "Aplicando el tema",
       "propose_skills": "Proponiendo skills",
       "ask_len": "Pasándoselo a Len",
       "message_len": "Escribiéndole a Len",

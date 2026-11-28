@@ -68,6 +68,7 @@
       "create_goal": "Creo l'obiettivo",
       "update_goal": "Aggiorno l'obiettivo",
       "create_assistant": "Creo il tuo assistente",
+      "set_theme": "Applico il tema",
       "propose_skills": "Proposta di skill",
       "ask_len": "Lo passo a Len",
       "message_len": "Scrivo a Len",

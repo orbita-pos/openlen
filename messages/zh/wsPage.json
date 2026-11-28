@@ -68,6 +68,7 @@
       "create_goal": "创建目标",
       "update_goal": "更新目标",
       "create_assistant": "创建你的助手",
+      "set_theme": "应用主题",
       "propose_skills": "正在提议技能",
       "ask_len": "转交给 Len",
       "message_len": "给 Len 发消息",

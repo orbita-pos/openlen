@@ -671,6 +671,8 @@ export default defineConfig({
       "lib/agent/game-mode.test.ts",
       "lib/agent/clone-policy.test.ts",
       "lib/agent/tool-install.test.ts",
+      // The workspace's themes (spec local 2026-11-27-temas-del-workspace, §4.5): set_theme and publish of a theme.
+      "lib/agent/theme-tools.test.ts",
       "lib/agent/compila-la-app.test.ts",
       // Plan 03 de las apps: tipos y lint tras cada edición, como el LSP de Claude Code.
       "lib/agent/types-and-lint.test.ts",

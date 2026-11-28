@@ -156,3 +156,13 @@ list — is ours. Added on 2026-11-20.
 Artifacts (`db` + `ArtifactData`) and DeepSeek's live state-follow streams, written entirely in our own words for
 Len's (and his assistants') private artifacts in `/.artifacts/` with `publish_artifact`, `artifact_data`,
 `window.openlen.data`, and throwaway-copy verification via `view_page`/`use_page`. Added on 2026-11-22.
+
+`theme-development` is ours (spec local 2026-11-27-temas-del-workspace, §4.5), from the method of Claude Code's
+`theme-examples` plugin (github.com/anthropics/claude-plugins-official, `plugins/theme-examples/README.md`, version
+0.6.0, read on 2026-11-27), Apache License 2.0, full text in `LICENSES/theme-examples.Apache-2.0.txt`: a scene drawn for
+one kind of window and its twin for the other, a still picture that is already a finished drawing, slow motion meant to
+sit under hours of work, ids with a hyphen, and glass that is only as strong as the text needs. Written in our own words;
+the manifest, the scene's gate, the preview page, `publish` and `set_theme` are OpenLen's. Its three references,
+`references/honu-lagoon.svg`, `references/night-reef.svg` and `references/paper-garden.svg`, are scenes of that plugin,
+by Anthropic, under the same license, copied unchanged from `lib/themes/bundled/` (where `scripts/themes-bundle.mjs`
+wrote exactly what the plugin's `scene()` returns). Added on 2026-11-27.

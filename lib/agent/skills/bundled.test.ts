@@ -65,6 +65,32 @@ describe("bundled skills", () => {
     expect(bundledSkills({ app, env: {} }).map((b) => b.skill.name)).not.toContain("tool-development");
   });
 
+  // THE WORKSPACE'S THEMES (spec local 2026-11-27-temas-del-workspace, §4.5): theme-examples' method, our words.
+  describe("theme-development", () => {
+    const skill = `${BUNDLED_SKILLS_DIR}/theme-development`;
+    it("is offered only in a theme project, and is gone with OPENLEN_THEMES=0", () => {
+      expect(bundledSkills({ app: null, env: {}, theme: true }).map((b) => b.skill.name)).toContain("theme-development");
+      expect(bundledSkills({ app: null, env: {} }).map((b) => b.skill.name)).not.toContain("theme-development");
+      expect(bundledSkills({ app: null, env: { OPENLEN_THEMES: "0" }, theme: true }).map((b) => b.skill.name)).not.toContain("theme-development");
+      expect(Object.keys(bundledSkillFiles({ app: null, env: { OPENLEN_THEMES: "0" } })).some((p) => p.startsWith(`${skill}/`))).toBe(false);
+    });
+
+    it("carries the three reference scenes, and every code of the scene's gate", () => {
+      const files = bundledSkillFiles({ app: null, env: {}, theme: true });
+      for (const n of ["honu-lagoon", "night-reef", "paper-garden"]) {
+        expect(files[`${skill}/references/${n}.svg`], n).toBe(readFileSync(`lib/themes/bundled/${n}.svg`, "utf8"));
+      }
+      expect(Object.keys(bundledSkillFiles({ app: null, env: {} })).some((p) => p.startsWith(`${skill}/references/`))).toBe(false);
+      const text = files[`${skill}/SKILL.md`]!;
+      for (const code of ["script", "event_handler", "foreign_object", "external_ref", "doctype", "too_big", "no_viewbox", "not_slice", "not_svg", "smil", "char_reference", "css_escape", "foreign_namespace", "style_markup"]) {
+        expect(text, code).toContain(`\`${code}\``);
+      }
+      for (const must of ["twin", "@keyframes", "prefers-reduced-motion", "hyphen", "heavy", "view_page", "/themes/preview.html", "`publish`", "`set_theme`", "openlen.theme.themes", "[width, height]"]) {
+        expect(text, must).toContain(must);
+      }
+    });
+  });
+
   // THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.5): Kimi's method, three's official rules, Phaser's
   // own agent skills copied as they are.
   describe("game-development", () => {

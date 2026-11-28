@@ -13,6 +13,7 @@ import { CARPETA_SKILLS } from "@/lib/agent/ficheros/manual";
 
 import { lenArtifactsEnabled } from "@/lib/len-artifacts/enabled";
 import { scheduleEnabled } from "@/lib/scheduled-tasks/enabled";
+import { themesEnabled } from "@/lib/themes/enabled";
 import { GENERATED_SKILLS, type BundledContext } from "./generated";
 import { parseSkillFile, type SkillDefinition } from "./skill-file";
 
@@ -79,11 +80,13 @@ function generated(ctx: BundledContext): { skills: BundledSkill[]; files: Record
 
 const DEFAULT_CONTEXT = (): BundledContext => ({ app: null, env: process.env });
 
-/** Skills on disk this server leaves out: `/schedule` with scheduled tasks off, `artifacts` with Len's artifacts off. */
+/** Skills on disk this server leaves out: `/schedule` with scheduled tasks off, `artifacts` with Len's artifacts off,
+ *  `theme-development` with the workspace's themes off. */
 function offHere(ctx: BundledContext): ReadonlySet<string> {
   return new Set([
     ...(scheduleEnabled(ctx.env) ? [] : ["schedule"]),
     ...(lenArtifactsEnabled(ctx.env) ? [] : ["artifacts"]),
+    ...(themesEnabled(ctx.env) ? [] : ["theme-development"]),
   ]);
 }
 
@@ -96,6 +99,8 @@ function notOffered(ctx: BundledContext): ReadonlySet<string> {
     // THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.5): offered in a game; its SKILL.md stays readable
     // everywhere, so a page that becomes a game is built from it.
     ...(ctx.game ? [] : ["game-development"]),
+    // THE WORKSPACE'S THEMES (spec local 2026-11-27-temas-del-workspace, §4.5): offered in a theme project; readable elsewhere.
+    ...(ctx.theme ? [] : ["theme-development"]),
     ...(ctx.toolSuggestions && !ctx.tool ? [] : ["tool-suggestions"]),
   ]);
 }
@@ -103,6 +108,8 @@ function notOffered(ctx: BundledContext): ReadonlySet<string> {
 /** Phaser's own agent skills, copied as they are (587 KB, 2.6× everything else bundled), and our index of them:
  *  served only in a game, so pages and apps don't list 37 files of an engine they don't use under /.openlen. */
 const PHASER_REFERENCES = `${BUNDLED_SKILLS_DIR}/game-development/references/phaser`;
+/** The three example scenes of `theme-development` (170 KB of SVG): served only in a theme project, like Phaser's in a game. */
+const THEME_REFERENCES = `${BUNDLED_SKILLS_DIR}/theme-development/references/`;
 
 /** OpenLen's skills in this context: the ones on disk and the generated ones it offers, by name. */
 export function bundledSkills(ctx: BundledContext = DEFAULT_CONTEXT()): readonly BundledSkill[] {
@@ -114,7 +121,7 @@ export function bundledSkills(ctx: BundledContext = DEFAULT_CONTEXT()): readonly
 export function bundledSkillFiles(ctx: BundledContext = DEFAULT_CONTEXT()): Readonly<Record<string, string>> {
   const off = offHere(ctx);
   const files = Object.entries(load().files).filter(
-    ([p]) => ![...off].some((name) => p.startsWith(`${BUNDLED_SKILLS_DIR}/${name}/`)) && (ctx.game || !p.startsWith(PHASER_REFERENCES)),
+    ([p]) => ![...off].some((name) => p.startsWith(`${BUNDLED_SKILLS_DIR}/${name}/`)) && (ctx.game || !p.startsWith(PHASER_REFERENCES)) && (ctx.theme || !p.startsWith(THEME_REFERENCES)),
   );
   return { ...Object.fromEntries(files), ...generated(ctx).files };
 }
